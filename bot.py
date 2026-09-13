@@ -3,6 +3,7 @@ import aiosqlite
 import time
 import os
 import json
+import base64
 from aiohttp import web
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart, Command, CommandObject
@@ -17,7 +18,6 @@ BOT_TOKEN = "8707730826:AAExJ7ZSQe9YFy8Y0O2eG3uPCAwVa_vG6Qc"
 ADMIN_ID = 1932161126
 SPONSOR_CHANNEL = "@olka_ad"
 
-# عنوان محفظتك الرسمية لاستقبال جميع الإيداعات
 PROJECT_TON_WALLET = "UQB3Xs8jkbebkVumWJlnEmDkjN4YXsZuHPrXSpZT1RtmZrCB"
 
 CONVERSION_RATE = 10000
@@ -36,6 +36,33 @@ CHANNELS_TASKS = [
 ]
 
 WEBAPP_URL = "https://olka-bot-service.onrender.com"
+
+# دالة تحويل العنوان الخام (0:...) إلى صيغة المحفظة المقروءة (UQ...)
+def raw_to_user_friendly(raw_addr: str) -> str:
+    if not raw_addr or not raw_addr.startswith("0:"):
+        return raw_addr
+    try:
+        wc_str, hex_str = raw_addr.split(":", 1)
+        wc = int(wc_str)
+        account_id = bytes.fromhex(hex_str)
+        # 0x51 للعنوان غير القابل للارتداد UQ على الشبكة الرئيسية
+        tag = 0x51
+        data = bytes([tag, wc & 0xFF]) + account_id
+
+        # حساب كود التحقق CRC16-CCITT/XMODEM
+        poly = 0x1021
+        crc = 0
+        for b in data:
+            crc ^= (b << 8)
+            for _ in range(8):
+                if crc & 0x8000:
+                    crc = ((crc << 1) ^ poly) & 0xFFFF
+                else:
+                    crc = (crc << 1) & 0xFFFF
+        full_data = data + crc.to_bytes(2, byteorder='big')
+        return base64.urlsafe_b64encode(full_data).decode('utf-8')
+    except Exception:
+        return raw_addr
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
@@ -602,7 +629,7 @@ MINI_APP_HTML = f"""<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- صفحة 2: المحفظة وإدارة التحويل اليدوي -->
+    <!-- صفحة 2: المحفظة والتحويل اليدوي -->
     <div class="page-tab" id="tab-wallet">
       <div class="card-panel">
         <div style="font-weight:bold; color:var(--gold-primary); font-size:15px; display:flex; justify-content:space-between; align-items:center;">
@@ -775,9 +802,15 @@ MINI_APP_HTML = f"""<!DOCTYPE html>
       manifestUrl: window.location.origin + '/tonconnect-manifest.json'
     }});
 
+    // تحويل العنوان مباشرة إلى صيغة UQ المألوفة
     tonConnectUI.onStatusChange(async (wallet) => {{
       if (wallet) {{
-        connectedWalletAddress = wallet.account.address;
+        try {{
+          connectedWalletAddress = TON_CONNECT_UI.toUserFriendlyAddress(wallet.account.address);
+        }} catch(e) {{
+          connectedWalletAddress = wallet.account.address;
+        }}
+        
         const shortAddr = connectedWalletAddress.slice(0, 4) + '...' + connectedWalletAddress.slice(-4);
         walletBtnText.innerText = shortAddr;
         walletStatusLabel.innerText = "متصل ✅";
@@ -951,8 +984,8 @@ MINI_APP_HTML = f"""<!DOCTYPE html>
         validUntil: Math.floor(Date.now() / 1000) + 360,
         messages: [
           {{
-            address: "{PROJECT_TON_WALLET}", // محفظتك الرسمية المسجلة
-            amount: "100000000" // 0.1 TON
+            address: "{PROJECT_TON_WALLET}",
+            amount: "100000000"
           }}
         ]
       }};
@@ -966,7 +999,7 @@ MINI_APP_HTML = f"""<!DOCTYPE html>
             headers: {{ "Content-Type": "application/json" }},
             body: JSON.stringify({{ user_id: userId, amount: 1000 }})
           }});
-          alert("🎉 تم تأكيد إيداع 0.1 TON في محفظة المشروع وحصلت على +1,000 OLK فوراً!");
+          alert("🎉 تم تأكيد إيداع 0.1 TON وحصلت على +1,000 OLK فوراً!");
         }}
       }} catch (e) {{
         alert("❌ تم إلغاء المعاملة أو فشل الإيداع.");
@@ -1097,10 +1130,12 @@ async def api_save_wallet(request):
         data = await request.json()
         user_id = int(data.get("user_id"))
         address = str(data.get("address", "")).strip()
+        friendly_address = raw_to_user_friendly(address)
+
         async with aiosqlite.connect("olka_vip.db") as db:
-            await db.execute("UPDATE users SET saved_wallet = ? WHERE user_id = ?", (address, user_id))
+            await db.execute("UPDATE users SET saved_wallet = ? WHERE user_id = ?", (friendly_address, user_id))
             await db.commit()
-        return web.json_response({"ok": True})
+        return web.json_response({"ok": True, "address": friendly_address})
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
@@ -1126,7 +1161,7 @@ async def api_get_user(request):
                         "ton_balance": ton,
                         "mining_speed": speed,
                         "miner_level": lvl,
-                        "saved_wallet": saved_wallet,
+                        "saved_wallet": raw_to_user_friendly(saved_wallet),
                         "offline_mined": offline_mined
                     })
                 else:
@@ -1196,6 +1231,7 @@ async def api_withdraw(request):
         data = await request.json()
         user_id = int(data.get("user_id"))
         address = str(data.get("address", "")).strip()
+        friendly_address = raw_to_user_friendly(address)
         now = int(time.time())
 
         async with aiosqlite.connect("olka_vip.db") as db:
@@ -1206,7 +1242,7 @@ async def api_withdraw(request):
 
                 ton_bal, phone = row[0], row[1] or "غير موثق"
                 cur_ins = await db.execute("INSERT INTO withdrawals (user_id, amount_ton, wallet_address, created_at) VALUES (?, ?, ?, ?)",
-                                 (user_id, ton_bal, address, now))
+                                 (user_id, ton_bal, friendly_address, now))
                 withdrawal_id = cur_ins.lastrowid
                 await db.execute("UPDATE users SET ton_balance = 0.0 WHERE user_id = ?", (user_id,))
                 await db.commit()
@@ -1222,7 +1258,7 @@ async def api_withdraw(request):
             f"👤 المستخدم: `{user_id}`\n"
             f"📱 الهاتف: `{phone}`\n"
             f"💎 المبلغ: `{ton_bal:.4f} TON`\n"
-            f"📫 المحفظة المربوطة:\n`{address}`"
+            f"📫 المحفظة المستلمة:\n`{friendly_address}`"
         )
         try:
             await bot.send_message(chat_id=ADMIN_ID, text=admin_notification, reply_markup=admin_kb, parse_mode="Markdown")
@@ -1540,7 +1576,8 @@ async def balance_handler(callback: CallbackQuery):
             row = await cursor.fetchone()
             olk, ton, saved_w = row if row else (0.0, 0.0, None)
 
-    wallet_info = f"`{saved_w}`" if saved_w else "⚠️ لم يتم ربط محفظة بعد"
+    friendly_saved = raw_to_user_friendly(saved_w)
+    wallet_info = f"`{friendly_saved}`" if friendly_saved else "⚠️ لم يتم ربط محفظة بعد"
     text = (
         "💼 **محفظة التعدين السحابي (OLKA VIP):**\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -1615,14 +1652,16 @@ async def withdraw_start(callback: CallbackQuery):
         await callback.answer("❌ يرجى ربط محفظة TON أولاً من داخل التطبيق!", show_alert=True)
         return
 
+    friendly_saved = raw_to_user_friendly(saved_w)
+
     async with aiosqlite.connect("olka_vip.db") as db:
         cur_ins = await db.execute("INSERT INTO withdrawals (user_id, amount_ton, wallet_address, created_at) VALUES (?, ?, ?, ?)",
-                         (user_id, ton, saved_w, now))
+                         (user_id, ton, friendly_saved, now))
         withdrawal_id = cur_ins.lastrowid
         await db.execute("UPDATE users SET ton_balance = 0.0 WHERE user_id = ?", (user_id,))
         await db.commit()
 
-    await callback.message.answer(f"✅ تم تسجيل طلب السحب بنجاح بمبلغ `{ton:.4f} TON` إلى محفظتك:\n`{saved_w}`", parse_mode="Markdown")
+    await callback.message.answer(f"✅ تم تسجيل طلب السحب بنجاح بمبلغ `{ton:.4f} TON` إلى محفظتك:\n`{friendly_saved}`", parse_mode="Markdown")
 
     admin_kb = InlineKeyboardMarkup(inline_keyboard=[
         [
@@ -1633,7 +1672,7 @@ async def withdraw_start(callback: CallbackQuery):
     try:
         await bot.send_message(
             chat_id=ADMIN_ID,
-            text=f"🚨 **طلب سحب TON #{withdrawal_id}**\n👤 المعرف: `{user_id}`\n📱 الهاتف: `{phone}`\n💎 المبلغ: `{ton:.4f} TON`\n📫 المحفظة:\n`{saved_w}`",
+            text=f"🚨 **طلب سحب TON #{withdrawal_id}**\n👤 المعرف: `{user_id}`\n📱 الهاتف: `{phone}`\n💎 المبلغ: `{ton:.4f} TON`\n📫 المحفظة المستلمة:\n`{friendly_saved}`",
             reply_markup=admin_kb,
             parse_mode="Markdown"
         )
@@ -1662,7 +1701,7 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("OLK Ultra Engine with Active Deposit Wallet is live...")
+    print("OLK Ultra Engine with Pure UQ User-Friendly Addresses is live...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
