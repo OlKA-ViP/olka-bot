@@ -25,7 +25,6 @@ dp = Dispatcher()
 
 withdraw_state = {}
 
-# واجهة الويب المتكاملة مع السيرفر وقاعدة البيانات
 MINI_APP_HTML = """<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -79,9 +78,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       align-items: center;
       animation: fadeIn 0.2s ease-out forwards;
     }
-    .page.active {
-      display: flex;
-    }
+    .page.active { display: flex; }
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(6px); }
       to { opacity: 1; transform: translateY(0); }
@@ -98,11 +95,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       border-radius: 18px;
       margin-bottom: 12px;
     }
-    .user-profile {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
+    .user-profile { display: flex; align-items: center; gap: 10px; }
     .avatar-icon {
       width: 38px;
       height: 38px;
@@ -139,10 +132,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       margin-top: 4px;
       text-shadow: 0 0 25px var(--gold-glow);
     }
-    .coin-wrapper {
-      position: relative;
-      margin: 20px 0;
-    }
+    .coin-wrapper { position: relative; margin: 20px 0; }
     .tap-coin {
       width: 230px;
       height: 230px;
@@ -224,22 +214,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       margin-bottom: 10px;
       backdrop-filter: blur(10px);
     }
-    .card-info {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .card-icon {
-      width: 42px;
-      height: 42px;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-    }
-    .card-title { font-size: 14px; font-weight: 700; }
-    .card-subtitle { font-size: 12px; color: #94a3b8; }
     .btn-action {
       background: linear-gradient(135deg, #f59e0b, #d97706);
       color: #000;
@@ -334,23 +308,16 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب المحفظة والسحب المباشر -->
+    <!-- تبويب المحفظة والسحب -->
     <div class="page" id="page-wallet">
       <div class="section-title"><i class="fa-solid fa-wallet"></i> المحفظة والسحب السريع</div>
-
       <div class="card-item" style="flex-direction:column; align-items:stretch;">
         <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
           <span>رصيد Gram القابل للسحب:</span>
           <strong style="color:#34d399;" id="gram-wallet-val">0.0000 Gram</strong>
         </div>
-        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-          <span>سعر الصرف الحالي:</span>
-          <span style="color:#94a3b8;">100 OLK = 1 Gram</span>
-        </div>
         <button class="btn-action" style="margin-bottom:12px;" onclick="convertOlkToGram()">تحويل رصيد OLK إلى Gram 🔄</button>
-
         <hr style="border:0; border-top:1px solid var(--card-border); margin:8px 0;">
-
         <label style="font-size:12px; color:#cbd5e1; margin-top:8px;">عنوان محفظتك (TON / Gram Address):</label>
         <input type="text" id="wallet-address-input" class="input-box" placeholder="UQ... أو EQ...">
         <button class="btn-action" style="background:#10b981; color:#fff;" onclick="submitWebWithdraw()">تأكيد وإرسال طلب السحب 💳</button>
@@ -360,36 +327,27 @@ MINI_APP_HTML = """<!DOCTYPE html>
     <!-- تبويب التطويرات -->
     <div class="page" id="page-boost">
       <div class="section-title"><i class="fa-solid fa-rocket"></i> تطويرات التعدين</div>
-
       <div class="card-item">
-        <div class="card-info">
-          <div class="card-icon" style="background:rgba(245, 158, 11, 0.15); color:var(--gold);"><i class="fa-solid fa-hand-pointer"></i></div>
-          <div>
-            <div class="card-title">Multi-Tap (قوة النقر)</div>
-            <div class="card-subtitle">احصل على +1 لكل ضغطة</div>
-          </div>
+        <div>
+          <div style="font-weight:bold;">Multi-Tap (قوة النقر)</div>
+          <div style="font-size:12px; color:#94a3b8;">+1 لكل ضغطة</div>
         </div>
         <button class="btn-action" onclick="upgradeMultiTap()">تطوير (100 OLK)</button>
       </div>
-
       <div class="card-item">
-        <div class="card-info">
-          <div class="card-icon" style="background:rgba(56, 189, 248, 0.15); color:var(--accent-blue);"><i class="fa-solid fa-battery-full"></i></div>
-          <div>
-            <div class="card-title">توسيع خزان الطاقة</div>
-            <div class="card-subtitle">+500 حد أقصى</div>
-          </div>
+        <div>
+          <div style="font-weight:bold;">توسيع خزان الطاقة</div>
+          <div style="font-size:12px; color:#94a3b8;">+500 حد أقصى</div>
         </div>
         <button class="btn-action" onclick="upgradeEnergyMax()">شراء (200 OLK)</button>
       </div>
     </div>
 
-    <!-- تبويب الإحالة والأصدقاء -->
+    <!-- تبويب الإحالة -->
     <div class="page" id="page-frens">
-      <div class="section-title"><i class="fa-solid fa-user-group"></i> نظام الإحالة المتكامل</div>
-
+      <div class="section-title"><i class="fa-solid fa-user-group"></i> نظام الإحالة</div>
       <div class="card-item" style="flex-direction:column; align-items:stretch; gap:10px;">
-        <div style="font-size:13px; color:#cbd5e1;">شارك رابطك الخاص واربح <strong>100 OLK</strong> تضاف لحسابك تلقائياً عند توثيق صديقك!</div>
+        <div style="font-size:13px; color:#cbd5e1;">شارك رابطك واربح <strong>100 OLK</strong> لكل صديق يسجل ويوثق هاتفه!</div>
         <button class="btn-action" style="padding:12px;" onclick="copyInviteLink()"><i class="fa-solid fa-copy"></i> نسخ رابط الدعوة الخاص بي</button>
       </div>
     </div>
@@ -418,8 +376,9 @@ MINI_APP_HTML = """<!DOCTYPE html>
     const tg = window.Telegram?.WebApp;
     if (tg) { tg.ready(); tg.expand(); }
 
-    const tgUser = tg?.initDataUnsafe?.user;
-    const userId = tgUser?.id || 1932161126;
+    // قراءة معرف المستخدم الحقيقي بدقة من تليجرام
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = tg?.initDataUnsafe?.user?.id || urlParams.get('user_id') || 1932161126;
 
     const userNameEl = document.getElementById("user-name");
     const userAvatarEl = document.getElementById("user-avatar");
@@ -430,19 +389,18 @@ MINI_APP_HTML = """<!DOCTYPE html>
     const coinBtn = document.getElementById("coin-btn");
     const syncBadge = document.getElementById("sync-badge");
 
-    if (tgUser?.first_name) {
-      userNameEl.innerText = tgUser.first_name;
-      userAvatarEl.innerText = tgUser.first_name.charAt(0).toUpperCase();
+    if (tg?.initDataUnsafe?.user?.first_name) {
+      userNameEl.innerText = tg.initDataUnsafe.user.first_name;
+      userAvatarEl.innerText = tg.initDataUnsafe.user.first_name.charAt(0).toUpperCase();
     }
 
     let olkBalance = 0;
     let gramBalance = 0;
-    let unsavedClicks = 0;
+    let pendingClicks = 0;
     let maxEnergy = 1000;
     let energy = 1000;
     let clickPower = 1;
 
-    // جلب البيانات الأصلية من سيرفر البوت (قاعدة البيانات)
     async function loadUserData() {
       try {
         const res = await fetch(`/api/get_user?user_id=${userId}`);
@@ -464,29 +422,40 @@ MINI_APP_HTML = """<!DOCTYPE html>
       energyProgressEl.style.width = ((energy / maxEnergy) * 100) + "%";
     }
 
-    // إرسال ومزامنة النقرات مع قاعدة بيانات البوت
-    async function syncBalance() {
-      if (unsavedClicks === 0) return;
-      syncBadge.innerText = "⏳ جاري المزامنة...";
+    // مزامنة فورية ومستمرة مع قاعدة البيانات
+    async function syncNow() {
+      if (pendingClicks === 0) return;
+      const clicksToSend = pendingClicks;
+      pendingClicks = 0;
       try {
         const res = await fetch("/api/sync", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId, added_olk: unsavedClicks })
+          body: JSON.stringify({ user_id: userId, added_olk: clicksToSend })
         });
         const d = await res.json();
-        if (d.ok) {
-          unsavedClicks = 0;
+        if (!d.ok) {
+          pendingClicks += clicksToSend;
+        } else {
           syncBadge.innerText = "🟢 متصل ومحفوظ";
         }
       } catch (e) {
-        syncBadge.innerText = "⚠️ فشل الحفظ";
+        pendingClicks += clicksToSend;
+        syncBadge.innerText = "⚠️ جاري الحفظ...";
       }
     }
 
-    setInterval(syncBalance, 3000);
+    // حفظ تلقائي كل ثانيتين لضمان استقرار الرصيد
+    setInterval(syncNow, 2000);
 
-    // النقر وزيادة العداد
+    // ضمان الحفظ عند إغلاق أو مغادرة الصفحة
+    window.addEventListener("beforeunload", () => {
+      if (pendingClicks > 0) {
+        const blob = new Blob([JSON.stringify({ user_id: userId, added_olk: pendingClicks })], { type: "application/json" });
+        navigator.sendBeacon("/api/sync", blob);
+      }
+    });
+
     coinBtn.addEventListener("pointerdown", (event) => {
       if (energy < clickPower) {
         if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred("error");
@@ -495,7 +464,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
 
       energy -= clickPower;
       olkBalance += clickPower;
-      unsavedClicks += clickPower;
+      pendingClicks += clickPower;
       renderUI();
 
       if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred("medium");
@@ -507,7 +476,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       floatEl.style.left = (event.clientX - rect.left - 15) + "px";
       floatEl.style.top = (event.clientY - rect.top - 25) + "px";
       coinBtn.parentElement.appendChild(floatEl);
-      setTimeout(() => floatEl.remove(), 700);
+      setTimeout(() => floatEl.remove(), 600);
     });
 
     setInterval(() => {
@@ -525,7 +494,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
     }
 
     async function convertOlkToGram() {
-      await syncBalance();
+      await syncNow();
       if (olkBalance < 100) {
         alert("⚠️ تحتاج إلى 100 OLK على الأقل للتحويل.");
         return;
@@ -540,16 +509,17 @@ MINI_APP_HTML = """<!DOCTYPE html>
         olkBalance = data.olk_balance;
         gramBalance = data.gram_balance;
         renderUI();
-        alert("✅ تم تحويل الرصيد بنجاح!");
+        alert("✅ تم تحويل الرصيد إلى Gram بنجاح!");
       } else {
         alert(data.msg);
       }
     }
 
     async function submitWebWithdraw() {
+      await syncNow();
       const address = document.getElementById("wallet-address-input").value.trim();
       if (!address) {
-        alert("❌ يرجى إدخال عنوان محفظتك!");
+        alert("❌ يرجى إدخال عنوان المحفظة!");
         return;
       }
       const res = await fetch("/api/withdraw", {
@@ -562,7 +532,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         gramBalance = 0;
         renderUI();
         document.getElementById("wallet-address-input").value = "";
-        alert("✅ تم إرسال طلب السحب للمسؤول بنجاح!");
+        alert("✅ تم إرسال طلب السحب بنجاح إلى المشرف!");
       } else {
         alert(data.msg);
       }
@@ -571,27 +541,27 @@ MINI_APP_HTML = """<!DOCTYPE html>
     function upgradeMultiTap() {
       if (olkBalance >= 100) {
         olkBalance -= 100;
-        unsavedClicks -= 100;
+        pendingClicks -= 100;
         clickPower += 1;
         renderUI();
-        syncBalance();
-        alert("🎉 تم تطوير قوة النقر!");
+        syncNow();
+        alert("🎉 تم ترقية قوة النقر!");
       } else {
-        alert("⚠️ لا تملك رصيداً كافياً");
+        alert("⚠️ لا تملك رصيداً كافياً (100 OLK)");
       }
     }
 
     function upgradeEnergyMax() {
       if (olkBalance >= 200) {
         olkBalance -= 200;
-        unsavedClicks -= 200;
+        pendingClicks -= 200;
         maxEnergy += 500;
         energy = maxEnergy;
         renderUI();
-        syncBalance();
+        syncNow();
         alert("⚡ تم توسيع خزان الطاقة!");
       } else {
-        alert("⚠️ لا تملك رصيداً كافياً");
+        alert("⚠️ لا تملك رصيداً كافياً (200 OLK)");
       }
     }
 
@@ -599,7 +569,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       const botUser = "OlkaVip_bot";
       const inviteUrl = `https://t.me/${botUser}?start=${userId}`;
       navigator.clipboard.writeText(inviteUrl);
-      alert("✅ تم نسخ رابط الإحالة الخاص بك بنجاح!");
+      alert("✅ تم نسخ رابط الدعوة الخاص بك!");
     }
 
     loadUserData();
@@ -608,7 +578,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
 </html>
 """
 
-# تجهيز قاعدة البيانات
 async def init_db():
     async with aiosqlite.connect("olka_vip.db") as db:
         await db.execute("""
@@ -642,7 +611,6 @@ async def init_db():
         """)
         await db.commit()
 
-# مسارات واجهة برمجة التطبيقات (API) لربط الويب بقاعدة بيانات البوت
 async def api_get_user(request):
     try:
         user_id = int(request.query.get("user_id", 0))
@@ -706,7 +674,6 @@ async def api_withdraw(request):
                 await db.execute("UPDATE users SET gram_balance = 0.0 WHERE user_id = ?", (user_id,))
                 await db.commit()
 
-        # إشعار المدير
         admin_notification = (
             f"🚨 **طلب سحب جديد من Mini App**\n\n"
             f"👤 المعرف: `{user_id}`\n"
@@ -731,9 +698,11 @@ def get_contact_keyboard():
     )
 
 def main_dashboard_keyboard(user_id: int):
+    # تمرير user_id في الرابط لضمان التعرف على الحساب فوراً
+    app_url = f"{WEBAPP_URL}?user_id={user_id}"
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="🎮 فتح لعبة ومحفظة الويب (Mini App) 🚀", web_app=WebAppInfo(url=WEBAPP_URL))
+            InlineKeyboardButton(text="🎮 فتح لعبة ومحفظة الويب (Mini App) 🚀", web_app=WebAppInfo(url=app_url))
         ],
         [
             InlineKeyboardButton(text="⚡ تعدين يومي (+20)", callback_data="claim"),
@@ -764,7 +733,6 @@ async def start_handler(message: Message, command: CommandObject):
         async with db.execute("SELECT phone_number, olk_balance, gram_balance FROM users WHERE user_id = ?", (user_id,)) as cursor:
             user = await cursor.fetchone()
 
-        # تسجيل الإحالة للمستخدم الجديد
         if not user and ref_param:
             try:
                 clean_ref = ref_param.replace("ref_", "")
@@ -842,7 +810,6 @@ async def contact_handler(message: Message):
         """, (user_id, contact.phone_number))
         await db.commit()
 
-        # مكافأة المُحيل فوراً بعد التوثيق
         async with db.execute("SELECT referred_by, ref_reward_claimed FROM users WHERE user_id = ?", (user_id,)) as cursor:
             ref_row = await cursor.fetchone()
 
@@ -1040,7 +1007,7 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("Bot is running with full DB Web Sync...")
+    print("Bot is running with fully synced Real-time Database...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
