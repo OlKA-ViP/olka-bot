@@ -17,7 +17,8 @@ BOT_TOKEN = "8707730826:AAExJ7ZSQe9YFy8Y0O2eG3uPCAwVa_vG6Qc"
 ADMIN_ID = 1932161126
 SPONSOR_CHANNEL = "@olka_ad"
 
-PROJECT_TON_WALLET = "UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJKZ"
+# عنوان محفظتك الرسمية لاستقبال جميع الإيداعات
+PROJECT_TON_WALLET = "UQB3Xs8jkbebkVumWJlnEmDkjN4YXsZuHPrXSpZT1RtmZrCB"
 
 CONVERSION_RATE = 10000
 MIN_WITHDRAW_TON = 0.1
@@ -42,7 +43,7 @@ dp = Dispatcher()
 class AdminBroadcast(StatesGroup):
     waiting_for_message = State()
 
-MINI_APP_HTML = """<!DOCTYPE html>
+MINI_APP_HTML = f"""<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
@@ -52,7 +53,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
   <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    :root {
+    :root {{
       --bg-main: #060a12;
       --card-bg: rgba(15, 23, 42, 0.88);
       --card-border: rgba(45, 66, 107, 0.55);
@@ -62,8 +63,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
       --accent-cyan: #06b6d4;
       --accent-blue: #2563eb;
       --text-muted: #94a3b8;
-    }
-    * {
+    }}
+    * {{
       box-sizing: border-box;
       user-select: none;
       -webkit-user-select: none;
@@ -71,8 +72,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
       margin: 0;
       padding: 0;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    }
-    html, body {
+    }}
+    html, body {{
       background-color: var(--bg-main);
       background-image: 
         linear-gradient(rgba(30, 41, 67, 0.22) 1px, transparent 1px),
@@ -82,8 +83,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
       min-height: 100vh;
       height: 100%;
       overflow: hidden;
-    }
-    .main-scroll-view {
+    }}
+    .main-scroll-view {{
       height: 100vh;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
@@ -92,8 +93,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
       flex-direction: column;
       align-items: center;
       width: 100%;
-    }
-    .top-header {
+    }}
+    .top-header {{
       width: 100%;
       text-align: center;
       font-size: 18px;
@@ -104,15 +105,15 @@ MINI_APP_HTML = """<!DOCTYPE html>
       justify-content: center;
       align-items: center;
       position: relative;
-    }
-    .header-signal {
+    }}
+    .header-signal {{
       position: absolute;
       right: 4px;
       font-size: 12px;
       color: var(--accent-green);
       font-weight: 600;
-    }
-    .assets-container {
+    }}
+    .assets-container {{
       width: 100%;
       background: var(--card-bg);
       border: 1px solid var(--card-border);
@@ -121,26 +122,26 @@ MINI_APP_HTML = """<!DOCTYPE html>
       padding: 14px;
       margin-bottom: 12px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-    }
-    .assets-title-row {
+    }}
+    .assets-title-row {{
       display: flex;
       justify-content: space-between;
       align-items: center;
       font-size: 12px;
       margin-bottom: 10px;
-    }
-    .assets-total { color: #cbd5e1; font-weight: 700; }
-    .assets-total span { color: var(--gold-primary); direction: ltr; display: inline-block; }
-    .assets-badge {
+    }}
+    .assets-total {{ color: #cbd5e1; font-weight: 700; }}
+    .assets-total span {{ color: var(--gold-primary); direction: ltr; display: inline-block; }}
+    .assets-badge {{
       display: flex;
       align-items: center;
       gap: 6px;
       color: #93c5fd;
       font-size: 12px;
       font-weight: 700;
-    }
+    }}
 
-    .wallet-connection-banner {
+    .wallet-connection-banner {{
       width: 100%;
       background: linear-gradient(135deg, rgba(37, 99, 235, 0.2), rgba(6, 182, 212, 0.15));
       border: 1.5px solid rgba(56, 189, 248, 0.45);
@@ -152,10 +153,10 @@ MINI_APP_HTML = """<!DOCTYPE html>
       align-items: center;
       cursor: pointer;
       box-shadow: 0 4px 15px rgba(2, 132, 199, 0.25);
-    }
-    .wallet-connection-banner:active { transform: scale(0.98); }
-    .wallet-banner-left { display: flex; align-items: center; gap: 10px; }
-    .wallet-icon-box {
+    }}
+    .wallet-connection-banner:active {{ transform: scale(0.98); }}
+    .wallet-banner-left {{ display: flex; align-items: center; gap: 10px; }}
+    .wallet-icon-box {{
       width: 40px;
       height: 40px;
       background: linear-gradient(135deg, #0284c7, #0ea5e9);
@@ -166,11 +167,11 @@ MINI_APP_HTML = """<!DOCTYPE html>
       font-size: 18px;
       color: #ffffff;
       box-shadow: 0 0 12px rgba(14, 165, 233, 0.5);
-    }
-    .wallet-banner-info { display: flex; flex-direction: column; }
-    .wallet-banner-title { font-size: 13px; font-weight: 800; color: #ffffff; }
-    .wallet-banner-sub { font-size: 11px; color: #93c5fd; font-weight: 600; direction: ltr; text-align: right; }
-    .wallet-status-tag {
+    }}
+    .wallet-banner-info {{ display: flex; flex-direction: column; }}
+    .wallet-banner-title {{ font-size: 13px; font-weight: 800; color: #ffffff; }}
+    .wallet-banner-sub {{ font-size: 11px; color: #93c5fd; font-weight: 600; direction: ltr; text-align: right; }}
+    .wallet-status-tag {{
       background: #0284c7;
       color: #ffffff;
       font-size: 11px;
@@ -178,35 +179,34 @@ MINI_APP_HTML = """<!DOCTYPE html>
       padding: 6px 12px;
       border-radius: 20px;
       border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    .wallet-status-tag.connected {
+    }}
+    .wallet-status-tag.connected {{
       background: rgba(34, 197, 94, 0.25);
       color: #4ade80;
       border-color: #22c55e;
-    }
+    }}
 
-    .page-tab {
+    .page-tab {{
       display: none;
       width: 100%;
       flex-direction: column;
       align-items: center;
       animation: tabFadeIn 0.2s ease-out;
-    }
-    .page-tab.active { display: flex; }
-    @keyframes tabFadeIn {
-      from { opacity: 0; transform: translateY(6px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
+    }}
+    .page-tab.active {{ display: flex; }}
+    @keyframes tabFadeIn {{
+      from {{ opacity: 0; transform: translateY(6px); }}
+      to {{ opacity: 1; transform: translateY(0); }}
+    }}
 
-    /* كروت المحفظة المرتبة والواضحة */
-    .balance-cards-grid {
+    .balance-cards-grid {{
       width: 100%;
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px;
       margin-bottom: 12px;
-    }
-    .bal-card {
+    }}
+    .bal-card {{
       background: rgba(6, 11, 22, 0.9);
       border: 1px solid var(--card-border);
       border-radius: 16px;
@@ -214,23 +214,22 @@ MINI_APP_HTML = """<!DOCTYPE html>
       display: flex;
       flex-direction: column;
       gap: 4px;
-    }
-    .bal-card-title {
+    }}
+    .bal-card-title {{
       font-size: 11px;
       color: var(--text-muted);
       display: flex;
       align-items: center;
       gap: 5px;
-    }
-    .bal-card-value {
+    }}
+    .bal-card-value {{
       font-size: 18px;
       font-weight: 900;
       direction: ltr;
       text-align: left;
-    }
+    }}
 
-    /* حاسبة التبديل والتحويل اليدوي */
-    .convert-box {
+    .convert-box {{
       width: 100%;
       background: rgba(6, 11, 22, 0.7);
       border: 1px solid rgba(255, 255, 255, 0.08);
@@ -240,8 +239,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
       display: flex;
       flex-direction: column;
       gap: 10px;
-    }
-    .input-row {
+    }}
+    .input-row {{
       display: flex;
       align-items: center;
       gap: 8px;
@@ -249,8 +248,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
       border: 1px solid var(--card-border);
       border-radius: 12px;
       padding: 6px 10px;
-    }
-    .convert-input {
+    }}
+    .convert-input {{
       flex: 1;
       background: transparent;
       border: none;
@@ -260,8 +259,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
       font-weight: 800;
       direction: ltr;
       text-align: left;
-    }
-    .btn-max {
+    }}
+    .btn-max {{
       background: rgba(245, 158, 11, 0.2);
       border: 1px solid var(--gold-primary);
       color: var(--gold-primary);
@@ -270,20 +269,20 @@ MINI_APP_HTML = """<!DOCTYPE html>
       font-size: 11px;
       font-weight: 800;
       cursor: pointer;
-    }
-    .exchange-rate-row {
+    }}
+    .exchange-rate-row {{
       display: flex;
       justify-content: space-between;
       align-items: center;
       font-size: 11px;
       color: var(--text-muted);
       padding: 0 4px;
-    }
-    .exchange-rate-row span {
+    }}
+    .exchange-rate-row span {{
       direction: ltr;
-    }
+    }}
 
-    .mining-hero-card {
+    .mining-hero-card {{
       width: 100%;
       background: var(--card-bg);
       border: 1px solid var(--card-border);
@@ -295,8 +294,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
       backdrop-filter: blur(20px);
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
       position: relative;
-    }
-    .miner-status-badge {
+    }}
+    .miner-status-badge {{
       display: flex;
       align-items: center;
       gap: 8px;
@@ -306,22 +305,22 @@ MINI_APP_HTML = """<!DOCTYPE html>
       font-size: 12px;
       font-weight: 800;
       border: 1px solid rgba(255, 255, 255, 0.08);
-    }
-    .status-online {
+    }}
+    .status-online {{
       background: var(--accent-green);
       color: #052e16;
       font-size: 11px;
       padding: 2px 8px;
       border-radius: 12px;
       font-weight: 800;
-    }
-    .unclaimed-subtitle {
+    }}
+    .unclaimed-subtitle {{
       font-size: 11px;
       color: var(--text-muted);
       margin-top: 10px;
       font-weight: 600;
-    }
-    .unclaimed-counter {
+    }}
+    .unclaimed-counter {{
       font-size: 30px;
       font-weight: 900;
       color: #ffffff;
@@ -330,12 +329,12 @@ MINI_APP_HTML = """<!DOCTYPE html>
       align-items: center;
       gap: 6px;
       letter-spacing: 0.5px;
-    }
-    .unclaimed-counter span {
+    }}
+    .unclaimed-counter span {{
       color: var(--gold-primary);
       font-size: 18px;
-    }
-    .hashrate-capsule {
+    }}
+    .hashrate-capsule {{
       background: rgba(15, 23, 42, 0.75);
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 20px;
@@ -347,15 +346,15 @@ MINI_APP_HTML = """<!DOCTYPE html>
       color: #93c5fd;
       font-weight: 700;
       margin-top: 4px;
-    }
-    .central-coin-stage {
+    }}
+    .central-coin-stage {{
       margin: 16px 0 12px 0;
       position: relative;
       display: flex;
       justify-content: center;
       align-items: center;
-    }
-    .coin-3d {
+    }}
+    .coin-3d {{
       width: 195px;
       height: 195px;
       border-radius: 50%;
@@ -369,9 +368,9 @@ MINI_APP_HTML = """<!DOCTYPE html>
       justify-content: center;
       cursor: pointer;
       transition: transform 0.08s ease-out;
-    }
-    .coin-3d:active { transform: scale(0.95); }
-    .coin-inner-details {
+    }}
+    .coin-3d:active {{ transform: scale(0.95); }}
+    .coin-inner-details {{
       width: 155px;
       height: 155px;
       border-radius: 50%;
@@ -380,21 +379,21 @@ MINI_APP_HTML = """<!DOCTYPE html>
       flex-direction: column;
       align-items: center;
       justify-content: center;
-    }
-    .coin-symbol {
+    }}
+    .coin-symbol {{
       font-size: 48px;
       color: #ffffff;
       text-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
-    }
-    .coin-name {
+    }}
+    .coin-name {{
       font-size: 22px;
       font-weight: 900;
       color: #ffffff;
       letter-spacing: 2px;
       text-shadow: 0 3px 8px rgba(0, 0, 0, 0.8);
       margin-top: -2px;
-    }
-    .btn-claim-rewards {
+    }}
+    .btn-claim-rewards {{
       width: 100%;
       background: linear-gradient(135deg, #f59e0b, #d97706);
       color: #000;
@@ -410,16 +409,16 @@ MINI_APP_HTML = """<!DOCTYPE html>
       justify-content: center;
       gap: 8px;
       box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
-    }
-    .btn-claim-rewards:active { transform: scale(0.97); }
-    .hero-actions-grid {
+    }}
+    .btn-claim-rewards:active {{ transform: scale(0.97); }}
+    .hero-actions-grid {{
       width: 100%;
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px;
       margin-top: 12px;
-    }
-    .btn-upgrade-rig {
+    }}
+    .btn-upgrade-rig {{
       background: linear-gradient(135deg, #1d4ed8, #3b82f6);
       color: #fff;
       font-weight: 800;
@@ -432,8 +431,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
       align-items: center;
       justify-content: center;
       gap: 6px;
-    }
-    .btn-wallet-link {
+    }}
+    .btn-wallet-link {{
       background: linear-gradient(135deg, #0284c7, #0ea5e9);
       color: #fff;
       font-weight: 800;
@@ -446,13 +445,13 @@ MINI_APP_HTML = """<!DOCTYPE html>
       align-items: center;
       justify-content: center;
       gap: 6px;
-    }
-    .btn-wallet-link.connected {
+    }}
+    .btn-wallet-link.connected {{
       background: rgba(34, 197, 94, 0.2);
       border: 1px solid var(--accent-green);
       color: #4ade80;
-    }
-    .card-panel {
+    }}
+    .card-panel {{
       width: 100%;
       background: var(--card-bg);
       border: 1px solid var(--card-border);
@@ -462,8 +461,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
       display: flex;
       flex-direction: column;
       gap: 10px;
-    }
-    .rig-item {
+    }}
+    .rig-item {{
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -471,8 +470,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
       padding: 12px 14px;
       border-radius: 14px;
       border: 1px solid rgba(255, 255, 255, 0.05);
-    }
-    .bottom-bar {
+    }}
+    .bottom-bar {{
       position: fixed;
       bottom: 0;
       left: 0;
@@ -486,8 +485,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
       align-items: center;
       z-index: 1000;
       padding: 0 6px;
-    }
-    .nav-link {
+    }}
+    .nav-link {{
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -499,11 +498,11 @@ MINI_APP_HTML = """<!DOCTYPE html>
       font-weight: 700;
       flex: 1;
       position: relative;
-    }
-    .nav-link i { font-size: 18px; }
-    .nav-link.active { color: #bef264; }
-    .nav-link.active i { color: #bef264; }
-    .notify-dot {
+    }}
+    .nav-link i {{ font-size: 18px; }}
+    .nav-link.active {{ color: #bef264; }}
+    .nav-link.active i {{ color: #bef264; }}
+    .notify-dot {{
       position: absolute;
       top: -1px;
       left: 20px;
@@ -517,7 +516,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       display: flex;
       align-items: center;
       justify-content: center;
-    }
+    }}
   </style>
 </head>
 <body>
@@ -528,7 +527,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       <div>تعدين OLK VIP</div>
     </div>
 
-    <!-- كرت الأصول المحفوظة العلوية -->
+    <!-- كرت الأصول المحفوظة -->
     <div class="assets-container">
       <div class="assets-title-row">
         <div class="assets-total">الإجمالي: <span id="total-assets">0.0000 OLK</span></div>
@@ -546,7 +545,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
         </div>
       </div>
 
-      <!-- زر ومربع المحفظة الكبير -->
       <div class="wallet-connection-banner" onclick="handleConnectWalletClick()">
         <div class="wallet-banner-left">
           <div class="wallet-icon-box">
@@ -561,7 +559,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- صفحة 1: شاشة التعدين السحابي -->
+    <!-- صفحة 1: شاشة التعدين -->
     <div class="page-tab active" id="tab-mining">
       <div class="mining-hero-card">
         <div class="miner-status-badge">
@@ -604,7 +602,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- صفحة 2: المحفظة وإدارة التحويل اليدوي والسحب -->
+    <!-- صفحة 2: المحفظة وإدارة التحويل اليدوي -->
     <div class="page-tab" id="tab-wallet">
       <div class="card-panel">
         <div style="font-weight:bold; color:var(--gold-primary); font-size:15px; display:flex; justify-content:space-between; align-items:center;">
@@ -612,7 +610,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
           <span style="font-size:11px; color:#38bdf8; direction:ltr;">1 TON = 10,000 OLK</span>
         </div>
 
-        <!-- حاسبة التبديل اليدوي الدقيقة -->
         <div class="convert-box">
           <div style="display:flex; justify-content:space-between; font-size:12px;">
             <span style="color:var(--text-muted);">أدخل كمية OLK المراد تحويلها:</span>
@@ -636,7 +633,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
 
         <hr style="border:0; border-top:1px solid var(--card-border); margin:6px 0;">
 
-        <!-- قسم السحب والإيداع المرتب -->
         <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px;">
           <span style="color:var(--text-muted);">الحد الأدنى المطلوب للسحب:</span>
           <strong style="color:#f87171; direction:ltr;">0.1 TON (1,000 OLK)</strong>
@@ -719,7 +715,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
     </div>
   </div>
 
-  <!-- شريط التنقل السفلي الثابت -->
   <div class="bottom-bar">
     <div class="nav-link" onclick="switchNav('wallet', this)">
       <i class="fa-solid fa-wallet"></i>
@@ -746,10 +741,10 @@ MINI_APP_HTML = """<!DOCTYPE html>
 
   <script>
     const tg = window.Telegram?.WebApp;
-    if (tg) { 
+    if (tg) {{ 
       tg.ready(); 
       tg.expand(); 
-    }
+    }}
 
     const urlParams = new URLSearchParams(window.location.search);
     const userId = tg?.initDataUnsafe?.user?.id || urlParams.get('user_id') || 1932161126;
@@ -776,12 +771,12 @@ MINI_APP_HTML = """<!DOCTYPE html>
     const convertPreview = document.getElementById("convert-preview-val");
     const availableOlkConvert = document.getElementById("available-olk-convert");
 
-    const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+    const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({{
       manifestUrl: window.location.origin + '/tonconnect-manifest.json'
-    });
+    }});
 
-    tonConnectUI.onStatusChange(async (wallet) => {
-      if (wallet) {
+    tonConnectUI.onStatusChange(async (wallet) => {{
+      if (wallet) {{
         connectedWalletAddress = wallet.account.address;
         const shortAddr = connectedWalletAddress.slice(0, 4) + '...' + connectedWalletAddress.slice(-4);
         walletBtnText.innerText = shortAddr;
@@ -791,12 +786,12 @@ MINI_APP_HTML = """<!DOCTYPE html>
         walletBtn.classList.add("connected");
         walletDisplay.innerText = connectedWalletAddress;
 
-        await fetch("/api/save_wallet", {
+        await fetch("/api/save_wallet", {{
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId, address: connectedWalletAddress })
-        });
-      } else {
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{ user_id: userId, address: connectedWalletAddress }})
+        }});
+      }} else {{
         connectedWalletAddress = null;
         walletBtnText.innerText = "CONNECT WALLET";
         walletStatusLabel.innerText = "اتصال";
@@ -804,27 +799,27 @@ MINI_APP_HTML = """<!DOCTYPE html>
         walletStatusSub.innerText = "اضغط لربط المحفظة مباشرة";
         walletBtn.classList.remove("connected");
         walletDisplay.innerText = "⚠️ لم يتم ربط محفظة TON بعد";
-      }
-    });
+      }}
+    }});
 
-    function handleConnectWalletClick() {
-      if (tonConnectUI.connected) {
+    function handleConnectWalletClick() {{
+      if (tonConnectUI.connected) {{
         tonConnectUI.disconnect();
-      } else {
+      }} else {{
         tonConnectUI.openModal();
-      }
-    }
+      }}
+    }}
 
-    async function loadData() {
-      try {
-        const res = await fetch(`/api/get_user?user_id=${userId}`);
+    async function loadData() {{
+      try {{
+        const res = await fetch(`/api/get_user?user_id=${{userId}}`);
         const data = await res.json();
-        if (data.ok) {
+        if (data.ok) {{
           appOlk = data.olk_balance;
           appTon = data.ton_balance;
           speed = data.mining_speed || 0.25;
           minerLevel = data.miner_level || 1;
-          if (data.saved_wallet) {
+          if (data.saved_wallet) {{
             connectedWalletAddress = data.saved_wallet;
             const shortAddr = connectedWalletAddress.slice(0, 4) + '...' + connectedWalletAddress.slice(-4);
             walletBtnText.innerText = shortAddr;
@@ -833,18 +828,18 @@ MINI_APP_HTML = """<!DOCTYPE html>
             walletStatusSub.innerText = shortAddr;
             walletBtn.classList.add("connected");
             walletDisplay.innerText = connectedWalletAddress;
-          }
-          if (data.offline_mined) {
+          }}
+          if (data.offline_mined) {{
             unclaimed += data.offline_mined;
-          }
+          }}
           refreshScreen();
-        }
-      } catch (err) {
+        }}
+      }} catch (err) {{
         console.error("Data load failed", err);
-      }
-    }
+      }}
+    }}
 
-    function refreshScreen() {
+    function refreshScreen() {{
       totalAssetsEl.innerText = (appOlk + unclaimed).toFixed(4) + " OLK";
       appBalEl.innerText = appOlk.toFixed(2) + " OLK";
       appTonEl.innerText = appTon.toFixed(4) + " TON";
@@ -852,31 +847,30 @@ MINI_APP_HTML = """<!DOCTYPE html>
       speedValEl.innerText = speed.toFixed(2);
       levelDisplayEl.innerText = minerLevel;
       availableOlkConvert.innerText = "المتاح: " + appOlk.toFixed(2);
-    }
+    }}
 
-    // آلة حاسبة تفاعلية للتحويل اليدوي
-    function calculateConvertPreview() {
+    function calculateConvertPreview() {{
       const amt = parseFloat(convertInput.value) || 0;
       const tonVal = amt / 10000;
       convertPreview.innerText = tonVal.toFixed(4) + " TON";
-    }
+    }}
 
-    function setMaxConvert() {
+    function setMaxConvert() {{
       convertInput.value = Math.floor(appOlk);
       calculateConvertPreview();
-    }
+    }}
 
-    setInterval(() => {
+    setInterval(() => {{
       unclaimed += (speed * 0.000015);
       unclaimedValEl.innerText = unclaimed.toFixed(6);
       totalAssetsEl.innerText = (appOlk + unclaimed).toFixed(4) + " OLK";
-    }, 100);
+    }}, 100);
 
-    async function claimRewardsToDb() {
-      if (unclaimed < 0.001) {
+    async function claimRewardsToDb() {{
+      if (unclaimed < 0.001) {{
         alert("⚠️ أرباح التعدين قليلة جداً حالياً، واصل التعدين!");
         return;
-      }
+      }}
       const reward = unclaimed;
       unclaimed = 0;
       appOlk += reward;
@@ -884,158 +878,157 @@ MINI_APP_HTML = """<!DOCTYPE html>
 
       if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
 
-      try {
-        await fetch("/api/claim_passive", {
+      try {{
+        await fetch("/api/claim_passive", {{
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId, amount: reward })
-        });
-      } catch (e) {
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{ user_id: userId, amount: reward }})
+        }});
+      }} catch (e) {{
         console.error("Claim request failed", e);
-      }
-    }
+      }}
+    }}
 
-    function manualBoostClick() {
+    function manualBoostClick() {{
       unclaimed += (speed * 0.0005);
       unclaimedValEl.innerText = unclaimed.toFixed(6);
       if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
-    }
+    }}
 
-    async function buyRig(rigId, cost, speedGain) {
-      if (appOlk < cost) {
-        alert(`⚠️ رصيدك في التطبيق غير كافٍ! يلزمك ${cost} OLK.`);
+    async function buyRig(rigId, cost, speedGain) {{
+      if (appOlk < cost) {{
+        alert(`⚠️ رصيدك في التطبيق غير كافٍ! يلزمك ${{cost}} OLK.`);
         return;
-      }
+      }}
       appOlk -= cost;
       speed += speedGain;
       minerLevel += 1;
       refreshScreen();
 
-      await fetch("/api/upgrade_rig", {
+      await fetch("/api/upgrade_rig", {{
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId, cost: cost, new_speed: speed, new_level: minerLevel })
-      });
-      alert(`🎉 تم شراء جهاز التعدين بنجاح! السرعة الآن: ${speed.toFixed(2)} TH/s`);
-    }
+        headers: {{ "Content-Type": "application/json" }},
+        body: JSON.stringify({{ user_id: userId, cost: cost, new_speed: speed, new_level: minerLevel }})
+      }});
+      alert(`🎉 تم شراء جهاز التعدين بنجاح! السرعة الآن: ${{speed.toFixed(2)}} TH/s`);
+    }}
 
-    // التحويل اليدوي للكمية المحددة فقط
-    async function convertOlkDirect() {
+    async function convertOlkDirect() {{
       const amountToConvert = parseFloat(convertInput.value);
-      if (!amountToConvert || amountToConvert <= 0) {
+      if (!amountToConvert || amountToConvert <= 0) {{
         alert("⚠️ يرجى كتابة كمية OLK التي ترغب في تحويلها أولاً!");
         return;
-      }
-      if (amountToConvert > appOlk) {
+      }}
+      if (amountToConvert > appOlk) {{
         alert("⚠️ الكمية المدخلة أكبر من رصيدك المتاح في التطبيق!");
         return;
-      }
-      const res = await fetch("/api/convert", {
+      }}
+      const res = await fetch("/api/convert", {{
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId, amount: amountToConvert })
-      });
+        headers: {{ "Content-Type": "application/json" }},
+        body: JSON.stringify({{ user_id: userId, amount: amountToConvert }})
+      }});
       const data = await res.json();
-      if (data.ok) {
+      if (data.ok) {{
         appOlk = data.olk_balance;
         appTon = data.ton_balance;
         convertInput.value = "";
         calculateConvertPreview();
         refreshScreen();
-        alert(`✅ تم تحويل ${amountToConvert} OLK إلى ${(amountToConvert / 10000).toFixed(4)} TON بنجاح!`);
-      } else {
+        alert(`✅ تم تحويل ${{amountToConvert}} OLK إلى ${{(amountToConvert / 10000).toFixed(4)}} TON بنجاح!`);
+      }} else {{
         alert(data.msg);
-      }
-    }
+      }}
+    }}
 
-    async function depositTonDirect() {
-      if (!tonConnectUI.connected) {
+    async function depositTonDirect() {{
+      if (!tonConnectUI.connected) {{
         alert("❌ يرجى ربط محفظة TON أولاً!");
         handleConnectWalletClick();
         return;
-      }
-      const transaction = {
+      }}
+      const transaction = {{
         validUntil: Math.floor(Date.now() / 1000) + 360,
         messages: [
-          {
-            address: "UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJKZ",
-            amount: "100000000"
-          }
+          {{
+            address: "{PROJECT_TON_WALLET}", // محفظتك الرسمية المسجلة
+            amount: "100000000" // 0.1 TON
+          }}
         ]
-      };
-      try {
+      }};
+      try {{
         const result = await tonConnectUI.sendTransaction(transaction);
-        if (result) {
+        if (result) {{
           appOlk += 1000;
           refreshScreen();
-          await fetch("/api/claim_passive", {
+          await fetch("/api/claim_passive", {{
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: userId, amount: 1000 })
-          });
-          alert("🎉 تم تأكيد إيداع 0.1 TON وحصلت على +1,000 OLK فوراً!");
-        }
-      } catch (e) {
+            headers: {{ "Content-Type": "application/json" }},
+            body: JSON.stringify({{ user_id: userId, amount: 1000 }})
+          }});
+          alert("🎉 تم تأكيد إيداع 0.1 TON في محفظة المشروع وحصلت على +1,000 OLK فوراً!");
+        }}
+      }} catch (e) {{
         alert("❌ تم إلغاء المعاملة أو فشل الإيداع.");
-      }
-    }
+      }}
+    }}
 
-    async function requestWithdrawalToConnectedWallet() {
-      if (!connectedWalletAddress) {
+    async function requestWithdrawalToConnectedWallet() {{
+      if (!connectedWalletAddress) {{
         alert("❌ يرجى ربط محفظة TON أولاً عبر زر CONNECT WALLET!");
         handleConnectWalletClick();
         return;
-      }
-      if (appTon < 0.1) {
+      }}
+      if (appTon < 0.1) {{
         alert("⚠️ رصيدك أقل من الحد الأدنى للسحب وهو 0.1 TON!");
         return;
-      }
-      const res = await fetch("/api/withdraw", {
+      }}
+      const res = await fetch("/api/withdraw", {{
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId, address: connectedWalletAddress })
-      });
+        headers: {{ "Content-Type": "application/json" }},
+        body: JSON.stringify({{ user_id: userId, address: connectedWalletAddress }})
+      }});
       const data = await res.json();
-      if (data.ok) {
+      if (data.ok) {{
         appTon = 0;
         refreshScreen();
         alert("✅ تم تسجيل طلب سحب TON بنجاح وسيتم التحويل لمحفظتك قريباً!");
-      } else {
+      }} else {{
         alert(data.msg);
-      }
-    }
+      }}
+    }}
 
-    function switchNav(tabName, el) {
+    function switchNav(tabName, el) {{
       document.querySelectorAll(".page-tab").forEach(tab => tab.classList.remove("active"));
       document.querySelectorAll(".nav-link").forEach(link => link.classList.remove("active"));
       document.getElementById("tab-" + tabName).classList.add("active");
       if (el) el.classList.add("active");
       if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
-    }
+    }}
 
-    function copyReferralLink() {
-      const invite = `https://t.me/OlkaVip_bot?start=${userId}`;
+    function copyReferralLink() {{
+      const invite = `https://t.me/OlkaVip_bot?start=${{userId}}`;
       navigator.clipboard.writeText(invite);
       alert("✅ تم نسخ رابط الإحالة الخاص بك!");
-    }
+    }}
 
-    async function checkChannelTask(taskId) {
-      try {
-        const res = await fetch("/api/verify_channel_task", {
+    async function checkChannelTask(taskId) {{
+      try {{
+        const res = await fetch("/api/verify_channel_task", {{
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId, task_id: taskId })
-        });
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{ user_id: userId, task_id: taskId }})
+        }});
         const data = await res.json();
         alert(data.msg);
-        if (data.ok) {
+        if (data.ok) {{
           appOlk += data.reward;
           refreshScreen();
-        }
-      } catch (err) {
+        }}
+      }} catch (err) {{
         alert("حدث خطأ أثناء التحقق!");
-      }
-    }
+      }}
+    }}
 
     loadData();
   </script>
@@ -1172,7 +1165,6 @@ async def api_upgrade_rig(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
-# مسار تحويل OLK إلى TON مع دعم الكميات اليدوية
 async def api_convert(request):
     try:
         data = await request.json()
@@ -1670,7 +1662,7 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("OLK Ultra Engine with Custom Conversion Calculator & Clean Numbers is live...")
+    print("OLK Ultra Engine with Active Deposit Wallet is live...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
