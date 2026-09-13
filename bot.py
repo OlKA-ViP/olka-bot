@@ -10,7 +10,6 @@ from aiogram.types import (
     CallbackQuery, ReplyKeyboardMarkup, KeyboardButton
 )
 
-# الإعدادات والمعلومات الأساسية
 BOT_TOKEN = "8707730826:AAExJ7ZSQe9YFy8Y0O2eG3uPCAwVa_vG6Qc"
 ADMIN_ID = 1932161126
 SPONSOR_CHANNEL = "@olka_ad"
@@ -22,22 +21,25 @@ dp = Dispatcher()
 
 withdraw_state = {}
 
-# واجهة الويب المتطورة للميني آب (Mini App UI)
+# واجهة الويب الاحترافية متعددة الصفحات (AAA Mini App)
 MINI_APP_HTML = """<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>OLKA VIP MINER</title>
+  <title>OLKA VIP EMPIRE</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     :root {
-      --bg-gradient: radial-gradient(circle at 50% 10%, #1e1b4b 0%, #090d16 100%);
-      --gold-primary: #f59e0b;
+      --bg-dark: #07090e;
+      --gold: #f59e0b;
       --gold-light: #fef08a;
       --gold-glow: rgba(245, 158, 11, 0.45);
-      --card-bg: rgba(255, 255, 255, 0.04);
+      --card-surface: rgba(255, 255, 255, 0.04);
       --card-border: rgba(255, 255, 255, 0.08);
+      --accent-blue: #38bdf8;
+      --accent-green: #10b981;
     }
     * {
       box-sizing: border-box;
@@ -46,29 +48,53 @@ MINI_APP_HTML = """<!DOCTYPE html>
       touch-action: manipulation;
       margin: 0;
       padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
     body {
-      background: var(--bg-gradient);
+      background: radial-gradient(circle at 50% 5%, #1e1b4b 0%, var(--bg-dark) 85%);
       color: #ffffff;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      align-items: center;
-      padding: 16px 20px;
       overflow: hidden;
     }
+    .main-view {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px 85px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+    }
+    .page {
+      display: none;
+      width: 100%;
+      flex-direction: column;
+      align-items: center;
+      animation: fadeIn 0.25s ease-out forwards;
+    }
+    .page.active {
+      display: flex;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* الشريط العلوي */
     .top-bar {
       width: 100%;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: var(--card-bg);
+      background: var(--card-surface);
       border: 1px solid var(--card-border);
-      backdrop-filter: blur(12px);
+      backdrop-filter: blur(16px);
       padding: 10px 16px;
       border-radius: 20px;
+      margin-bottom: 12px;
     }
     .user-profile {
       display: flex;
@@ -76,39 +102,37 @@ MINI_APP_HTML = """<!DOCTYPE html>
       gap: 10px;
     }
     .avatar-icon {
-      width: 36px;
-      height: 36px;
+      width: 38px;
+      height: 38px;
       border-radius: 50%;
-      background: linear-gradient(135deg, #6366f1, #a855f7);
+      background: linear-gradient(135deg, #6366f1, #d946ef);
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 800;
-      font-size: 14px;
-      box-shadow: 0 0 10px rgba(99, 102, 241, 0.4);
-    }
-    .user-text {
-      display: flex;
-      flex-direction: column;
+      font-size: 15px;
+      box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
     }
     .username {
       font-size: 14px;
       font-weight: 700;
     }
-    .user-league {
+    .user-rank {
       font-size: 11px;
       color: var(--gold-light);
       font-weight: 600;
     }
-    .live-badge {
+    .server-status {
       font-size: 11px;
       background: rgba(16, 185, 129, 0.15);
       color: #34d399;
-      padding: 4px 10px;
-      border-radius: 12px;
+      padding: 5px 12px;
+      border-radius: 14px;
       border: 1px solid rgba(52, 211, 153, 0.3);
       font-weight: 600;
     }
+
+    /* عداد الرصيد */
     .score-container {
       text-align: center;
       margin: 10px 0;
@@ -118,18 +142,18 @@ MINI_APP_HTML = """<!DOCTYPE html>
       color: #94a3b8;
       letter-spacing: 1.5px;
       text-transform: uppercase;
-      font-weight: 600;
+      font-weight: 700;
     }
     .score-value {
-      font-size: 46px;
+      font-size: 48px;
       font-weight: 900;
-      color: #ffffff;
+      color: #fff;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      margin-top: 2px;
-      text-shadow: 0 0 25px var(--gold-glow);
+      gap: 10px;
+      margin-top: 4px;
+      text-shadow: 0 0 30px var(--gold-glow);
     }
     .score-coin-icon {
       width: 38px;
@@ -144,141 +168,362 @@ MINI_APP_HTML = """<!DOCTYPE html>
       color: #78350f;
       border: 2px solid #fef08a;
     }
-    .tap-container {
+
+    /* منطقة العملة */
+    .coin-wrapper {
       position: relative;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      margin: 15px 0;
+      margin: 25px 0;
+      perspective: 1000px;
+    }
+    .coin-glow-bg {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 280px;
+      height: 280px;
+      background: radial-gradient(circle, rgba(245, 158, 11, 0.25) 0%, transparent 70%);
+      z-index: 0;
+      pointer-events: none;
+      animation: pulseGlow 3s infinite alternate;
+    }
+    @keyframes pulseGlow {
+      from { transform: translate(-50%, -50%) scale(0.9); opacity: 0.5; }
+      to { transform: translate(-50%, -50%) scale(1.15); opacity: 0.9; }
     }
     .tap-coin {
-      width: 230px;
-      height: 230px;
+      width: 240px;
+      height: 240px;
       border-radius: 50%;
       background: radial-gradient(circle at 35% 30%, #fde047 0%, #d97706 60%, #78350f 100%);
-      border: 7px solid #fef08a;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.6), 0 0 50px var(--gold-glow), inset 0 0 20px rgba(0,0,0,0.4);
+      border: 8px solid #fef08a;
+      box-shadow: 0 12px 35px rgba(0,0,0,0.8), 0 0 50px var(--gold-glow), inset 0 0 25px rgba(0,0,0,0.5);
       cursor: pointer;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      transition: transform 0.07s ease-out;
+      transition: transform 0.08s cubic-bezier(0.4, 0, 0.2, 1);
       position: relative;
-    }
-    .tap-coin:active {
-      transform: scale(0.93) translateY(4px);
+      z-index: 1;
     }
     .coin-logo {
-      font-size: 44px;
+      font-size: 46px;
       font-weight: 900;
-      letter-spacing: 3px;
+      letter-spacing: 4px;
       color: #ffffff;
-      text-shadow: 0 4px 10px rgba(0,0,0,0.6);
+      text-shadow: 0 4px 12px rgba(0,0,0,0.7);
     }
     .coin-sub {
       font-size: 13px;
       font-weight: 800;
-      letter-spacing: 4px;
-      color: rgba(255,255,255,0.85);
+      letter-spacing: 5px;
+      color: rgba(255,255,255,0.9);
       margin-top: -2px;
     }
     .float-num {
       position: absolute;
       color: #fffbeb;
-      font-size: 30px;
+      font-size: 32px;
       font-weight: 900;
       pointer-events: none;
       animation: floatUp 0.75s ease-out forwards;
-      text-shadow: 0 0 12px var(--gold-primary);
+      text-shadow: 0 0 15px var(--gold);
       z-index: 100;
     }
     @keyframes floatUp {
       0% { opacity: 1; transform: translateY(0) scale(1); }
-      100% { opacity: 0; transform: translateY(-90px) scale(1.3); }
+      100% { opacity: 0; transform: translateY(-100px) scale(1.35); }
     }
-    .bottom-section {
+
+    /* شريط الطاقة */
+    .energy-card {
       width: 100%;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    .energy-wrapper {
-      background: var(--card-bg);
+      background: var(--card-surface);
       border: 1px solid var(--card-border);
-      border-radius: 16px;
-      padding: 10px 14px;
-      backdrop-filter: blur(10px);
+      border-radius: 18px;
+      padding: 12px 16px;
+      backdrop-filter: blur(12px);
+      margin-top: 10px;
     }
     .energy-meta {
       display: flex;
       justify-content: space-between;
       font-size: 13px;
       font-weight: 700;
-      margin-bottom: 6px;
-    }
-    .energy-label {
-      color: #94a3b8;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .energy-num {
-      color: #38bdf8;
+      margin-bottom: 8px;
     }
     .bar-outer {
       width: 100%;
-      height: 10px;
+      height: 12px;
       background: rgba(255, 255, 255, 0.08);
-      border-radius: 10px;
+      border-radius: 12px;
       overflow: hidden;
     }
     .bar-fill {
       height: 100%;
       width: 100%;
       background: linear-gradient(90deg, #0284c7, #38bdf8);
-      border-radius: 10px;
+      border-radius: 12px;
       transition: width 0.15s ease-out;
+    }
+
+    /* القوائم والبطاقات (صفحات المهام، التطوير، الإحالة) */
+    .section-title {
+      font-size: 18px;
+      font-weight: 800;
+      margin: 10px 0 15px 0;
+      width: 100%;
+      text-align: right;
+      color: var(--gold-light);
+    }
+    .card-item {
+      width: 100%;
+      background: var(--card-surface);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      backdrop-filter: blur(10px);
+    }
+    .card-info {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .card-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+    .card-title {
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .card-subtitle {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+    .btn-action {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #000;
+      font-weight: 800;
+      padding: 8px 16px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      font-size: 12px;
+      transition: transform 0.1s;
+    }
+    .btn-action:active {
+      transform: scale(0.95);
+    }
+    .btn-done {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border: 1px solid rgba(52, 211, 153, 0.3);
+      cursor: default;
+    }
+
+    /* الشريط السفلي للتنقل */
+    .bottom-nav {
+      position: fixed;
+      bottom: 12px;
+      left: 14px;
+      right: 14px;
+      height: 66px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid var(--card-border);
+      border-radius: 22px;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      backdrop-filter: blur(25px);
+      z-index: 999;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+    }
+    .nav-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      color: #64748b;
+      cursor: pointer;
+      transition: all 0.2s;
+      flex: 1;
+    }
+    .nav-btn.active {
+      color: var(--gold-light);
+      transform: translateY(-2px);
+    }
+    .nav-btn i {
+      font-size: 20px;
+    }
+    .nav-btn span {
+      font-size: 11px;
+      font-weight: 700;
     }
   </style>
 </head>
 <body>
 
-  <div class="top-bar">
-    <div class="user-profile">
-      <div class="avatar-icon" id="user-avatar">O</div>
-      <div class="user-text">
-        <span class="username" id="user-name">عضو VIP</span>
-        <span class="user-league" id="user-league">🏆 رتبة: برونزي</span>
+  <div class="main-view">
+    <!-- الشريط العلوي المستمر -->
+    <div class="top-bar">
+      <div class="user-profile">
+        <div class="avatar-icon" id="user-avatar">O</div>
+        <div class="user-text">
+          <span class="username" id="user-name">VIP Miner</span>
+          <span class="user-rank" id="user-rank">🥉 رتبة: برونزي</span>
+        </div>
+      </div>
+      <div class="server-status">🟢 متصل بالسيرفر</div>
+    </div>
+
+    <!-- الصفحة 1: التعدين الرئيسي -->
+    <div class="page active" id="page-mine">
+      <div class="score-container">
+        <div class="score-title">إجمالي رصيد التعدين (OLK)</div>
+        <div class="score-value">
+          <span class="score-coin-icon">🪙</span>
+          <span id="score-display">0</span>
+        </div>
+      </div>
+
+      <div class="coin-wrapper">
+        <div class="coin-glow-bg"></div>
+        <div class="tap-coin" id="coin-btn">
+          <div class="coin-logo">OLK</div>
+          <div class="coin-sub">VIP MINER</div>
+        </div>
+      </div>
+
+      <div class="energy-card">
+        <div class="energy-meta">
+          <span style="color:#94a3b8;"><i class="fa-solid fa-bolt" style="color:var(--accent-blue);"></i> الطاقة المتبقية</span>
+          <span style="color:var(--accent-blue);" id="energy-counter">1000 / 1000</span>
+        </div>
+        <div class="bar-outer">
+          <div class="bar-fill" id="energy-progress"></div>
+        </div>
       </div>
     </div>
-    <div class="live-badge">🟢 متصل بالسيرفر</div>
-  </div>
 
-  <div class="score-container">
-    <div class="score-title">إجمالي رصيد التعدين (OLK)</div>
-    <div class="score-value">
-      <span class="score-coin-icon">🪙</span>
-      <span id="score-display">0</span>
+    <!-- الصفحة 2: متجر التطويرات (Boosters) -->
+    <div class="page" id="page-boost">
+      <div class="section-title"><i class="fa-solid fa-rocket"></i> تطويرات التعدين الخارقة</div>
+
+      <div class="card-item">
+        <div class="card-info">
+          <div class="card-icon" style="background:rgba(245, 158, 11, 0.15); color:var(--gold);"><i class="fa-solid fa-hand-pointer"></i></div>
+          <div>
+            <div class="card-title">Multi-Tap (قوة النقر)</div>
+            <div class="card-subtitle">احصل على +1 إضافية لكل ضغطة</div>
+          </div>
+        </div>
+        <button class="btn-action" onclick="upgradeMultiTap()">تطوير (100 OLK)</button>
+      </div>
+
+      <div class="card-item">
+        <div class="card-info">
+          <div class="card-icon" style="background:rgba(56, 189, 248, 0.15); color:var(--accent-blue);"><i class="fa-solid fa-battery-full"></i></div>
+          <div>
+            <div class="card-title">مخزن الطاقة الأقصى</div>
+            <div class="card-subtitle">زيادة الحد الأقصى للطاقة +500</div>
+          </div>
+        </div>
+        <button class="btn-action" onclick="upgradeEnergyMax()">شراء (200 OLK)</button>
+      </div>
+
+      <div class="card-item">
+        <div class="card-info">
+          <div class="card-icon" style="background:rgba(16, 185, 129, 0.15); color:var(--accent-green);"><i class="fa-solid fa-bolt-lightning"></i></div>
+          <div>
+            <div class="card-title">إعادة شحن فورية (Full Tank)</div>
+            <div class="card-subtitle">ملء خزان طاقتك 100% فوراً</div>
+          </div>
+        </div>
+        <button class="btn-action" onclick="refillEnergy()">شحن مجاني</button>
+      </div>
+    </div>
+
+    <!-- الصفحة 3: المهام والمكافآت (Tasks) -->
+    <div class="page" id="page-tasks">
+      <div class="section-title"><i class="fa-solid fa-list-check"></i> المهام والمكافآت السريعة</div>
+
+      <div class="card-item">
+        <div class="card-info">
+          <div class="card-icon" style="background:rgba(59, 130, 246, 0.15); color:#60a5fa;"><i class="fa-brands fa-telegram"></i></div>
+          <div>
+            <div class="card-title">متابعة قناة OLKA AD</div>
+            <div class="card-subtitle">+500 OLK مكافأة فورية</div>
+          </div>
+        </div>
+        <button class="btn-action" id="task-btn-tg" onclick="completeTask('tg', 500, 'https://t.me/olka_ad')">انضمام</button>
+      </div>
+
+      <div class="card-item">
+        <div class="card-info">
+          <div class="card-icon" style="background:rgba(236, 72, 153, 0.15); color:#f472b6;"><i class="fa-solid fa-gift"></i></div>
+          <div>
+            <div class="card-title">مكافأة الدخول اليومي</div>
+            <div class="card-subtitle">+200 OLK كل 24 ساعة</div>
+          </div>
+        </div>
+        <button class="btn-action" id="daily-claim-btn" onclick="claimDailyBonus()">استلام</button>
+      </div>
+    </div>
+
+    <!-- الصفحة 4: الإحالة والأصدقاء (Frens) -->
+    <div class="page" id="page-frens">
+      <div class="section-title"><i class="fa-solid fa-user-group"></i> نظام دعوة الأصدقاء</div>
+
+      <div class="card-item" style="flex-direction:column; align-items:flex-start; gap:10px;">
+        <div style="font-size:13px; color:#cbd5e1;">شارك رابط الإحالة الخاص بك واحصل على <strong>100 OLK</strong> فوراً لكل صديق يسجل في البوت!</div>
+        <button class="btn-action" style="width:100%; padding:12px; font-size:14px;" onclick="copyInviteLink()"><i class="fa-solid fa-copy"></i> نسخ رابط الدعوة الخاص بي</button>
+      </div>
+
+      <div class="section-title" style="margin-top:15px;"><i class="fa-solid fa-trophy"></i> صدارة المعدنين (VIP Leaderboard)</div>
+      <div class="card-item">
+        <div class="card-info">
+          <div style="font-weight:900; color:var(--gold); font-size:16px;">#1</div>
+          <div class="avatar-icon" style="background:#eab308; color:#000;">👑</div>
+          <div>
+            <div class="card-title">VIP Whale</div>
+            <div class="card-subtitle">85,200 OLK</div>
+          </div>
+        </div>
+        <span style="font-size:12px; color:var(--gold-light); font-weight:bold;">💎 أسطوري</span>
+      </div>
     </div>
   </div>
 
-  <div class="tap-container">
-    <div class="tap-coin" id="coin-btn">
-      <div class="coin-logo">OLK</div>
-      <div class="coin-sub">VIP MINER</div>
+  <!-- شريط التنقل السفلي الاحترافي -->
+  <div class="bottom-nav">
+    <div class="nav-btn active" onclick="switchTab('mine', this)">
+      <i class="fa-solid fa-pickaxe"></i>
+      <span>تعدين</span>
     </div>
-  </div>
-
-  <div class="bottom-section">
-    <div class="energy-wrapper">
-      <div class="energy-meta">
-        <span class="energy-label">⚡ الطاقة المتبقية</span>
-        <span class="energy-num" id="energy-counter">1000 / 1000</span>
-      </div>
-      <div class="bar-outer">
-        <div class="bar-fill" id="energy-progress"></div>
-      </div>
+    <div class="nav-btn" onclick="switchTab('boost', this)">
+      <i class="fa-solid fa-rocket"></i>
+      <span>تطويرات</span>
+    </div>
+    <div class="nav-btn" onclick="switchTab('tasks', this)">
+      <i class="fa-solid fa-list-check"></i>
+      <span>مهام</span>
+    </div>
+    <div class="nav-btn" onclick="switchTab('frens', this)">
+      <i class="fa-solid fa-user-group"></i>
+      <span>أصدقاء</span>
     </div>
   </div>
 
@@ -291,7 +536,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
 
     const userNameEl = document.getElementById("user-name");
     const userAvatarEl = document.getElementById("user-avatar");
-    const userLeagueEl = document.getElementById("user-league");
+    const userRankEl = document.getElementById("user-rank");
     const scoreEl = document.getElementById("score-display");
     const energyCounterEl = document.getElementById("energy-counter");
     const energyProgressEl = document.getElementById("energy-progress");
@@ -303,71 +548,161 @@ MINI_APP_HTML = """<!DOCTYPE html>
       userAvatarEl.innerText = tgUser.first_name.charAt(0).toUpperCase();
     }
 
-    const MAX_ENERGY = 1000;
-    let balance = parseFloat(localStorage.getItem("olk_game_balance") || "0");
-    let energy = parseInt(localStorage.getItem("olk_game_energy") || MAX_ENERGY.toString());
+    let balance = parseFloat(localStorage.getItem("olk_v2_balance") || "0");
+    let maxEnergy = parseInt(localStorage.getItem("olk_v2_max_energy") || "1000");
+    let energy = parseInt(localStorage.getItem("olk_v2_energy") || maxEnergy.toString());
+    let clickPower = parseInt(localStorage.getItem("olk_v2_tap_power") || "1");
 
-    function updateLeague() {
-      if (balance >= 10000) userLeagueEl.innerText = "💎 رتبة: ماسي";
-      else if (balance >= 5000) userLeagueEl.innerText = "🥇 رتبة: ذهبي";
-      else if (balance >= 1000) userLeagueEl.innerText = "🥈 رتبة: فضي";
-      else userLeagueEl.innerText = "🥉 رتبة: برونزي";
+    function updateRank() {
+      if (balance >= 20000) userRankEl.innerText = "💎 رتبة: أسطوري";
+      else if (balance >= 10000) userRankEl.innerText = "🥇 رتبة: ذهبي";
+      else if (balance >= 3000) userRankEl.innerText = "🥈 رتبة: فضي";
+      else userRankEl.innerText = "🥉 رتبة: برونزي";
     }
 
     function renderUI() {
       scoreEl.innerText = balance.toLocaleString();
-      energyCounterEl.innerText = `${energy} / ${MAX_ENERGY}`;
-      const pct = (energy / MAX_ENERGY) * 100;
+      energyCounterEl.innerText = `${energy} / ${maxEnergy}`;
+      const pct = (energy / maxEnergy) * 100;
       energyProgressEl.style.width = pct + "%";
-      updateLeague();
+      updateRank();
     }
 
     renderUI();
 
-    // تجديد الطاقة تلقائياً كل ثانية
+    // استعادة الطاقة تدريجياً
     setInterval(() => {
-      if (energy < MAX_ENERGY) {
-        energy = Math.min(MAX_ENERGY, energy + 3);
+      if (energy < maxEnergy) {
+        energy = Math.min(maxEnergy, energy + 4);
         renderUI();
-        localStorage.setItem("olk_game_energy", energy);
+        localStorage.setItem("olk_v2_energy", energy);
       }
     }, 1000);
 
-    // حدث النقر
+    // النقر التفاعلي
     coinBtn.addEventListener("pointerdown", (event) => {
-      if (energy <= 0) {
+      if (energy < clickPower) {
         if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred("error");
         return;
       }
 
-      energy -= 1;
-      balance += 1;
+      energy -= clickPower;
+      balance += clickPower;
       renderUI();
 
-      localStorage.setItem("olk_game_balance", balance);
-      localStorage.setItem("olk_game_energy", energy);
+      localStorage.setItem("olk_v2_balance", balance);
+      localStorage.setItem("olk_v2_energy", energy);
 
-      if (tg?.HapticFeedback) {
-        tg.HapticFeedback.impactOccurred("medium");
-      }
+      if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred("medium");
 
-      // تأثير الرقم العائم (+1)
+      // تأثير انحناء العملة عند الضغط (3D Tilt)
       const rect = coinBtn.getBoundingClientRect();
+      const x = event.clientX - rect.left - rect.width / 2;
+      const y = event.clientY - rect.top - rect.height / 2;
+      coinBtn.style.transform = `scale(0.94) rotateX(${-y/10}deg) rotateY(${x/10}deg)`;
+
+      // الرقم العائم
       const floatEl = document.createElement("div");
       floatEl.className = "float-num";
-      floatEl.innerText = "+1";
-      floatEl.style.left = (event.clientX - rect.left - 12) + "px";
-      floatEl.style.top = (event.clientY - rect.top - 24) + "px";
+      floatEl.innerText = "+" + clickPower;
+      floatEl.style.left = (event.clientX - rect.left - 15) + "px";
+      floatEl.style.top = (event.clientY - rect.top - 25) + "px";
       coinBtn.parentElement.appendChild(floatEl);
 
       setTimeout(() => floatEl.remove(), 750);
     });
+
+    coinBtn.addEventListener("pointerup", () => {
+      coinBtn.style.transform = "scale(1) rotateX(0deg) rotateY(0deg)";
+    });
+
+    // التنقل بين التبويبات
+    function switchTab(tabId, el) {
+      document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+      document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+      document.getElementById("page-" + tabId).classList.add("active");
+      el.classList.add("active");
+      if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
+    }
+
+    // التطويرات (Boosts)
+    function upgradeMultiTap() {
+      if (balance >= 100) {
+        balance -= 100;
+        clickPower += 1;
+        localStorage.setItem("olk_v2_balance", balance);
+        localStorage.setItem("olk_v2_tap_power", clickPower);
+        renderUI();
+        if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+        alert("🎉 تم تطوير قوة النقر بنجاح!");
+      } else {
+        alert("⚠️ لا تملك رصيداً كافياً (تحتاج 100 OLK)");
+      }
+    }
+
+    function upgradeEnergyMax() {
+      if (balance >= 200) {
+        balance -= 200;
+        maxEnergy += 500;
+        energy = maxEnergy;
+        localStorage.setItem("olk_v2_balance", balance);
+        localStorage.setItem("olk_v2_max_energy", maxEnergy);
+        localStorage.setItem("olk_v2_energy", energy);
+        renderUI();
+        if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+        alert("⚡ تم توسيع خزان الطاقة بنجاح!");
+      } else {
+        alert("⚠️ لا تملك رصيداً كافياً (تحتاج 200 OLK)");
+      }
+    }
+
+    function refillEnergy() {
+      energy = maxEnergy;
+      localStorage.setItem("olk_v2_energy", energy);
+      renderUI();
+      if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+      alert("⚡ تم ملء الطاقة بالكامل مجاناً!");
+    }
+
+    // المهام
+    function completeTask(taskName, reward, link) {
+      window.open(link, "_blank");
+      setTimeout(() => {
+        balance += reward;
+        localStorage.setItem("olk_v2_balance", balance);
+        renderUI();
+        const btn = document.getElementById("task-btn-" + taskName);
+        btn.className = "btn-action btn-done";
+        btn.innerText = "تم التحقق ✅";
+        btn.disabled = true;
+        if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+      }, 3000);
+    }
+
+    function claimDailyBonus() {
+      balance += 200;
+      localStorage.setItem("olk_v2_balance", balance);
+      renderUI();
+      const btn = document.getElementById("daily-claim-btn");
+      btn.className = "btn-action btn-done";
+      btn.innerText = "تم الاستلام ✅";
+      btn.disabled = true;
+      if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+    }
+
+    function copyInviteLink() {
+      const botUser = "OlkaVip_bot";
+      const userId = tgUser?.id || "123456";
+      const inviteUrl = `https://t.me/${botUser}?start=ref_${userId}`;
+      navigator.clipboard.writeText(inviteUrl);
+      if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+      alert("✅ تم نسخ رابط الدعوة الخاص بك!");
+    }
   </script>
 </body>
 </html>
 """
 
-# تجهيز قاعدة البيانات
 async def init_db():
     async with aiosqlite.connect("olka_vip.db") as db:
         await db.execute("""
@@ -390,7 +725,6 @@ async def init_db():
         """)
         await db.commit()
 
-# لوحات المفاتيح (Keyboards)
 def get_contact_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[[KeyboardButton(text="📱 توثيق الحساب برقم الهاتف", request_contact=True)]],
@@ -413,7 +747,6 @@ def main_menu():
         ]
     ])
 
-# التحقق من الاشتراك في القناة
 async def check_subscription(user_id: int) -> bool:
     try:
         member = await bot.get_chat_member(chat_id=SPONSOR_CHANNEL, user_id=user_id)
@@ -421,7 +754,6 @@ async def check_subscription(user_id: int) -> bool:
     except Exception:
         return True
 
-# معالجة أمر /start
 @dp.message(CommandStart())
 async def start_handler(message: Message):
     user_id = message.from_user.id
@@ -432,7 +764,7 @@ async def start_handler(message: Message):
 
     if not user or not user[0]:
         await message.answer(
-            "👋 مرحباً بك في مشروع OLKA VIP GAME!\n\n🔒 لحماية البوت من الحسابات الوهمية والتكرار، يرجى توثيق حسابك بمشاركة رقم هاتفك لمرة واحدة فقط:",
+            "👋 مرحباً بك في مشروع OLKA VIP EMPIRE!\n\n🔒 لحماية البوت من التكرار، يرجى توثيق حسابك بمشاركة رقم هاتفك لمرة واحدة فقط:",
             reply_markup=get_contact_keyboard()
         )
         return
@@ -447,9 +779,8 @@ async def start_handler(message: Message):
         )
         return
 
-    await message.answer("🪙 مرحباً بك في لوحة تحكم OLKA VIP:\nيمكنك استخدام القائمة أدناه أو الضغط على زر اللعبة بالأسفل لفتح الواجهة التفاعلية!", reply_markup=main_menu())
+    await message.answer("🪙 مرحباً بك في لوحة تحكم OLKA VIP EMPIRE:\nاضغط على زر **Open** بالأسفل لدخول عالم التعدين والمهام!", reply_markup=main_menu())
 
-# التحقق من رقم الهاتف لمنع التكرار (Anti-Cheat)
 @dp.message(F.contact)
 async def contact_handler(message: Message):
     contact = message.contact
@@ -461,7 +792,7 @@ async def contact_handler(message: Message):
         async with db.execute("SELECT user_id FROM users WHERE phone_number = ?", (contact.phone_number,)) as cursor:
             existing = await cursor.fetchone()
             if existing and existing[0] != message.from_user.id:
-                await message.answer("⛔ هذا الرقم مستخدم مسبقاً في حساب آخر! غير مسموح بتكرار الحسابات.")
+                await message.answer("⛔ هذا الرقم مستخدم مسبقاً في حساب آخر!")
                 return
 
         await db.execute("""
@@ -472,7 +803,6 @@ async def contact_handler(message: Message):
 
     await message.answer("✅ تم توثيق حسابك بنجاح وحصلت على مكافأة ترحيبية +10 OLK!", reply_markup=main_menu())
 
-# فحص الاشتراك
 @dp.callback_query(F.data == "verify_sub")
 async def verify_sub_handler(callback: CallbackQuery):
     if await check_subscription(callback.from_user.id):
@@ -480,7 +810,6 @@ async def verify_sub_handler(callback: CallbackQuery):
     else:
         await callback.answer("❌ لم تنضم للقناة بعد، اضغط على الرابط وانضم أولاً.", show_alert=True)
 
-# التعدين اليومي
 @dp.callback_query(F.data == "claim")
 async def claim_handler(callback: CallbackQuery):
     user_id = callback.from_user.id
@@ -505,7 +834,6 @@ async def claim_handler(callback: CallbackQuery):
     await callback.answer("✅ تمت إضافة 20 OLK إلى رصيدك بنجاح!", show_alert=True)
     await callback.message.edit_text("🎉 تم استلام التعدين اليومي بنجاح.", reply_markup=main_menu())
 
-# عرض الرصيد
 @dp.callback_query(F.data == "balance")
 async def balance_handler(callback: CallbackQuery):
     user_id = callback.from_user.id
@@ -517,7 +845,6 @@ async def balance_handler(callback: CallbackQuery):
     text = f"📊 محفظتك في OLKA VIP:\n\n• رصيد OLK: {olk:.2f} OLK\n• رصيد Gram: {gram:.4f} Gram\n\n💡 سعر الصرف: كل {CONVERSION_RATE} OLK = 1 Gram\n💳 الحد الأدنى للسحب: {MIN_WITHDRAW_GRAM} Gram"
     await callback.message.edit_text(text, reply_markup=main_menu())
 
-# تحويل الرصيد
 @dp.callback_query(F.data == "convert")
 async def convert_handler(callback: CallbackQuery):
     user_id = callback.from_user.id
@@ -537,7 +864,6 @@ async def convert_handler(callback: CallbackQuery):
     await callback.answer(f"✅ تم تحويل {olk:.2f} OLK إلى {gram_added:.4f} Gram بنجاح!", show_alert=True)
     await balance_handler(callback)
 
-# طلب سحب
 @dp.callback_query(F.data == "withdraw")
 async def withdraw_start(callback: CallbackQuery):
     user_id = callback.from_user.id
@@ -554,7 +880,6 @@ async def withdraw_start(callback: CallbackQuery):
     await callback.message.answer(f"💳 الرصيد المتاح للسحب: {gram:.4f} Gram\n\n📝 أرسل الآن عنوان محفظتك (TON / Gram Wallet):")
     await callback.answer()
 
-# معالجة عنوان المحفظة وإرسال الإشعار
 @dp.message(F.text)
 async def process_address(message: Message):
     user_id = message.from_user.id
@@ -586,15 +911,13 @@ async def process_address(message: Message):
     except Exception as e:
         print(f"تعذر إرسال الإشعار للمسؤول: {e}")
 
-# خادم الويب لعرض صفحة الميني آب وإبقاء الخدمة نشطة
 async def web_handler(request):
     return web.Response(text=MINI_APP_HTML, content_type="text/html")
 
 async def main():
     await init_db()
-    print("Bot is running with Web App support...")
+    print("Bot is running with Advanced Multi-Tab Web App...")
 
-    # تشغيل خادم aiohttp المتوافق مع متطلبات Render
     app = web.Application()
     app.router.add_get("/", web_handler)
     runner = web.AppRunner(app)
@@ -603,7 +926,6 @@ async def main():
     site = web.TCPSite(runner, "0.0.0.0", port)
     await site.start()
 
-    # تشغيل استطلاع البوت
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
