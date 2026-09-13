@@ -2,6 +2,7 @@ import asyncio
 import aiosqlite
 import time
 import os
+import json
 from aiohttp import web
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart, CommandObject
@@ -17,7 +18,6 @@ CONVERSION_RATE = 100
 MIN_WITHDRAW_GRAM = 5
 REFERRAL_REWARD = 100.0
 
-# رابط تطبيق الويب الخاص بك على Render
 WEBAPP_URL = "https://olka-bot-service.onrender.com"
 
 bot = Bot(token=BOT_TOKEN)
@@ -25,7 +25,7 @@ dp = Dispatcher()
 
 withdraw_state = {}
 
-# واجهة الويب المتطورة (Mini App)
+# واجهة الويب المتكاملة مع السيرفر وقاعدة البيانات
 MINI_APP_HTML = """<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -40,8 +40,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
       --gold: #f59e0b;
       --gold-light: #fef08a;
       --gold-glow: rgba(245, 158, 11, 0.45);
-      --card-surface: rgba(255, 255, 255, 0.04);
-      --card-border: rgba(255, 255, 255, 0.08);
+      --card-surface: rgba(255, 255, 255, 0.05);
+      --card-border: rgba(255, 255, 255, 0.1);
       --accent-blue: #38bdf8;
       --accent-green: #10b981;
     }
@@ -66,7 +66,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
     .main-view {
       flex: 1;
       overflow-y: auto;
-      padding: 16px 20px 85px 20px;
+      padding: 14px 16px 85px 16px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -77,7 +77,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       width: 100%;
       flex-direction: column;
       align-items: center;
-      animation: fadeIn 0.25s ease-out forwards;
+      animation: fadeIn 0.2s ease-out forwards;
     }
     .page.active {
       display: flex;
@@ -94,8 +94,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
       background: var(--card-surface);
       border: 1px solid var(--card-border);
       backdrop-filter: blur(16px);
-      padding: 10px 16px;
-      border-radius: 20px;
+      padding: 10px 14px;
+      border-radius: 18px;
       margin-bottom: 12px;
     }
     .user-profile {
@@ -113,160 +113,101 @@ MINI_APP_HTML = """<!DOCTYPE html>
       justify-content: center;
       font-weight: 800;
       font-size: 15px;
-      box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+      box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
     }
-    .username {
-      font-size: 14px;
-      font-weight: 700;
-    }
-    .user-rank {
-      font-size: 11px;
-      color: var(--gold-light);
-      font-weight: 600;
-    }
-    .server-status {
+    .username { font-size: 14px; font-weight: 700; }
+    .user-rank { font-size: 11px; color: var(--gold-light); font-weight: 600; }
+    .sync-status {
       font-size: 11px;
       background: rgba(16, 185, 129, 0.15);
       color: #34d399;
-      padding: 5px 12px;
-      border-radius: 14px;
+      padding: 4px 10px;
+      border-radius: 12px;
       border: 1px solid rgba(52, 211, 153, 0.3);
       font-weight: 600;
     }
-    .score-container {
-      text-align: center;
-      margin: 10px 0;
-    }
-    .score-title {
-      font-size: 12px;
-      color: #94a3b8;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      font-weight: 700;
-    }
+    .score-container { text-align: center; margin: 8px 0; }
+    .score-title { font-size: 12px; color: #94a3b8; font-weight: 700; }
     .score-value {
-      font-size: 48px;
+      font-size: 44px;
       font-weight: 900;
       color: #fff;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 10px;
+      gap: 8px;
       margin-top: 4px;
-      text-shadow: 0 0 30px var(--gold-glow);
-    }
-    .score-coin-icon {
-      width: 38px;
-      height: 38px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #fbbf24, #d97706);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      font-weight: 900;
-      color: #78350f;
-      border: 2px solid #fef08a;
+      text-shadow: 0 0 25px var(--gold-glow);
     }
     .coin-wrapper {
       position: relative;
-      margin: 25px 0;
-      perspective: 1000px;
-    }
-    .coin-glow-bg {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 280px;
-      height: 280px;
-      background: radial-gradient(circle, rgba(245, 158, 11, 0.25) 0%, transparent 70%);
-      z-index: 0;
-      pointer-events: none;
-      animation: pulseGlow 3s infinite alternate;
-    }
-    @keyframes pulseGlow {
-      from { transform: translate(-50%, -50%) scale(0.9); opacity: 0.5; }
-      to { transform: translate(-50%, -50%) scale(1.15); opacity: 0.9; }
+      margin: 20px 0;
     }
     .tap-coin {
-      width: 240px;
-      height: 240px;
+      width: 230px;
+      height: 230px;
       border-radius: 50%;
       background: radial-gradient(circle at 35% 30%, #fde047 0%, #d97706 60%, #78350f 100%);
       border: 8px solid #fef08a;
-      box-shadow: 0 12px 35px rgba(0,0,0,0.8), 0 0 50px var(--gold-glow), inset 0 0 25px rgba(0,0,0,0.5);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8), 0 0 50px var(--gold-glow);
       cursor: pointer;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      transition: transform 0.08s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: transform 0.08s;
       position: relative;
-      z-index: 1;
     }
-    .coin-logo {
-      font-size: 46px;
-      font-weight: 900;
-      letter-spacing: 4px;
-      color: #ffffff;
-      text-shadow: 0 4px 12px rgba(0,0,0,0.7);
-    }
-    .coin-sub {
-      font-size: 13px;
-      font-weight: 800;
-      letter-spacing: 5px;
-      color: rgba(255,255,255,0.9);
-      margin-top: -2px;
-    }
+    .tap-coin:active { transform: scale(0.93); }
+    .coin-logo { font-size: 46px; font-weight: 900; letter-spacing: 3px; }
+    .coin-sub { font-size: 12px; font-weight: 800; letter-spacing: 4px; }
     .float-num {
       position: absolute;
-      color: #fffbeb;
-      font-size: 32px;
+      color: #fff;
+      font-size: 30px;
       font-weight: 900;
       pointer-events: none;
-      animation: floatUp 0.75s ease-out forwards;
+      animation: floatUp 0.7s ease-out forwards;
       text-shadow: 0 0 15px var(--gold);
       z-index: 100;
     }
     @keyframes floatUp {
-      0% { opacity: 1; transform: translateY(0) scale(1); }
-      100% { opacity: 0; transform: translateY(-100px) scale(1.35); }
+      0% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-90px) scale(1.25); }
     }
     .energy-card {
       width: 100%;
       background: var(--card-surface);
       border: 1px solid var(--card-border);
-      border-radius: 18px;
-      padding: 12px 16px;
+      border-radius: 16px;
+      padding: 12px 14px;
       backdrop-filter: blur(12px);
-      margin-top: 10px;
     }
     .energy-meta {
       display: flex;
       justify-content: space-between;
       font-size: 13px;
       font-weight: 700;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
     .bar-outer {
       width: 100%;
-      height: 12px;
-      background: rgba(255, 255, 255, 0.08);
-      border-radius: 12px;
+      height: 10px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
       overflow: hidden;
     }
     .bar-fill {
       height: 100%;
       width: 100%;
       background: linear-gradient(90deg, #0284c7, #38bdf8);
-      border-radius: 12px;
+      border-radius: 10px;
       transition: width 0.15s ease-out;
     }
     .section-title {
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 800;
-      margin: 10px 0 15px 0;
+      margin: 10px 0 12px 0;
       width: 100%;
       text-align: right;
       color: var(--gold-light);
@@ -280,67 +221,61 @@ MINI_APP_HTML = """<!DOCTYPE html>
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
       backdrop-filter: blur(10px);
     }
     .card-info {
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 12px;
     }
     .card-icon {
-      width: 44px;
-      height: 44px;
+      width: 42px;
+      height: 42px;
       border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 20px;
+      font-size: 18px;
     }
-    .card-title {
-      font-size: 14px;
-      font-weight: 700;
-    }
-    .card-subtitle {
-      font-size: 12px;
-      color: #94a3b8;
-      margin-top: 2px;
-    }
+    .card-title { font-size: 14px; font-weight: 700; }
+    .card-subtitle { font-size: 12px; color: #94a3b8; }
     .btn-action {
       background: linear-gradient(135deg, #f59e0b, #d97706);
       color: #000;
       font-weight: 800;
-      padding: 8px 16px;
-      border-radius: 12px;
+      padding: 8px 14px;
+      border-radius: 10px;
       border: none;
       cursor: pointer;
       font-size: 12px;
-      transition: transform 0.1s;
     }
-    .btn-action:active {
-      transform: scale(0.95);
-    }
-    .btn-done {
-      background: rgba(16, 185, 129, 0.2);
-      color: #34d399;
-      border: 1px solid rgba(52, 211, 153, 0.3);
-      cursor: default;
+    .btn-action:active { transform: scale(0.96); }
+    .input-box {
+      width: 100%;
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      color: #fff;
+      font-size: 14px;
+      margin: 8px 0 12px 0;
+      outline: none;
     }
     .bottom-nav {
       position: fixed;
       bottom: 12px;
-      left: 14px;
-      right: 14px;
-      height: 66px;
-      background: rgba(15, 23, 42, 0.85);
+      left: 12px;
+      right: 12px;
+      height: 64px;
+      background: rgba(15, 23, 42, 0.9);
       border: 1px solid var(--card-border);
-      border-radius: 22px;
+      border-radius: 20px;
       display: flex;
       justify-content: space-around;
       align-items: center;
       backdrop-filter: blur(25px);
       z-index: 999;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.7);
     }
     .nav-btn {
       display: flex;
@@ -350,20 +285,11 @@ MINI_APP_HTML = """<!DOCTYPE html>
       gap: 4px;
       color: #64748b;
       cursor: pointer;
-      transition: all 0.2s;
       flex: 1;
     }
-    .nav-btn.active {
-      color: var(--gold-light);
-      transform: translateY(-2px);
-    }
-    .nav-btn i {
-      font-size: 20px;
-    }
-    .nav-btn span {
-      font-size: 11px;
-      font-weight: 700;
-    }
+    .nav-btn.active { color: var(--gold-light); transform: translateY(-2px); }
+    .nav-btn i { font-size: 18px; }
+    .nav-btn span { font-size: 11px; font-weight: 700; }
   </style>
 </head>
 <body>
@@ -377,20 +303,20 @@ MINI_APP_HTML = """<!DOCTYPE html>
           <span class="user-rank" id="user-rank">🥉 رتبة: برونزي</span>
         </div>
       </div>
-      <div class="server-status">🟢 متصل بالسيرفر</div>
+      <div class="sync-status" id="sync-badge">🟢 متصل ومحفوظ</div>
     </div>
 
+    <!-- تبويب التعدين -->
     <div class="page active" id="page-mine">
       <div class="score-container">
-        <div class="score-title">إجمالي رصيد التعدين (OLK)</div>
+        <div class="score-title">رصيد التعدين المباشر (OLK)</div>
         <div class="score-value">
-          <span class="score-coin-icon">🪙</span>
-          <span id="score-display">0</span>
+          <span>🪙</span>
+          <span id="score-display">0.00</span>
         </div>
       </div>
 
       <div class="coin-wrapper">
-        <div class="coin-glow-bg"></div>
         <div class="tap-coin" id="coin-btn">
           <div class="coin-logo">OLK</div>
           <div class="coin-sub">VIP MINER</div>
@@ -408,15 +334,39 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
+    <!-- تبويب المحفظة والسحب المباشر -->
+    <div class="page" id="page-wallet">
+      <div class="section-title"><i class="fa-solid fa-wallet"></i> المحفظة والسحب السريع</div>
+
+      <div class="card-item" style="flex-direction:column; align-items:stretch;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+          <span>رصيد Gram القابل للسحب:</span>
+          <strong style="color:#34d399;" id="gram-wallet-val">0.0000 Gram</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+          <span>سعر الصرف الحالي:</span>
+          <span style="color:#94a3b8;">100 OLK = 1 Gram</span>
+        </div>
+        <button class="btn-action" style="margin-bottom:12px;" onclick="convertOlkToGram()">تحويل رصيد OLK إلى Gram 🔄</button>
+
+        <hr style="border:0; border-top:1px solid var(--card-border); margin:8px 0;">
+
+        <label style="font-size:12px; color:#cbd5e1; margin-top:8px;">عنوان محفظتك (TON / Gram Address):</label>
+        <input type="text" id="wallet-address-input" class="input-box" placeholder="UQ... أو EQ...">
+        <button class="btn-action" style="background:#10b981; color:#fff;" onclick="submitWebWithdraw()">تأكيد وإرسال طلب السحب 💳</button>
+      </div>
+    </div>
+
+    <!-- تبويب التطويرات -->
     <div class="page" id="page-boost">
-      <div class="section-title"><i class="fa-solid fa-rocket"></i> تطويرات التعدين الخارقة</div>
+      <div class="section-title"><i class="fa-solid fa-rocket"></i> تطويرات التعدين</div>
 
       <div class="card-item">
         <div class="card-info">
           <div class="card-icon" style="background:rgba(245, 158, 11, 0.15); color:var(--gold);"><i class="fa-solid fa-hand-pointer"></i></div>
           <div>
             <div class="card-title">Multi-Tap (قوة النقر)</div>
-            <div class="card-subtitle">احصل على +1 إضافية لكل ضغطة</div>
+            <div class="card-subtitle">احصل على +1 لكل ضغطة</div>
           </div>
         </div>
         <button class="btn-action" onclick="upgradeMultiTap()">تطوير (100 OLK)</button>
@@ -426,70 +376,21 @@ MINI_APP_HTML = """<!DOCTYPE html>
         <div class="card-info">
           <div class="card-icon" style="background:rgba(56, 189, 248, 0.15); color:var(--accent-blue);"><i class="fa-solid fa-battery-full"></i></div>
           <div>
-            <div class="card-title">مخزن الطاقة الأقصى</div>
-            <div class="card-subtitle">زيادة الحد الأقصى للطاقة +500</div>
+            <div class="card-title">توسيع خزان الطاقة</div>
+            <div class="card-subtitle">+500 حد أقصى</div>
           </div>
         </div>
         <button class="btn-action" onclick="upgradeEnergyMax()">شراء (200 OLK)</button>
       </div>
-
-      <div class="card-item">
-        <div class="card-info">
-          <div class="card-icon" style="background:rgba(16, 185, 129, 0.15); color:var(--accent-green);"><i class="fa-solid fa-bolt-lightning"></i></div>
-          <div>
-            <div class="card-title">إعادة شحن فورية (Full Tank)</div>
-            <div class="card-subtitle">ملء خزان طاقتك 100% فوراً</div>
-          </div>
-        </div>
-        <button class="btn-action" onclick="refillEnergy()">شحن مجاني</button>
-      </div>
     </div>
 
-    <div class="page" id="page-tasks">
-      <div class="section-title"><i class="fa-solid fa-list-check"></i> المهام والمكافآت السريعة</div>
-
-      <div class="card-item">
-        <div class="card-info">
-          <div class="card-icon" style="background:rgba(59, 130, 246, 0.15); color:#60a5fa;"><i class="fa-brands fa-telegram"></i></div>
-          <div>
-            <div class="card-title">متابعة قناة OLKA AD</div>
-            <div class="card-subtitle">+500 OLK مكافأة فورية</div>
-          </div>
-        </div>
-        <button class="btn-action" id="task-btn-tg" onclick="completeTask('tg', 500, 'https://t.me/olka_ad')">انضمام</button>
-      </div>
-
-      <div class="card-item">
-        <div class="card-info">
-          <div class="card-icon" style="background:rgba(236, 72, 153, 0.15); color:#f472b6;"><i class="fa-solid fa-gift"></i></div>
-          <div>
-            <div class="card-title">مكافأة الدخول اليومي</div>
-            <div class="card-subtitle">+200 OLK كل 24 ساعة</div>
-          </div>
-        </div>
-        <button class="btn-action" id="daily-claim-btn" onclick="claimDailyBonus()">استلام</button>
-      </div>
-    </div>
-
+    <!-- تبويب الإحالة والأصدقاء -->
     <div class="page" id="page-frens">
-      <div class="section-title"><i class="fa-solid fa-user-group"></i> نظام دعوة الأصدقاء</div>
+      <div class="section-title"><i class="fa-solid fa-user-group"></i> نظام الإحالة المتكامل</div>
 
-      <div class="card-item" style="flex-direction:column; align-items:flex-start; gap:10px;">
-        <div style="font-size:13px; color:#cbd5e1;">شارك رابط الإحالة الخاص بك واحصل على <strong>100 OLK</strong> فوراً لكل صديق يسجل ويوثق حسابه في البوت!</div>
-        <button class="btn-action" style="width:100%; padding:12px; font-size:14px;" onclick="copyInviteLink()"><i class="fa-solid fa-copy"></i> نسخ رابط الدعوة الخاص بي</button>
-      </div>
-
-      <div class="section-title" style="margin-top:15px;"><i class="fa-solid fa-trophy"></i> صدارة المعدنين (VIP Leaderboard)</div>
-      <div class="card-item">
-        <div class="card-info">
-          <div style="font-weight:900; color:var(--gold); font-size:16px;">#1</div>
-          <div class="avatar-icon" style="background:#eab308; color:#000;">👑</div>
-          <div>
-            <div class="card-title">VIP Whale</div>
-            <div class="card-subtitle">85,200 OLK</div>
-          </div>
-        </div>
-        <span style="font-size:12px; color:var(--gold-light); font-weight:bold;">💎 أسطوري</span>
+      <div class="card-item" style="flex-direction:column; align-items:stretch; gap:10px;">
+        <div style="font-size:13px; color:#cbd5e1;">شارك رابطك الخاص واربح <strong>100 OLK</strong> تضاف لحسابك تلقائياً عند توثيق صديقك!</div>
+        <button class="btn-action" style="padding:12px;" onclick="copyInviteLink()"><i class="fa-solid fa-copy"></i> نسخ رابط الدعوة الخاص بي</button>
       </div>
     </div>
   </div>
@@ -499,13 +400,13 @@ MINI_APP_HTML = """<!DOCTYPE html>
       <i class="fa-solid fa-pickaxe"></i>
       <span>تعدين</span>
     </div>
+    <div class="nav-btn" onclick="switchTab('wallet', this)">
+      <i class="fa-solid fa-wallet"></i>
+      <span>المحفظة</span>
+    </div>
     <div class="nav-btn" onclick="switchTab('boost', this)">
       <i class="fa-solid fa-rocket"></i>
       <span>تطويرات</span>
-    </div>
-    <div class="nav-btn" onclick="switchTab('tasks', this)">
-      <i class="fa-solid fa-list-check"></i>
-      <span>مهام</span>
     </div>
     <div class="nav-btn" onclick="switchTab('frens', this)">
       <i class="fa-solid fa-user-group"></i>
@@ -515,55 +416,77 @@ MINI_APP_HTML = """<!DOCTYPE html>
 
   <script>
     const tg = window.Telegram?.WebApp;
-    if (tg) {
-      tg.ready();
-      tg.expand();
-    }
+    if (tg) { tg.ready(); tg.expand(); }
+
+    const tgUser = tg?.initDataUnsafe?.user;
+    const userId = tgUser?.id || 1932161126;
 
     const userNameEl = document.getElementById("user-name");
     const userAvatarEl = document.getElementById("user-avatar");
-    const userRankEl = document.getElementById("user-rank");
     const scoreEl = document.getElementById("score-display");
+    const gramWalletEl = document.getElementById("gram-wallet-val");
     const energyCounterEl = document.getElementById("energy-counter");
     const energyProgressEl = document.getElementById("energy-progress");
     const coinBtn = document.getElementById("coin-btn");
+    const syncBadge = document.getElementById("sync-badge");
 
-    const tgUser = tg?.initDataUnsafe?.user;
-    if (tgUser && tgUser.first_name) {
+    if (tgUser?.first_name) {
       userNameEl.innerText = tgUser.first_name;
       userAvatarEl.innerText = tgUser.first_name.charAt(0).toUpperCase();
     }
 
-    let balance = parseFloat(localStorage.getItem("olk_v2_balance") || "0");
-    let maxEnergy = parseInt(localStorage.getItem("olk_v2_max_energy") || "1000");
-    let energy = parseInt(localStorage.getItem("olk_v2_energy") || maxEnergy.toString());
-    let clickPower = parseInt(localStorage.getItem("olk_v2_tap_power") || "1");
+    let olkBalance = 0;
+    let gramBalance = 0;
+    let unsavedClicks = 0;
+    let maxEnergy = 1000;
+    let energy = 1000;
+    let clickPower = 1;
 
-    function updateRank() {
-      if (balance >= 20000) userRankEl.innerText = "💎 رتبة: أسطوري";
-      else if (balance >= 10000) userRankEl.innerText = "🥇 رتبة: ذهبي";
-      else if (balance >= 3000) userRankEl.innerText = "🥈 رتبة: فضي";
-      else userRankEl.innerText = "🥉 رتبة: برونزي";
+    // جلب البيانات الأصلية من سيرفر البوت (قاعدة البيانات)
+    async function loadUserData() {
+      try {
+        const res = await fetch(`/api/get_user?user_id=${userId}`);
+        const data = await res.json();
+        if (data.ok) {
+          olkBalance = data.olk_balance;
+          gramBalance = data.gram_balance;
+          renderUI();
+        }
+      } catch (err) {
+        console.log("Error loading DB data:", err);
+      }
     }
 
     function renderUI() {
-      scoreEl.innerText = balance.toLocaleString();
+      scoreEl.innerText = olkBalance.toFixed(2);
+      gramWalletEl.innerText = gramBalance.toFixed(4) + " Gram";
       energyCounterEl.innerText = `${energy} / ${maxEnergy}`;
-      const pct = (energy / maxEnergy) * 100;
-      energyProgressEl.style.width = pct + "%";
-      updateRank();
+      energyProgressEl.style.width = ((energy / maxEnergy) * 100) + "%";
     }
 
-    renderUI();
-
-    setInterval(() => {
-      if (energy < maxEnergy) {
-        energy = Math.min(maxEnergy, energy + 4);
-        renderUI();
-        localStorage.setItem("olk_v2_energy", energy);
+    // إرسال ومزامنة النقرات مع قاعدة بيانات البوت
+    async function syncBalance() {
+      if (unsavedClicks === 0) return;
+      syncBadge.innerText = "⏳ جاري المزامنة...";
+      try {
+        const res = await fetch("/api/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: userId, added_olk: unsavedClicks })
+        });
+        const d = await res.json();
+        if (d.ok) {
+          unsavedClicks = 0;
+          syncBadge.innerText = "🟢 متصل ومحفوظ";
+        }
+      } catch (e) {
+        syncBadge.innerText = "⚠️ فشل الحفظ";
       }
-    }, 1000);
+    }
 
+    setInterval(syncBalance, 3000);
+
+    // النقر وزيادة العداد
     coinBtn.addEventListener("pointerdown", (event) => {
       if (energy < clickPower) {
         if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred("error");
@@ -571,125 +494,127 @@ MINI_APP_HTML = """<!DOCTYPE html>
       }
 
       energy -= clickPower;
-      balance += clickPower;
+      olkBalance += clickPower;
+      unsavedClicks += clickPower;
       renderUI();
 
-      localStorage.setItem("olk_v2_balance", balance);
-      localStorage.setItem("olk_v2_energy", energy);
-
-      if (tg?.HapticFeedback) {
-        tg.HapticFeedback.impactOccurred("medium");
-      }
+      if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred("medium");
 
       const rect = coinBtn.getBoundingClientRect();
-      const x = event.clientX - rect.left - rect.width / 2;
-      const y = event.clientY - rect.top - rect.height / 2;
-      coinBtn.style.transform = `scale(0.94) rotateX(${-y/10}deg) rotateY(${x/10}deg)`;
-
       const floatEl = document.createElement("div");
       floatEl.className = "float-num";
       floatEl.innerText = "+" + clickPower;
       floatEl.style.left = (event.clientX - rect.left - 15) + "px";
       floatEl.style.top = (event.clientY - rect.top - 25) + "px";
       coinBtn.parentElement.appendChild(floatEl);
-
-      setTimeout(() => floatEl.remove(), 750);
+      setTimeout(() => floatEl.remove(), 700);
     });
 
-    coinBtn.addEventListener("pointerup", () => {
-      coinBtn.style.transform = "scale(1) rotateX(0deg) rotateY(0deg)";
-    });
+    setInterval(() => {
+      if (energy < maxEnergy) {
+        energy = Math.min(maxEnergy, energy + 4);
+        renderUI();
+      }
+    }, 1000);
 
     function switchTab(tabId, el) {
       document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
       document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
       document.getElementById("page-" + tabId).classList.add("active");
       el.classList.add("active");
-      if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
+    }
+
+    async function convertOlkToGram() {
+      await syncBalance();
+      if (olkBalance < 100) {
+        alert("⚠️ تحتاج إلى 100 OLK على الأقل للتحويل.");
+        return;
+      }
+      const res = await fetch("/api/convert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userId })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        olkBalance = data.olk_balance;
+        gramBalance = data.gram_balance;
+        renderUI();
+        alert("✅ تم تحويل الرصيد بنجاح!");
+      } else {
+        alert(data.msg);
+      }
+    }
+
+    async function submitWebWithdraw() {
+      const address = document.getElementById("wallet-address-input").value.trim();
+      if (!address) {
+        alert("❌ يرجى إدخال عنوان محفظتك!");
+        return;
+      }
+      const res = await fetch("/api/withdraw", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userId, address: address })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        gramBalance = 0;
+        renderUI();
+        document.getElementById("wallet-address-input").value = "";
+        alert("✅ تم إرسال طلب السحب للمسؤول بنجاح!");
+      } else {
+        alert(data.msg);
+      }
     }
 
     function upgradeMultiTap() {
-      if (balance >= 100) {
-        balance -= 100;
+      if (olkBalance >= 100) {
+        olkBalance -= 100;
+        unsavedClicks -= 100;
         clickPower += 1;
-        localStorage.setItem("olk_v2_balance", balance);
-        localStorage.setItem("olk_v2_tap_power", clickPower);
         renderUI();
-        if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
-        alert("🎉 تم تطوير قوة النقر بنجاح!");
+        syncBalance();
+        alert("🎉 تم تطوير قوة النقر!");
       } else {
-        alert("⚠️ لا تملك رصيداً كافياً (تحتاج 100 OLK)");
+        alert("⚠️ لا تملك رصيداً كافياً");
       }
     }
 
     function upgradeEnergyMax() {
-      if (balance >= 200) {
-        balance -= 200;
+      if (olkBalance >= 200) {
+        olkBalance -= 200;
+        unsavedClicks -= 200;
         maxEnergy += 500;
         energy = maxEnergy;
-        localStorage.setItem("olk_v2_balance", balance);
-        localStorage.setItem("olk_v2_max_energy", maxEnergy);
-        localStorage.setItem("olk_v2_energy", energy);
         renderUI();
-        if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
-        alert("⚡ تم توسيع خزان الطاقة بنجاح!");
+        syncBalance();
+        alert("⚡ تم توسيع خزان الطاقة!");
       } else {
-        alert("⚠️ لا تملك رصيداً كافياً (تحتاج 200 OLK)");
+        alert("⚠️ لا تملك رصيداً كافياً");
       }
-    }
-
-    function refillEnergy() {
-      energy = maxEnergy;
-      localStorage.setItem("olk_v2_energy", energy);
-      renderUI();
-      if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
-      alert("⚡ تم ملء الطاقة بالكامل مجاناً!");
-    }
-
-    function completeTask(taskName, reward, link) {
-      window.open(link, "_blank");
-      setTimeout(() => {
-        balance += reward;
-        localStorage.setItem("olk_v2_balance", balance);
-        renderUI();
-        const btn = document.getElementById("task-btn-" + taskName);
-        btn.className = "btn-action btn-done";
-        btn.innerText = "تم التحقق ✅";
-        btn.disabled = true;
-        if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
-      }, 3000);
-    }
-
-    function claimDailyBonus() {
-      balance += 200;
-      localStorage.setItem("olk_v2_balance", balance);
-      renderUI();
-      const btn = document.getElementById("daily-claim-btn");
-      btn.className = "btn-action btn-done";
-      btn.innerText = "تم الاستلام ✅";
-      btn.disabled = true;
-      if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
     }
 
     function copyInviteLink() {
       const botUser = "OlkaVip_bot";
-      const userId = tgUser?.id || "123456";
       const inviteUrl = `https://t.me/${botUser}?start=${userId}`;
       navigator.clipboard.writeText(inviteUrl);
-      if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
-      alert("✅ تم نسخ رابط الدعوة الخاص بك!");
+      alert("✅ تم نسخ رابط الإحالة الخاص بك بنجاح!");
     }
+
+    loadUserData();
   </script>
 </body>
 </html>
 """
 
+# تجهيز قاعدة البيانات
 async def init_db():
     async with aiosqlite.connect("olka_vip.db") as db:
         await db.execute("""
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER PRIMARY KEY,
-            phone_number TEXT UNIQUE,
+            phone_number TEXT,
             olk_balance REAL DEFAULT 0.0,
             gram_balance REAL DEFAULT 0.0,
             last_claim INTEGER DEFAULT 0,
@@ -717,6 +642,87 @@ async def init_db():
         """)
         await db.commit()
 
+# مسارات واجهة برمجة التطبيقات (API) لربط الويب بقاعدة بيانات البوت
+async def api_get_user(request):
+    try:
+        user_id = int(request.query.get("user_id", 0))
+        async with aiosqlite.connect("olka_vip.db") as db:
+            async with db.execute("SELECT olk_balance, gram_balance FROM users WHERE user_id = ?", (user_id,)) as cur:
+                row = await cur.fetchone()
+                if row:
+                    return web.json_response({"ok": True, "olk_balance": row[0], "gram_balance": row[1]})
+                else:
+                    await db.execute("INSERT OR IGNORE INTO users (user_id, olk_balance) VALUES (?, 0.0)", (user_id,))
+                    await db.commit()
+                    return web.json_response({"ok": True, "olk_balance": 0.0, "gram_balance": 0.0})
+    except Exception as e:
+        return web.json_response({"ok": False, "msg": str(e)})
+
+async def api_sync(request):
+    try:
+        data = await request.json()
+        user_id = int(data.get("user_id"))
+        added_olk = float(data.get("added_olk", 0))
+        async with aiosqlite.connect("olka_vip.db") as db:
+            await db.execute("UPDATE users SET olk_balance = olk_balance + ? WHERE user_id = ?", (added_olk, user_id))
+            await db.commit()
+        return web.json_response({"ok": True})
+    except Exception as e:
+        return web.json_response({"ok": False, "msg": str(e)})
+
+async def api_convert(request):
+    try:
+        data = await request.json()
+        user_id = int(data.get("user_id"))
+        async with aiosqlite.connect("olka_vip.db") as db:
+            async with db.execute("SELECT olk_balance, gram_balance FROM users WHERE user_id = ?", (user_id,)) as cur:
+                row = await cur.fetchone()
+                if not row or row[0] < CONVERSION_RATE:
+                    return web.json_response({"ok": False, "msg": "رصيد OLK غير كافٍ للتحويل"})
+                olk = row[0]
+                gram_add = olk / CONVERSION_RATE
+                new_gram = row[1] + gram_add
+                await db.execute("UPDATE users SET olk_balance = 0.0, gram_balance = ? WHERE user_id = ?", (new_gram, user_id))
+                await db.commit()
+                return web.json_response({"ok": True, "olk_balance": 0.0, "gram_balance": new_gram})
+    except Exception as e:
+        return web.json_response({"ok": False, "msg": str(e)})
+
+async def api_withdraw(request):
+    try:
+        data = await request.json()
+        user_id = int(data.get("user_id"))
+        address = str(data.get("address", "")).strip()
+
+        async with aiosqlite.connect("olka_vip.db") as db:
+            async with db.execute("SELECT gram_balance, phone_number FROM users WHERE user_id = ?", (user_id,)) as cur:
+                row = await cur.fetchone()
+                if not row or row[0] < MIN_WITHDRAW_GRAM:
+                    return web.json_response({"ok": False, "msg": f"الحد الأدنى للسحب هو {MIN_WITHDRAW_GRAM} Gram"})
+
+                gram_bal, phone = row[0], row[1] or "غير موثق بعد"
+                await db.execute("INSERT INTO withdrawals (user_id, amount_gram, wallet_address) VALUES (?, ?, ?)",
+                                 (user_id, gram_bal, address))
+                await db.execute("UPDATE users SET gram_balance = 0.0 WHERE user_id = ?", (user_id,))
+                await db.commit()
+
+        # إشعار المدير
+        admin_notification = (
+            f"🚨 **طلب سحب جديد من Mini App**\n\n"
+            f"👤 المعرف: `{user_id}`\n"
+            f"📱 الهاتف: `{phone}`\n"
+            f"💰 المبلغ: `{gram_bal:.4f} Gram`\n"
+            f"📫 المحفظة:\n`{address}`"
+        )
+        try:
+            await bot.send_message(chat_id=ADMIN_ID, text=admin_notification, parse_mode="Markdown")
+        except Exception:
+            pass
+
+        return web.json_response({"ok": True})
+    except Exception as e:
+        return web.json_response({"ok": False, "msg": str(e)})
+
 def get_contact_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[[KeyboardButton(text="⚡ توثيق الحساب والمطالبة بـ 10 OLK 🚀", request_contact=True)]],
@@ -725,13 +731,12 @@ def get_contact_keyboard():
     )
 
 def main_dashboard_keyboard(user_id: int):
-    # زر الويب المباشر المدمج في الرسالة
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="🎮 إطلاق لعبة OLKA VIP (Mini App) 🚀", web_app=WebAppInfo(url=WEBAPP_URL))
+            InlineKeyboardButton(text="🎮 فتح لعبة ومحفظة الويب (Mini App) 🚀", web_app=WebAppInfo(url=WEBAPP_URL))
         ],
         [
-            InlineKeyboardButton(text="⚡ تعدين فوري", callback_data="claim"),
+            InlineKeyboardButton(text="⚡ تعدين يومي (+20)", callback_data="claim"),
             InlineKeyboardButton(text="🔄 صرافة Gram", callback_data="convert")
         ],
         [
@@ -759,27 +764,31 @@ async def start_handler(message: Message, command: CommandObject):
         async with db.execute("SELECT phone_number, olk_balance, gram_balance FROM users WHERE user_id = ?", (user_id,)) as cursor:
             user = await cursor.fetchone()
 
+        # تسجيل الإحالة للمستخدم الجديد
         if not user and ref_param:
             try:
-                referrer_id = int(ref_param.replace("ref_", ""))
+                clean_ref = ref_param.replace("ref_", "")
+                referrer_id = int(clean_ref)
                 if referrer_id != user_id:
                     await db.execute("""
                         INSERT INTO users (user_id, referred_by) VALUES (?, ?)
-                        ON CONFLICT(user_id) DO NOTHING
+                        ON CONFLICT(user_id) DO UPDATE SET referred_by = excluded.referred_by
                     """, (user_id, referrer_id))
                     await db.commit()
             except ValueError:
                 pass
+        elif not user:
+            await db.execute("INSERT OR IGNORE INTO users (user_id) VALUES (?)", (user_id,))
+            await db.commit()
 
     if not user or not user[0]:
         welcome_banner = (
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             "🌟 **مرحباً بك في إمبراطورية OLKA VIP** 🌟\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n\n"
-            "⛏️ انضم الآن لأقوى مجتمع تعدين سحابي للعبة **OLKA VIP EMPIRE** على تليجرام.\n\n"
-            "🎁 **هدية التسجيل الفوري:** `+10 OLK`\n"
-            "🛡️ **الحماية:** لمنع الحسابات الوهمية والتكرار، يلزم توثيق هويتك بمشاركة رقم الهاتف لمرة واحدة فقط.\n\n"
-            "👇 **اضغط على الزر بالأسفل للتوثيق والبدء فوراً:**"
+            "⛏️ انضم لأقوى نظام تعدين وسحب Gram على تليجرام.\n\n"
+            "🎁 **هدية التوثيق:** `+10 OLK`\n"
+            "👇 **اضغط على الزر بالأسفل لتوثيق حسابك برقم الهاتف:**"
         )
         await message.answer(welcome_banner, parse_mode="Markdown", reply_markup=get_contact_keyboard())
         return
@@ -787,7 +796,7 @@ async def start_handler(message: Message, command: CommandObject):
     if not await check_subscription(user_id):
         sub_banner = (
             "⚠️ **خطوة أخيرة لتفعيل حسابك!**\n\n"
-            f"يرجى الانضمام إلى قناتنا الرسمية لتبقى على اطلاع بآخر أخبار التوزيع والإدراج:\n"
+            f"يرجى الانضمام إلى قناتنا الرسمية:\n"
             f"📢 **{SPONSOR_CHANNEL}**"
         )
         await message.answer(
@@ -800,16 +809,14 @@ async def start_handler(message: Message, command: CommandObject):
         )
         return
 
-    user_name = message.from_user.first_name or "المعدّن"
     dash_text = (
-        f"👑 **مرحباً بك في لوحة تحكم OLKA VIP يا {user_name}!**\n"
+        f"👑 **لوحة تحكم OLKA VIP:**\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"🆔 **معرّف الحساب:** `{user_id}`\n"
-        f"💎 **رتبة الحساب:** VIP Miner ⚡\n"
-        f"💰 **رصيد التعدين الحالي:** `{user[1]:.2f} OLK`\n"
-        f"💳 **رصيد محفظة السحب:** `{user[2]:.4f} Gram`\n"
+        f"🆔 المعرّف: `{user_id}`\n"
+        f"💰 رصيد OLK: `{user[1]:.2f} OLK`\n"
+        f"💳 رصيد Gram: `{user[2]:.4f} Gram`\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "🚀 **يمكنك النقر والتعدين عبر Mini App أو استخدام خيارات التحكم أدناه:**"
+        "🚀 اضغط على زر اللعبة بالأسفل لفتح اللعبة والمحفظة السحابية المتزامنة!"
     )
     await message.answer(dash_text, parse_mode="Markdown", reply_markup=main_dashboard_keyboard(user_id))
 
@@ -831,10 +838,11 @@ async def contact_handler(message: Message):
 
         await db.execute("""
             INSERT INTO users (user_id, phone_number, olk_balance) VALUES (?, ?, 10.0)
-            ON CONFLICT(user_id) DO UPDATE SET phone_number = excluded.phone_number
+            ON CONFLICT(user_id) DO UPDATE SET phone_number = excluded.phone_number, olk_balance = olk_balance + 10.0
         """, (user_id, contact.phone_number))
         await db.commit()
 
+        # مكافأة المُحيل فوراً بعد التوثيق
         async with db.execute("SELECT referred_by, ref_reward_claimed FROM users WHERE user_id = ?", (user_id,)) as cursor:
             ref_row = await cursor.fetchone()
 
@@ -849,29 +857,23 @@ async def contact_handler(message: Message):
                 await bot.send_message(
                     chat_id=referrer_id,
                     text=(
-                        "🎉 **إحالة ناجحة جديدة!**\n\n"
-                        f"👤 صديقك: **{invited_name}** أكمل التوثيق بنجاح.\n"
-                        f"💰 **تمت إضافة +{REFERRAL_REWARD:.0f} OLK إلى محفظتك مباشرة!**"
+                        f"🎉 **إحالة ناجحة جديدة!**\n\n"
+                        f"قام صديقك ({invited_name}) بتوثيق حسابه.\n"
+                        f"💰 تمت إضافة **+{REFERRAL_REWARD:.0f} OLK** إلى رصيدك فوراً في البوت والويب!"
                     ),
                     parse_mode="Markdown"
                 )
             except Exception:
                 pass
 
-    success_text = (
-        "✅ **تم توثيق الحساب بنجاح!**\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "🎁 تمت إضافة **+10.00 OLK** كهدية ترحيبية إلى رصيدك.\n\n"
-        "اضغط على زر إطلاق اللعبة وابدأ في التعدين فوراً!"
-    )
-    await message.answer(success_text, parse_mode="Markdown", reply_markup=main_dashboard_keyboard(user_id))
+    await message.answer("✅ **تم توثيق الحساب بنجاح وإضافة مكافأة +10 OLK!**", parse_mode="Markdown", reply_markup=main_dashboard_keyboard(user_id))
 
 @dp.callback_query(F.data == "verify_sub")
 async def verify_sub_handler(callback: CallbackQuery):
     if await check_subscription(callback.from_user.id):
-        await callback.message.edit_text("✅ **تم التحقق بنجاح!** مرحباً بك في الإمبراطورية.", parse_mode="Markdown", reply_markup=main_dashboard_keyboard(callback.from_user.id))
+        await callback.message.edit_text("✅ **تم التحقق بنجاح!**", reply_markup=main_dashboard_keyboard(callback.from_user.id))
     else:
-        await callback.answer("❌ لم تنضم للقناة بعد، اضغط على الرابط أعلاه وانضم أولاً.", show_alert=True)
+        await callback.answer("❌ لم تنضم للقناة بعد!", show_alert=True)
 
 @dp.callback_query(F.data == "claim")
 async def claim_handler(callback: CallbackQuery):
@@ -888,7 +890,7 @@ async def claim_handler(callback: CallbackQuery):
             rem = cooldown - (current_time - last_claim)
             hours = rem // 3600
             mins = (rem % 3600) // 60
-            await callback.answer(f"⏳ يمكنك استلام التعدين مجدداً بعد: {hours} ساعة و {mins} دقيقة.", show_alert=True)
+            await callback.answer(f"⏳ يمكنك التعدين مجدداً بعد: {hours} ساعة و {mins} دقيقة.", show_alert=True)
             return
 
         await db.execute("UPDATE users SET olk_balance = olk_balance + 20.0, last_claim = ? WHERE user_id = ?", (current_time, user_id))
@@ -906,22 +908,20 @@ async def balance_handler(callback: CallbackQuery):
             olk, gram = row if row else (0.0, 0.0)
 
     text = (
-        "💼 **المحفظة الاستثمارية لـ OLKA VIP:**\n"
+        "💼 **المحفظة الاستثمارية (OLKA VIP):**\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"🪙 **رصيد عملة OLK:** `{olk:.2f} OLK`\n"
-        f"💎 **رصيد Gram القابل للسحب:** `{gram:.4f} Gram`\n\n"
-        f"💡 **معدل التحويل:** كل `{CONVERSION_RATE} OLK` = `1 Gram`\n"
-        f"💳 **الحد الأدنى للسحب:** `{MIN_WITHDRAW_GRAM} Gram`\n"
+        f"🪙 **رصيد OLK:** `{olk:.2f} OLK`\n"
+        f"💎 **رصيد Gram:** `{gram:.4f} Gram`\n\n"
+        f"💡 سعر الصرف: `{CONVERSION_RATE} OLK = 1 Gram`\n"
+        f"💳 الحد الأدنى للسحب: `{MIN_WITHDRAW_GRAM} Gram`\n"
         "━━━━━━━━━━━━━━━━━━━━━━"
     )
     buttons = InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="🔄 تحويل الرصيد إلى Gram", callback_data="convert"),
-            InlineKeyboardButton(text="💳 سحب أرباح Gram", callback_data="withdraw")
+            InlineKeyboardButton(text="🔄 تحويل إلى Gram", callback_data="convert"),
+            InlineKeyboardButton(text="💳 سحب Gram", callback_data="withdraw")
         ],
-        [
-            InlineKeyboardButton(text="🔙 العودة للرئيسية", callback_data="back_home")
-        ]
+        [InlineKeyboardButton(text="🔙 العودة للرئيسية", callback_data="back_home")]
     ])
     await callback.message.edit_text(text, parse_mode="Markdown", reply_markup=buttons)
 
@@ -937,22 +937,15 @@ async def referral_handler(callback: CallbackQuery):
     ref_link = f"https://t.me/{bot_info.username}?start={user_id}"
 
     text = (
-        "👥 **نظام الشركاء والإحالات الملكي (VIP Affiliate):**\n"
+        "👥 **نظام دعوة الأصدقاء (الإحالات المباشرة):**\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"🤝 **عدد أصدقائك الموثقين:** `{ref_count} صديق`\n"
-        f"🎁 **أرباحك لكل إحالة:** `+{REFERRAL_REWARD:.0f} OLK` فوراً\n\n"
-        f"🔗 **رابط الإحالة الحصري الخاص بك:**\n"
-        f"`{ref_link}`\n\n"
-        "💡 *اضغط على الرابط بالأعلى لنسخه وشاركه مع أصدقائك في المجموعات والقنوات!*\n"
-        "━━━━━━━━━━━━━━━━━━━━━━"
+        f"🤝 أصدقاؤك الموثقون: `{ref_count}`\n"
+        f"🎁 المكافأة: `+{REFERRAL_REWARD:.0f} OLK` لكل صديق يوثق رقمه\n\n"
+        f"🔗 الرابط الخاص بك:\n`{ref_link}`"
     )
     buttons = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="📤 مشاركة مع الأصدقاء", url=f"https://t.me/share/url?url={ref_link}&text=انضم%20معي%20في%20لعبة%20تعدين%20OLKA%20VIP%20واربح%20عملات%20رقمية%20مجاناً!")
-        ],
-        [
-            InlineKeyboardButton(text="🔙 العودة للرئيسية", callback_data="back_home")
-        ]
+        [InlineKeyboardButton(text="📤 مشاركة الرابط", url=f"https://t.me/share/url?url={ref_link}&text=انضم%20الآن%20إلى%20مشروع%20OLKA%20VIP!")],
+        [InlineKeyboardButton(text="🔙 العودة للرئيسية", callback_data="back_home")]
     ])
     await callback.message.edit_text(text, parse_mode="Markdown", reply_markup=buttons)
 
@@ -988,12 +981,7 @@ async def withdraw_start(callback: CallbackQuery):
         return
 
     withdraw_state[user_id] = True
-    await callback.message.answer(
-        f"💳 **طلب سحب جديد:**\n\n"
-        f"• الرصيد القابل للسحب: `{gram:.4f} Gram`\n\n"
-        f"📝 **أرسل الآن عنوان محفظتك (TON / Gram Wallet) كرسالة نصية:**",
-        parse_mode="Markdown"
-    )
+    await callback.message.answer(f"💳 الرصيد المتاح: `{gram:.4f} Gram`\n\n📝 أرسل الآن عنوان محفظتك (TON / Gram Address):", parse_mode="Markdown")
     await callback.answer()
 
 @dp.message(F.text)
@@ -1019,27 +1007,16 @@ async def process_address(message: Message):
         await db.execute("UPDATE users SET gram_balance = 0.0 WHERE user_id = ?", (user_id,))
         await db.commit()
 
-    confirm_msg = (
-        "✅ **تم استلام وتسجيل طلب السحب بنجاح!**\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"💰 **المبلغ:** `{gram_balance:.4f} Gram`\n"
-        f"📫 **عنوان المحفظة:** `{wallet_address}`\n"
-        "⏳ **الحالة:** قيد المعالجة (تتم المراجعة والتحويل خلال 24 ساعة)\n"
-        "━━━━━━━━━━━━━━━━━━━━━━"
-    )
-    await message.answer(confirm_msg, parse_mode="Markdown", reply_markup=main_dashboard_keyboard(user_id))
+    await message.answer(f"✅ تم تسجيل طلب السحب بنجاح بمبلغ `{gram_balance:.4f} Gram`!", parse_mode="Markdown", reply_markup=main_dashboard_keyboard(user_id))
 
-    admin_notification = (
-        f"🚨 **إشعار طلب سحب جديد (OLKA VIP)**\n\n"
-        f"👤 المعرف: `{user_id}` (@{message.from_user.username or 'بدون'})\n"
-        f"📱 الهاتف: `{phone}`\n"
-        f"💰 المبلغ: `{gram_balance:.4f} Gram`\n"
-        f"📫 المحفظة المستلمة:\n`{wallet_address}`"
-    )
     try:
-        await bot.send_message(chat_id=ADMIN_ID, text=admin_notification, parse_mode="Markdown")
-    except Exception as e:
-        print(f"تعذر إرسال الإشعار للمسؤول: {e}")
+        await bot.send_message(
+            chat_id=ADMIN_ID,
+            text=f"🚨 **طلب سحب من البوت**\n👤 المعرف: `{user_id}`\n📱 الهاتف: `{phone}`\n💰 المبلغ: `{gram_balance:.4f} Gram`\n📫 المحفظة:\n`{wallet_address}`",
+            parse_mode="Markdown"
+        )
+    except Exception:
+        pass
 
 @dp.callback_query(F.data == "back_home")
 async def back_home_handler(callback: CallbackQuery):
@@ -1048,16 +1025,13 @@ async def back_home_handler(callback: CallbackQuery):
         async with db.execute("SELECT phone_number, olk_balance, gram_balance FROM users WHERE user_id = ?", (user_id,)) as cursor:
             user = await cursor.fetchone()
 
-    user_name = callback.from_user.first_name or "المعدّن"
     dash_text = (
-        f"👑 **مرحباً بك مجدداً في لوحة تحكم OLKA VIP يا {user_name}!**\n"
+        f"👑 **لوحة تحكم OLKA VIP:**\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"🆔 **معرّف الحساب:** `{user_id}`\n"
-        f"💎 **رتبة الحساب:** VIP Miner ⚡\n"
-        f"💰 **رصيد التعدين الحالي:** `{user[1]:.2f} OLK`\n"
-        f"💳 **رصيد محفظة السحب:** `{user[2]:.4f} Gram`\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "🚀 **يمكنك النقر والتعدين عبر Mini App أو استخدام خيارات التحكم أدناه:**"
+        f"🆔 المعرّف: `{user_id}`\n"
+        f"💰 رصيد OLK: `{user[1]:.2f} OLK`\n"
+        f"💳 رصيد Gram: `{user[2]:.4f} Gram`\n"
+        "━━━━━━━━━━━━━━━━━━━━━━"
     )
     await callback.message.edit_text(dash_text, parse_mode="Markdown", reply_markup=main_dashboard_keyboard(user_id))
 
@@ -1066,10 +1040,15 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("Bot is running with Next-Gen VIP UI...")
+    print("Bot is running with full DB Web Sync...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
+    app.router.add_get("/api/get_user", api_get_user)
+    app.router.add_post("/api/sync", api_sync)
+    app.router.add_post("/api/convert", api_convert)
+    app.router.add_post("/api/withdraw", api_withdraw)
+
     runner = web.AppRunner(app)
     await runner.setup()
     port = int(os.environ.get("PORT", 8080))
