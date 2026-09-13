@@ -20,10 +20,10 @@ SPONSOR_CHANNEL = "@olka_ad"
 
 PROJECT_TON_WALLET = "UQB3Xs8jkbebkVumWJlnEmDkjN4YXsZuHPrXSpZT1RtmZrCB"
 
-CONVERSION_RATE = 10000
-MIN_WITHDRAW_TON = 0.1
-REFERRAL_REWARD = 5.0
-SIGNUP_BONUS = 5.0
+CONVERSION_RATE = 10000  # 10,000 OLK = 1 TON (Gram)
+MIN_WITHDRAW_TON = 0.1   # الحد الأدنى للسحب 0.1 TON
+REFERRAL_REWARD = 5.0    # 5 OLK لكل إحالة
+SIGNUP_BONUS = 5.0       # 5 OLK هدية التوثيق
 
 CHANNELS_TASKS = [
     {
@@ -37,7 +37,6 @@ CHANNELS_TASKS = [
 
 WEBAPP_URL = "https://olka-bot-service.onrender.com"
 
-# دالة تحويل العنوان الخام (0:...) إلى صيغة المحفظة المقروءة (UQ...)
 def raw_to_user_friendly(raw_addr: str) -> str:
     if not raw_addr or not raw_addr.startswith("0:"):
         return raw_addr
@@ -45,11 +44,9 @@ def raw_to_user_friendly(raw_addr: str) -> str:
         wc_str, hex_str = raw_addr.split(":", 1)
         wc = int(wc_str)
         account_id = bytes.fromhex(hex_str)
-        # 0x51 للعنوان غير القابل للارتداد UQ على الشبكة الرئيسية
         tag = 0x51
         data = bytes([tag, wc & 0xFF]) + account_id
 
-        # حساب كود التحقق CRC16-CCITT/XMODEM
         poly = 0x1021
         crc = 0
         for b in data:
@@ -168,13 +165,43 @@ MINI_APP_HTML = f"""<!DOCTYPE html>
       font-weight: 700;
     }}
 
+    .balance-cards-grid {{
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }}
+    .bal-card {{
+      background: rgba(6, 11, 22, 0.9);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }}
+    .bal-card-title {{
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }}
+    .bal-card-value {{
+      font-size: 17px;
+      font-weight: 900;
+      direction: ltr;
+      text-align: left;
+    }}
+
     .wallet-connection-banner {{
       width: 100%;
       background: linear-gradient(135deg, rgba(37, 99, 235, 0.2), rgba(6, 182, 212, 0.15));
       border: 1.5px solid rgba(56, 189, 248, 0.45);
       border-radius: 16px;
       padding: 12px 14px;
-      margin-top: 10px;
+      margin-top: 6px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -224,89 +251,6 @@ MINI_APP_HTML = f"""<!DOCTYPE html>
     @keyframes tabFadeIn {{
       from {{ opacity: 0; transform: translateY(6px); }}
       to {{ opacity: 1; transform: translateY(0); }}
-    }}
-
-    .balance-cards-grid {{
-      width: 100%;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 12px;
-    }}
-    .bal-card {{
-      background: rgba(6, 11, 22, 0.9);
-      border: 1px solid var(--card-border);
-      border-radius: 16px;
-      padding: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }}
-    .bal-card-title {{
-      font-size: 11px;
-      color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }}
-    .bal-card-value {{
-      font-size: 18px;
-      font-weight: 900;
-      direction: ltr;
-      text-align: left;
-    }}
-
-    .convert-box {{
-      width: 100%;
-      background: rgba(6, 11, 22, 0.7);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 16px;
-      padding: 14px;
-      margin-top: 8px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }}
-    .input-row {{
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(0, 0, 0, 0.5);
-      border: 1px solid var(--card-border);
-      border-radius: 12px;
-      padding: 6px 10px;
-    }}
-    .convert-input {{
-      flex: 1;
-      background: transparent;
-      border: none;
-      outline: none;
-      color: #fff;
-      font-size: 16px;
-      font-weight: 800;
-      direction: ltr;
-      text-align: left;
-    }}
-    .btn-max {{
-      background: rgba(245, 158, 11, 0.2);
-      border: 1px solid var(--gold-primary);
-      color: var(--gold-primary);
-      padding: 4px 10px;
-      border-radius: 8px;
-      font-size: 11px;
-      font-weight: 800;
-      cursor: pointer;
-    }}
-    .exchange-rate-row {{
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 11px;
-      color: var(--text-muted);
-      padding: 0 4px;
-    }}
-    .exchange-rate-row span {{
-      direction: ltr;
     }}
 
     .mining-hero-card {{
@@ -489,6 +433,58 @@ MINI_APP_HTML = f"""<!DOCTYPE html>
       flex-direction: column;
       gap: 10px;
     }}
+    .convert-box {{
+      width: 100%;
+      background: rgba(6, 11, 22, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 14px;
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }}
+    .input-row {{
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 6px 10px;
+    }}
+    .convert-input {{
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 800;
+      direction: ltr;
+      text-align: left;
+    }}
+    .btn-max {{
+      background: rgba(245, 158, 11, 0.2);
+      border: 1px solid var(--gold-primary);
+      color: var(--gold-primary);
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+    }}
+    .exchange-rate-row {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--text-muted);
+      padding: 0 4px;
+    }}
+    .exchange-rate-row span {{
+      direction: ltr;
+    }}
     .rig-item {{
       display: flex;
       justify-content: space-between;
@@ -554,20 +550,21 @@ MINI_APP_HTML = f"""<!DOCTYPE html>
       <div>تعدين OLK VIP</div>
     </div>
 
-    <!-- كرت الأصول المحفوظة -->
+    <!-- كرت الأصول المحفوظة العلوية -->
     <div class="assets-container">
       <div class="assets-title-row">
         <div class="assets-total">الإجمالي: <span id="total-assets">0.0000 OLK</span></div>
         <div class="assets-badge"><i class="fa-solid fa-shield-halved"></i> أصولي المحفوظة</div>
       </div>
       
+      <!-- رصيدا المستخدم المنفصلان: OLK للتعدين والمهام، و TON للإيداع والسحب والترقية -->
       <div class="balance-cards-grid">
         <div class="bal-card">
-          <div class="bal-card-title"><i class="fa-solid fa-coins" style="color:var(--gold-primary);"></i> رصيد OLK:</div>
+          <div class="bal-card-title"><i class="fa-solid fa-coins" style="color:var(--gold-primary);"></i> رصيد التعدين (OLK):</div>
           <div class="bal-card-value" style="color:var(--gold-primary);" id="app-balance-val">0.00 OLK</div>
         </div>
         <div class="bal-card">
-          <div class="bal-card-title"><i class="fa-solid fa-gem" style="color:#60a5fa;"></i> رصيد TON:</div>
+          <div class="bal-card-title"><i class="fa-solid fa-gem" style="color:#60a5fa;"></i> رصيد TON (Gram):</div>
           <div class="bal-card-value" style="color:#60a5fa;" id="app-ton-val">0.0000 TON</div>
         </div>
       </div>
@@ -586,7 +583,7 @@ MINI_APP_HTML = f"""<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- صفحة 1: شاشة التعدين -->
+    <!-- صفحة 1: شاشة التعدين السحابي (تجمع عملة OLK فقط) -->
     <div class="page-tab active" id="tab-mining">
       <div class="mining-hero-card">
         <div class="miner-status-badge">
@@ -594,7 +591,7 @@ MINI_APP_HTML = f"""<!DOCTYPE html>
           <span class="status-online">نشط</span>
         </div>
 
-        <div class="unclaimed-subtitle">مكافأة التعدين غير المطالب بها</div>
+        <div class="unclaimed-subtitle">أرباح تعدين OLK غير المطالب بها</div>
         <div class="unclaimed-counter">
           <span>OLK</span>
           <div id="unclaimed-val">0.000000</div>
@@ -615,13 +612,13 @@ MINI_APP_HTML = f"""<!DOCTYPE html>
         </div>
 
         <button class="btn-claim-rewards" onclick="claimRewardsToDb()">
-          <i class="fa-solid fa-cloud-arrow-down"></i> المطالبة بالأرباح وتحويلها للمحفظة
+          <i class="fa-solid fa-cloud-arrow-down"></i> المطالبة بأرباح OLK وإضافتها للرصيد
         </button>
       </div>
 
       <div class="hero-actions-grid">
         <button class="btn-upgrade-rig" onclick="switchNav('miners')">
-          ترقية المعدن <i class="fa-solid fa-arrow-left"></i>
+          ترقية عبر TON <i class="fa-solid fa-bolt"></i>
         </button>
         <button class="btn-wallet-link" id="btn-connect-wallet" onclick="handleConnectWalletClick()">
           <i class="fa-solid fa-wallet"></i> <span id="wallet-btn-text">CONNECT WALLET</span>
@@ -629,109 +626,118 @@ MINI_APP_HTML = f"""<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- صفحة 2: المحفظة والتحويل اليدوي -->
+    <!-- صفحة 2: المحفظة (إيداع وسحب TON المباشر + تحويل OLK إلى TON) -->
     <div class="page-tab" id="tab-wallet">
       <div class="card-panel">
         <div style="font-weight:bold; color:var(--gold-primary); font-size:15px; display:flex; justify-content:space-between; align-items:center;">
-          <span>💳 صرافة وتحويل العملات</span>
+          <span>💳 صرافة OLK إلى TON (Gram)</span>
           <span style="font-size:11px; color:#38bdf8; direction:ltr;">1 TON = 10,000 OLK</span>
         </div>
 
         <div class="convert-box">
           <div style="display:flex; justify-content:space-between; font-size:12px;">
-            <span style="color:var(--text-muted);">أدخل كمية OLK المراد تحويلها:</span>
+            <span style="color:var(--text-muted);">كمية OLK المراد تحويلها لـ TON:</span>
             <span style="color:#f59e0b; direction:ltr;" id="available-olk-convert">المتاح: 0.00</span>
           </div>
 
           <div class="input-row">
-            <input type="number" id="convert-input-amount" class="convert-input" placeholder="مثال: 100 أو 1000" oninput="calculateConvertPreview()">
+            <input type="number" id="convert-input-amount" class="convert-input" placeholder="مثال: 1000" oninput="calculateConvertPreview()">
             <button class="btn-max" onclick="setMaxConvert()">MAX</button>
           </div>
 
           <div class="exchange-rate-row">
-            <span>ستحصل على تقريباً:</span>
+            <span>ستحصل على رصيد TON للسحب أو الترقية:</span>
             <strong style="color:#4ade80; font-size:14px;" id="convert-preview-val">0.0000 TON</strong>
           </div>
 
           <button class="btn-claim-rewards" style="margin-top:2px;" onclick="convertOlkDirect()">
-            <i class="fa-solid fa-repeat"></i> تأكيد تحويل الكمية المحددة
+            <i class="fa-solid fa-repeat"></i> تحويل إلى رصيد TON
           </button>
         </div>
 
         <hr style="border:0; border-top:1px solid var(--card-border); margin:6px 0;">
 
+        <!-- قسم الإيداع والسحب لعملة TON المباشرة -->
         <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px;">
-          <span style="color:var(--text-muted);">الحد الأدنى المطلوب للسحب:</span>
-          <strong style="color:#f87171; direction:ltr;">0.1 TON (1,000 OLK)</strong>
+          <span style="color:var(--text-muted);">الحد الأدنى للسحب:</span>
+          <strong style="color:#f87171; direction:ltr;">0.1 TON (Gram)</strong>
         </div>
 
-        <div style="font-size:12px; color:#cbd5e1; margin-top:2px;">المحفظة المرتبطة بالسحب:</div>
+        <div style="font-size:12px; color:#cbd5e1; margin-top:2px;">محفظتك المرتبطة للإيداع والسحب:</div>
         <div id="connected-wallet-display" style="font-size:11px; color:#93c5fd; background:rgba(0,0,0,0.5); padding:10px; border-radius:12px; word-break:break-all; direction:ltr; text-align:left;">
           ⚠️ لم يتم ربط محفظة TON بعد
         </div>
 
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:6px;">
+          <!-- إيداع مباشر بالـ TON لزيادة الرصيد واستخدامه في الترقية -->
           <button class="btn-upgrade-rig" style="background:#059669;" onclick="depositTonDirect()">
             <i class="fa-solid fa-arrow-down"></i> إيداع 0.1 TON
           </button>
+          <!-- سحب أرباح الـ TON المكتسبة -->
           <button class="btn-upgrade-rig" onclick="requestWithdrawalToConnectedWallet()">
-            <i class="fa-solid fa-arrow-up"></i> سحب رصيد TON
+            <i class="fa-solid fa-arrow-up"></i> سحب TON
           </button>
         </div>
       </div>
     </div>
 
-    <!-- صفحة 3: الأصدقاء -->
+    <!-- صفحة 3: الأصدقاء (مكافأة بعملة OLK) -->
     <div class="page-tab" id="tab-frens">
       <div class="card-panel">
         <div style="font-weight:bold; color:#bef264; font-size:15px;"><i class="fa-solid fa-users"></i> شبكة التعدين التشاركية (الإحالات)</div>
-        <div style="font-size:13px; color:#cbd5e1;">شارك رابط جهازك واحصل على <strong>5 OLK</strong> فور توثيق صديقك لحسابه!</div>
+        <div style="font-size:13px; color:#cbd5e1;">شارك رابط جهازك واحصل على <strong>5 OLK</strong> مجاناً فور توثيق صديقك لحسابه!</div>
         <button class="btn-upgrade-rig" style="width:100%;" onclick="copyReferralLink()">
           <i class="fa-solid fa-copy"></i> نسخ رابط الدعوة الخاص بي
         </button>
       </div>
     </div>
 
-    <!-- صفحة 4: المعدنون وترقية الأجهزة -->
+    <!-- صفحة 4: المعدنون (الترقية تتم حصرياً عبر رصيد TON / Gram المودع) -->
     <div class="page-tab" id="tab-miners">
       <div class="card-panel">
-        <div style="font-weight:bold; color:var(--accent-cyan); font-size:15px;"><i class="fa-solid fa-microchip"></i> ترقية أجهزة التعدين السحابي</div>
+        <div style="font-weight:bold; color:var(--accent-cyan); font-size:15px; display:flex; justify-content:space-between; align-items:center;">
+          <span><i class="fa-solid fa-microchip"></i> ترقية أجهزة التعدين</span>
+          <span style="font-size:11px; color:#38bdf8;">الدفع عبر رصيد TON</span>
+        </div>
+        <div style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">
+          قم بإيداع TON في المحفظة لشراء أجهزة التعدين ومضاعفة سرعة جمع عملة OLK!
+        </div>
         
         <div class="rig-item">
           <div>
             <div style="font-weight:bold; font-size:13px;">CPU S-Cloud Rig</div>
-            <div style="font-size:11px; color:var(--text-muted); direction:ltr; text-align:right;">+0.15 TH/s زيادة سرعة</div>
+            <div style="font-size:11px; color:var(--accent-green); direction:ltr; text-align:right;">+0.20 TH/s سرعة تعدين</div>
           </div>
-          <button class="btn-upgrade-rig" style="padding:8px 12px; font-size:12px;" onclick="buyRig(1, 150, 0.15)">شراء (150 OLK)</button>
+          <button class="btn-upgrade-rig" style="padding:8px 12px; font-size:12px;" onclick="buyRigWithTon(1, 0.05, 0.20)">ترقية (0.05 TON)</button>
         </div>
 
         <div class="rig-item">
           <div>
             <div style="font-weight:bold; font-size:13px;">GPU Quantum Rig</div>
-            <div style="font-size:11px; color:var(--text-muted); direction:ltr; text-align:right;">+0.50 TH/s زيادة سرعة</div>
+            <div style="font-size:11px; color:var(--accent-green); direction:ltr; text-align:right;">+0.60 TH/s سرعة تعدين</div>
           </div>
-          <button class="btn-upgrade-rig" style="padding:8px 12px; font-size:12px;" onclick="buyRig(2, 450, 0.50)">شراء (450 OLK)</button>
+          <button class="btn-upgrade-rig" style="padding:8px 12px; font-size:12px;" onclick="buyRigWithTon(2, 0.15, 0.60)">ترقية (0.15 TON)</button>
         </div>
 
         <div class="rig-item">
           <div>
             <div style="font-weight:bold; font-size:13px;">ASIC VIP Titan</div>
-            <div style="font-size:11px; color:var(--text-muted); direction:ltr; text-align:right;">+1.50 TH/s زيادة سرعة</div>
+            <div style="font-size:11px; color:var(--accent-green); direction:ltr; text-align:right;">+2.00 TH/s سرعة فائقة</div>
           </div>
-          <button class="btn-upgrade-rig" style="padding:8px 12px; font-size:12px;" onclick="buyRig(3, 1200, 1.50)">شراء (1200 OLK)</button>
+          <button class="btn-upgrade-rig" style="padding:8px 12px; font-size:12px;" onclick="buyRigWithTon(3, 0.40, 2.00)">ترقية (0.40 TON)</button>
         </div>
       </div>
     </div>
 
-    <!-- صفحة 5: المهام -->
+    <!-- صفحة 5: المهام (تربح منها عملة OLK فقط) -->
     <div class="page-tab" id="tab-tasks">
       <div class="card-panel">
-        <div style="font-weight:bold; color:var(--gold-primary); font-size:15px;"><i class="fa-solid fa-list-check"></i> مهام التحقق من القنوات</div>
+        <div style="font-weight:bold; color:var(--gold-primary); font-size:15px;"><i class="fa-solid fa-list-check"></i> مهام جمع عملة OLK المجانية</div>
         
         <div class="rig-item">
           <div>
             <div style="font-weight:bold; font-size:13px;">قناة OLKA AD الرسمية</div>
-            <div style="font-size:11px; color:var(--text-muted);">+10 OLK مكافأة انضمام</div>
+            <div style="font-size:11px; color:var(--gold-primary);">+10 OLK مكافأة انضمام</div>
           </div>
           <div style="display:flex; gap:6px;">
             <button class="btn-upgrade-rig" style="padding:6px 10px; font-size:11px;" onclick="window.open('https://t.me/olka_ad', '_blank')">انضمام</button>
@@ -802,7 +808,6 @@ MINI_APP_HTML = f"""<!DOCTYPE html>
       manifestUrl: window.location.origin + '/tonconnect-manifest.json'
     }});
 
-    // تحويل العنوان مباشرة إلى صيغة UQ المألوفة
     tonConnectUI.onStatusChange(async (wallet) => {{
       if (wallet) {{
         try {{
@@ -893,6 +898,7 @@ MINI_APP_HTML = f"""<!DOCTYPE html>
       calculateConvertPreview();
     }}
 
+    // محرك التعدين التلقائي لعملة OLK
     setInterval(() => {{
       unclaimed += (speed * 0.000015);
       unclaimedValEl.innerText = unclaimed.toFixed(6);
@@ -928,22 +934,24 @@ MINI_APP_HTML = f"""<!DOCTYPE html>
       if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
     }}
 
-    async function buyRig(rigId, cost, speedGain) {{
-      if (appOlk < cost) {{
-        alert(`⚠️ رصيدك في التطبيق غير كافٍ! يلزمك ${{cost}} OLK.`);
+    // ترقية أجهزة التعدين باستخدام رصيد TON (Gram) المتاح
+    async function buyRigWithTon(rigId, tonCost, speedGain) {{
+      if (appTon < tonCost) {{
+        alert(`⚠️ رصيد TON غير كافٍ! يلزمك ${{tonCost}} TON. يمكنك عمل إيداع TON أولاً.`);
+        switchNav('wallet');
         return;
       }}
-      appOlk -= cost;
+      appTon -= tonCost;
       speed += speedGain;
       minerLevel += 1;
       refreshScreen();
 
-      await fetch("/api/upgrade_rig", {{
+      await fetch("/api/upgrade_rig_ton", {{
         method: "POST",
         headers: {{ "Content-Type": "application/json" }},
-        body: JSON.stringify({{ user_id: userId, cost: cost, new_speed: speed, new_level: minerLevel }})
+        body: JSON.stringify({{ user_id: userId, cost_ton: tonCost, new_speed: speed, new_level: minerLevel }})
       }});
-      alert(`🎉 تم شراء جهاز التعدين بنجاح! السرعة الآن: ${{speed.toFixed(2)}} TH/s`);
+      alert(`🎉 تم شراء الترقية بنجاح عبر TON! السرعة الآن: ${{speed.toFixed(2)}} TH/s`);
     }}
 
     async function convertOlkDirect() {{
@@ -953,7 +961,7 @@ MINI_APP_HTML = f"""<!DOCTYPE html>
         return;
       }}
       if (amountToConvert > appOlk) {{
-        alert("⚠️ الكمية المدخلة أكبر من رصيدك المتاح في التطبيق!");
+        alert("⚠️ الكمية المدخلة أكبر من رصيد OLK المتاح!");
         return;
       }}
       const res = await fetch("/api/convert", {{
@@ -974,6 +982,7 @@ MINI_APP_HTML = f"""<!DOCTYPE html>
       }}
     }}
 
+    // إيداع 0.1 TON مباشرة عبر محفظة المستخدم المتصلة
     async function depositTonDirect() {{
       if (!tonConnectUI.connected) {{
         alert("❌ يرجى ربط محفظة TON أولاً!");
@@ -985,21 +994,22 @@ MINI_APP_HTML = f"""<!DOCTYPE html>
         messages: [
           {{
             address: "{PROJECT_TON_WALLET}",
-            amount: "100000000"
+            amount: "100000000" // 0.1 TON بوحدة النانو
           }}
         ]
       }};
       try {{
         const result = await tonConnectUI.sendTransaction(transaction);
         if (result) {{
-          appOlk += 1000;
+          // إضافة 0.1 TON إلى رصيد المستخدم في التطبيق مباشرة
+          appTon += 0.1;
           refreshScreen();
-          await fetch("/api/claim_passive", {{
+          await fetch("/api/deposit_ton_credit", {{
             method: "POST",
             headers: {{ "Content-Type": "application/json" }},
-            body: JSON.stringify({{ user_id: userId, amount: 1000 }})
+            body: JSON.stringify({{ user_id: userId, amount_ton: 0.1 }})
           }});
-          alert("🎉 تم تأكيد إيداع 0.1 TON وحصلت على +1,000 OLK فوراً!");
+          alert("🎉 تم تأكيد إيداع 0.1 TON بنجاح وتمت إضافتها إلى رصيدك!");
         }}
       }} catch (e) {{
         alert("❌ تم إلغاء المعاملة أو فشل الإيداع.");
@@ -1184,17 +1194,37 @@ async def api_claim_passive(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
-async def api_upgrade_rig(request):
+# مسار ترقية جهاز التعدين باستخدام رصيد TON
+async def api_upgrade_rig_ton(request):
     try:
         data = await request.json()
         user_id = int(data.get("user_id"))
-        cost = float(data.get("cost"))
+        cost_ton = float(data.get("cost_ton"))
         new_speed = float(data.get("new_speed"))
         new_level = int(data.get("new_level"))
 
         async with aiosqlite.connect("olka_vip.db") as db:
-            await db.execute("UPDATE users SET olk_balance = olk_balance - ?, mining_speed = ?, miner_level = ? WHERE user_id = ?",
-                             (cost, new_speed, new_level, user_id))
+            async with db.execute("SELECT ton_balance FROM users WHERE user_id = ?", (user_id,)) as cur:
+                row = await cur.fetchone()
+                if not row or row[0] < cost_ton:
+                    return web.json_response({"ok": False, "msg": "رصيد TON غير كافٍ"})
+
+            await db.execute("UPDATE users SET ton_balance = ton_balance - ?, mining_speed = ?, miner_level = ? WHERE user_id = ?",
+                             (cost_ton, new_speed, new_level, user_id))
+            await db.commit()
+        return web.json_response({"ok": True})
+    except Exception as e:
+        return web.json_response({"ok": False, "msg": str(e)})
+
+# مسار إضافة رصيد TON المودع مباشرة إلى الحساب
+async def api_deposit_ton_credit(request):
+    try:
+        data = await request.json()
+        user_id = int(data.get("user_id"))
+        amount_ton = float(data.get("amount_ton", 0.1))
+
+        async with aiosqlite.connect("olka_vip.db") as db:
+            await db.execute("UPDATE users SET ton_balance = ton_balance + ? WHERE user_id = ?", (amount_ton, user_id))
             await db.commit()
         return web.json_response({"ok": True})
     except Exception as e:
@@ -1456,7 +1486,7 @@ async def start_handler(message: Message, command: CommandObject):
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             "🌟 **مرحباً بك في إمبراطورية OLKA VIP** 🌟\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n\n"
-            "⛏️ أقوى نظام تعدين سحابي أوتوماتيكي مع ربط محفظة TON.\n"
+            "⛏️ عدّن واكسب عملة **OLK**، واسحب أو رقّ أجهزتك عبر **TON (Gram)**.\n"
             f"🎁 **هدية التوثيق:** `+{SIGNUP_BONUS:.0f} OLK`\n\n"
             "👇 **اضغط على الزر بالأسفل لتوثيق حسابك والمطالبة بالهدية:**"
         )
@@ -1483,8 +1513,8 @@ async def start_handler(message: Message, command: CommandObject):
         f"👑 **لوحة تحكم معدن OLKA VIP:**\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
         f"🆔 المعرّف: `{user_id}`\n"
-        f"🪙 رصيد OLK: `{user[1]:.2f} OLK`\n"
-        f"💎 رصيد TON: `{user[2]:.4f} TON`\n"
+        f"🪙 رصيد التعدين: `{user[1]:.2f} OLK`\n"
+        f"💎 رصيد TON (Gram): `{user[2]:.4f} TON`\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
         "🚀 اضغط على زر جهاز التعدين بالأسفل لفتح اللعبة والمحفظة!"
     )
@@ -1581,8 +1611,8 @@ async def balance_handler(callback: CallbackQuery):
     text = (
         "💼 **محفظة التعدين السحابي (OLKA VIP):**\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"🪙 **رصيد OLK:** `{olk:.2f} OLK`\n"
-        f"💎 **رصيد TON:** `{ton:.4f} TON`\n"
+        f"🪙 **رصيد التعدين (OLK):** `{olk:.2f} OLK`\n"
+        f"💎 **رصيد TON (Gram):** `{ton:.4f} TON`\n"
         f"📫 **المحفظة المتصلة:** {wallet_info}\n\n"
         f"💡 سعر الصرف: `1 TON = {CONVERSION_RATE} OLK`\n"
         f"💳 الحد الأدنى للسحب: `{MIN_WITHDRAW_TON} TON`\n"
@@ -1630,7 +1660,7 @@ async def convert_handler(callback: CallbackQuery):
             olk = row[0] if row else 0.0
 
     await callback.message.answer(
-        f"🪙 **صرافة OLK إلى TON:**\n\nرصيدك الحالي: `{olk:.2f} OLK`\n\n💡 للتحويل بالكمية التي تريدها بالضبط، افتح تبويب **المحفظة** من داخل الـ Mini App واكتب المبلغ المطلوب في حاسبة التحويل!",
+        f"🪙 **صرافة OLK إلى TON (Gram):**\n\nرصيدك المتاح: `{olk:.2f} OLK`\n\n💡 يمكنك التحويل بالكمية التي تختارها من خلال حاسبة التبديل في تبويب **المحفظة** داخل التطبيق!",
         parse_mode="Markdown"
     )
     await callback.answer()
@@ -1665,7 +1695,7 @@ async def withdraw_start(callback: CallbackQuery):
 
     admin_kb = InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="✅ موافقة وتأكيد", callback_data=f"adm_app_{withdrawal_id}"),
+            InlineKeyboardButton(text="✅ موافقة وإرسال", callback_data=f"adm_app_{withdrawal_id}"),
             InlineKeyboardButton(text="❌ رفض", callback_data=f"adm_rej_{withdrawal_id}")
         ]
     ])
@@ -1690,8 +1720,8 @@ async def back_home_handler(callback: CallbackQuery):
         f"👑 **لوحة تحكم معدن OLKA VIP:**\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
         f"🆔 المعرّف: `{user_id}`\n"
-        f"🪙 رصيد OLK: `{user[1]:.2f} OLK`\n"
-        f"💎 رصيد TON: `{user[2]:.4f} TON`\n"
+        f"🪙 رصيد التعدين: `{user[1]:.2f} OLK`\n"
+        f"💎 رصيد TON (Gram): `{user[2]:.4f} TON`\n"
         "━━━━━━━━━━━━━━━━━━━━━━"
     )
     await callback.message.edit_text(dash_text, parse_mode="Markdown", reply_markup=main_dashboard_keyboard(user_id))
@@ -1701,7 +1731,7 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("OLK Ultra Engine with Pure UQ User-Friendly Addresses is live...")
+    print("OLK Ultra Engine with Dual Economy (OLK Mine/Tasks + TON Deposit/Withdraw/Boost) is online...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
@@ -1709,7 +1739,8 @@ async def main():
     app.router.add_get("/api/get_user", api_get_user)
     app.router.add_post("/api/save_wallet", api_save_wallet)
     app.router.add_post("/api/claim_passive", api_claim_passive)
-    app.router.add_post("/api/upgrade_rig", api_upgrade_rig)
+    app.router.add_post("/api/upgrade_rig_ton", api_upgrade_rig_ton)
+    app.router.add_post("/api/deposit_ton_credit", api_deposit_ton_credit)
     app.router.add_post("/api/convert", api_convert)
     app.router.add_post("/api/withdraw", api_withdraw)
     app.router.add_post("/api/verify_channel_task", api_verify_channel_task)
