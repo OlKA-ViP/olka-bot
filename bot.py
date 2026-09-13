@@ -54,7 +54,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
   <style>
     :root {
       --bg-main: #060a12;
-      --card-bg: rgba(15, 23, 42, 0.85);
+      --card-bg: rgba(15, 23, 42, 0.88);
       --card-border: rgba(45, 66, 107, 0.55);
       --gold-primary: #f59e0b;
       --gold-glow: rgba(245, 158, 11, 0.4);
@@ -83,12 +83,11 @@ MINI_APP_HTML = """<!DOCTYPE html>
       height: 100%;
       overflow: hidden;
     }
-    /* حاوية التمرير الرئيسية - تم حل مشكلة النزول والتمرير */
     .main-scroll-view {
       height: 100vh;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
-      padding: 12px 14px 130px 14px; /* مساحة كافية للنزول تحت الشريط السفلي */
+      padding: 12px 14px 140px 14px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -102,7 +101,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       color: #ffffff;
       margin-bottom: 12px;
       display: flex;
-      justify-content: center; /* توسيط العنوان بعد إزالة العنصر */
+      justify-content: center;
       align-items: center;
       position: relative;
     }
@@ -119,7 +118,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       border: 1px solid var(--card-border);
       backdrop-filter: blur(20px);
       border-radius: 20px;
-      padding: 12px 16px;
+      padding: 14px;
       margin-bottom: 12px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.5);
     }
@@ -131,7 +130,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       margin-bottom: 10px;
     }
     .assets-total { color: #cbd5e1; font-weight: 700; }
-    .assets-total span { color: var(--gold-primary); }
+    .assets-total span { color: var(--gold-primary); direction: ltr; display: inline-block; }
     .assets-badge {
       display: flex;
       align-items: center;
@@ -141,29 +140,21 @@ MINI_APP_HTML = """<!DOCTYPE html>
       font-weight: 700;
     }
 
-    /* تعديل وتكبير كرت ربط المحفظة */
     .wallet-connection-banner {
       width: 100%;
       background: linear-gradient(135deg, rgba(37, 99, 235, 0.2), rgba(6, 182, 212, 0.15));
       border: 1.5px solid rgba(56, 189, 248, 0.45);
       border-radius: 16px;
-      padding: 12px 16px;
+      padding: 12px 14px;
       margin-top: 10px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       cursor: pointer;
-      transition: all 0.2s ease;
       box-shadow: 0 4px 15px rgba(2, 132, 199, 0.25);
     }
-    .wallet-connection-banner:active {
-      transform: scale(0.98);
-    }
-    .wallet-banner-left {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
+    .wallet-connection-banner:active { transform: scale(0.98); }
+    .wallet-banner-left { display: flex; align-items: center; gap: 10px; }
     .wallet-icon-box {
       width: 40px;
       height: 40px;
@@ -176,26 +167,15 @@ MINI_APP_HTML = """<!DOCTYPE html>
       color: #ffffff;
       box-shadow: 0 0 12px rgba(14, 165, 233, 0.5);
     }
-    .wallet-banner-info {
-      display: flex;
-      flex-direction: column;
-    }
-    .wallet-banner-title {
-      font-size: 13px;
-      font-weight: 800;
-      color: #ffffff;
-    }
-    .wallet-banner-sub {
-      font-size: 11px;
-      color: #93c5fd;
-      font-weight: 600;
-    }
+    .wallet-banner-info { display: flex; flex-direction: column; }
+    .wallet-banner-title { font-size: 13px; font-weight: 800; color: #ffffff; }
+    .wallet-banner-sub { font-size: 11px; color: #93c5fd; font-weight: 600; direction: ltr; text-align: right; }
     .wallet-status-tag {
       background: #0284c7;
       color: #ffffff;
       font-size: 11px;
       font-weight: 800;
-      padding: 6px 14px;
+      padding: 6px 12px;
       border-radius: 20px;
       border: 1px solid rgba(255, 255, 255, 0.2);
     }
@@ -217,6 +197,92 @@ MINI_APP_HTML = """<!DOCTYPE html>
       from { opacity: 0; transform: translateY(6px); }
       to { opacity: 1; transform: translateY(0); }
     }
+
+    /* كروت المحفظة المرتبة والواضحة */
+    .balance-cards-grid {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .bal-card {
+      background: rgba(6, 11, 22, 0.9);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .bal-card-title {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .bal-card-value {
+      font-size: 18px;
+      font-weight: 900;
+      direction: ltr;
+      text-align: left;
+    }
+
+    /* حاسبة التبديل والتحويل اليدوي */
+    .convert-box {
+      width: 100%;
+      background: rgba(6, 11, 22, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 14px;
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .input-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 6px 10px;
+    }
+    .convert-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 800;
+      direction: ltr;
+      text-align: left;
+    }
+    .btn-max {
+      background: rgba(245, 158, 11, 0.2);
+      border: 1px solid var(--gold-primary);
+      color: var(--gold-primary);
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .exchange-rate-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--text-muted);
+      padding: 0 4px;
+    }
+    .exchange-rate-row span {
+      direction: ltr;
+    }
+
     .mining-hero-card {
       width: 100%;
       background: var(--card-bg);
@@ -456,26 +522,31 @@ MINI_APP_HTML = """<!DOCTYPE html>
 </head>
 <body>
 
-  <!-- الحاوية القابلة للتمرير بالكامل دون أي حجب -->
   <div class="main-scroll-view">
     <div class="top-header">
       <div class="header-signal"><i class="fa-solid fa-signal"></i> مباشر</div>
       <div>تعدين OLK VIP</div>
     </div>
 
-    <!-- كرت الأصول المحفوظة -->
+    <!-- كرت الأصول المحفوظة العلوية -->
     <div class="assets-container">
       <div class="assets-title-row">
         <div class="assets-total">الإجمالي: <span id="total-assets">0.0000 OLK</span></div>
         <div class="assets-badge"><i class="fa-solid fa-shield-halved"></i> أصولي المحفوظة</div>
       </div>
       
-      <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(6, 11, 22, 0.85); padding:10px 14px; border-radius:14px; border:1px solid rgba(255,255,255,0.08);">
-        <span style="font-size:12px; color:var(--text-muted);">رصيد التطبيق:</span>
-        <strong id="app-balance-val" style="color:#ffffff; font-size:14px;">0.00 OLK</strong>
+      <div class="balance-cards-grid">
+        <div class="bal-card">
+          <div class="bal-card-title"><i class="fa-solid fa-coins" style="color:var(--gold-primary);"></i> رصيد OLK:</div>
+          <div class="bal-card-value" style="color:var(--gold-primary);" id="app-balance-val">0.00 OLK</div>
+        </div>
+        <div class="bal-card">
+          <div class="bal-card-title"><i class="fa-solid fa-gem" style="color:#60a5fa;"></i> رصيد TON:</div>
+          <div class="bal-card-value" style="color:#60a5fa;" id="app-ton-val">0.0000 TON</div>
+        </div>
       </div>
 
-      <!-- الزر المطور والكبير لربط محفظة TON -->
+      <!-- زر ومربع المحفظة الكبير -->
       <div class="wallet-connection-banner" onclick="handleConnectWalletClick()">
         <div class="wallet-banner-left">
           <div class="wallet-icon-box">
@@ -533,27 +604,46 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- صفحة 2: المحفظة (إيداع وسحب TON مباشر) -->
+    <!-- صفحة 2: المحفظة وإدارة التحويل اليدوي والسحب -->
     <div class="page-tab" id="tab-wallet">
       <div class="card-panel">
-        <div style="font-weight:bold; color:var(--gold-primary); font-size:15px;">💳 إدارة محفظة TON المباشرة</div>
-        <div style="display:flex; justify-content:space-between; font-size:13px;">
-          <span>رصيد TON المتوفر للسحب:</span>
-          <strong style="color:var(--accent-green);" id="ton-available-text">0.0000 TON</strong>
+        <div style="font-weight:bold; color:var(--gold-primary); font-size:15px; display:flex; justify-content:space-between; align-items:center;">
+          <span>💳 صرافة وتحويل العملات</span>
+          <span style="font-size:11px; color:#38bdf8; direction:ltr;">1 TON = 10,000 OLK</span>
         </div>
-        <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-muted);">
-          <span>معدل الصرف:</span>
-          <span>10,000 OLK = 1 TON</span>
+
+        <!-- حاسبة التبديل اليدوي الدقيقة -->
+        <div class="convert-box">
+          <div style="display:flex; justify-content:space-between; font-size:12px;">
+            <span style="color:var(--text-muted);">أدخل كمية OLK المراد تحويلها:</span>
+            <span style="color:#f59e0b; direction:ltr;" id="available-olk-convert">المتاح: 0.00</span>
+          </div>
+
+          <div class="input-row">
+            <input type="number" id="convert-input-amount" class="convert-input" placeholder="مثال: 100 أو 1000" oninput="calculateConvertPreview()">
+            <button class="btn-max" onclick="setMaxConvert()">MAX</button>
+          </div>
+
+          <div class="exchange-rate-row">
+            <span>ستحصل على تقريباً:</span>
+            <strong style="color:#4ade80; font-size:14px;" id="convert-preview-val">0.0000 TON</strong>
+          </div>
+
+          <button class="btn-claim-rewards" style="margin-top:2px;" onclick="convertOlkDirect()">
+            <i class="fa-solid fa-repeat"></i> تأكيد تحويل الكمية المحددة
+          </button>
         </div>
-        <div style="display:flex; justify-content:space-between; font-size:12px; color:#f87171;">
-          <span>الحد الأدنى للسحب:</span>
-          <span>0.1 TON (1,000 OLK)</span>
-        </div>
-        <button class="btn-claim-rewards" style="margin-top:2px;" onclick="convertOlkDirect()">تحويل رصيد OLK إلى TON 🔄</button>
-        
+
         <hr style="border:0; border-top:1px solid var(--card-border); margin:6px 0;">
-        <div style="font-size:12px; color:#cbd5e1; margin-bottom:4px;">المحفظة المتصلة بالسحب:</div>
-        <div id="connected-wallet-display" style="font-size:12px; color:#93c5fd; background:rgba(0,0,0,0.4); padding:10px; border-radius:12px; word-break:break-all;">
+
+        <!-- قسم السحب والإيداع المرتب -->
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px;">
+          <span style="color:var(--text-muted);">الحد الأدنى المطلوب للسحب:</span>
+          <strong style="color:#f87171; direction:ltr;">0.1 TON (1,000 OLK)</strong>
+        </div>
+
+        <div style="font-size:12px; color:#cbd5e1; margin-top:2px;">المحفظة المرتبطة بالسحب:</div>
+        <div id="connected-wallet-display" style="font-size:11px; color:#93c5fd; background:rgba(0,0,0,0.5); padding:10px; border-radius:12px; word-break:break-all; direction:ltr; text-align:left;">
           ⚠️ لم يتم ربط محفظة TON بعد
         </div>
 
@@ -562,7 +652,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
             <i class="fa-solid fa-arrow-down"></i> إيداع 0.1 TON
           </button>
           <button class="btn-upgrade-rig" onclick="requestWithdrawalToConnectedWallet()">
-            <i class="fa-solid fa-arrow-up"></i> سحب 0.1 TON
+            <i class="fa-solid fa-arrow-up"></i> سحب رصيد TON
           </button>
         </div>
       </div>
@@ -587,7 +677,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         <div class="rig-item">
           <div>
             <div style="font-weight:bold; font-size:13px;">CPU S-Cloud Rig</div>
-            <div style="font-size:11px; color:var(--text-muted);">+0.15 TH/s زيادة سرعة</div>
+            <div style="font-size:11px; color:var(--text-muted); direction:ltr; text-align:right;">+0.15 TH/s زيادة سرعة</div>
           </div>
           <button class="btn-upgrade-rig" style="padding:8px 12px; font-size:12px;" onclick="buyRig(1, 150, 0.15)">شراء (150 OLK)</button>
         </div>
@@ -595,7 +685,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         <div class="rig-item">
           <div>
             <div style="font-weight:bold; font-size:13px;">GPU Quantum Rig</div>
-            <div style="font-size:11px; color:var(--text-muted);">+0.50 TH/s زيادة سرعة</div>
+            <div style="font-size:11px; color:var(--text-muted); direction:ltr; text-align:right;">+0.50 TH/s زيادة سرعة</div>
           </div>
           <button class="btn-upgrade-rig" style="padding:8px 12px; font-size:12px;" onclick="buyRig(2, 450, 0.50)">شراء (450 OLK)</button>
         </div>
@@ -603,7 +693,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         <div class="rig-item">
           <div>
             <div style="font-weight:bold; font-size:13px;">ASIC VIP Titan</div>
-            <div style="font-size:11px; color:var(--text-muted);">+1.50 TH/s زيادة سرعة</div>
+            <div style="font-size:11px; color:var(--text-muted); direction:ltr; text-align:right;">+1.50 TH/s زيادة سرعة</div>
           </div>
           <button class="btn-upgrade-rig" style="padding:8px 12px; font-size:12px;" onclick="buyRig(3, 1200, 1.50)">شراء (1200 OLK)</button>
         </div>
@@ -673,15 +763,18 @@ MINI_APP_HTML = """<!DOCTYPE html>
 
     const totalAssetsEl = document.getElementById("total-assets");
     const appBalEl = document.getElementById("app-balance-val");
+    const appTonEl = document.getElementById("app-ton-val");
     const unclaimedValEl = document.getElementById("unclaimed-val");
     const speedValEl = document.getElementById("speed-val");
     const levelDisplayEl = document.getElementById("level-display");
-    const tonAvailTextEl = document.getElementById("ton-available-text");
     const walletStatusLabel = document.getElementById("wallet-status-label");
     const walletStatusSub = document.getElementById("wallet-status-sub");
     const walletBtn = document.getElementById("btn-connect-wallet");
     const walletBtnText = document.getElementById("wallet-btn-text");
     const walletDisplay = document.getElementById("connected-wallet-display");
+    const convertInput = document.getElementById("convert-input-amount");
+    const convertPreview = document.getElementById("convert-preview-val");
+    const availableOlkConvert = document.getElementById("available-olk-convert");
 
     const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
       manifestUrl: window.location.origin + '/tonconnect-manifest.json'
@@ -694,9 +787,9 @@ MINI_APP_HTML = """<!DOCTYPE html>
         walletBtnText.innerText = shortAddr;
         walletStatusLabel.innerText = "متصل ✅";
         walletStatusLabel.classList.add("connected");
-        walletStatusSub.innerText = "المحفظة: " + shortAddr;
+        walletStatusSub.innerText = shortAddr;
         walletBtn.classList.add("connected");
-        walletDisplay.innerText = "✅ متصل: " + connectedWalletAddress;
+        walletDisplay.innerText = connectedWalletAddress;
 
         await fetch("/api/save_wallet", {
           method: "POST",
@@ -737,9 +830,9 @@ MINI_APP_HTML = """<!DOCTYPE html>
             walletBtnText.innerText = shortAddr;
             walletStatusLabel.innerText = "مسجلة ✅";
             walletStatusLabel.classList.add("connected");
-            walletStatusSub.innerText = "المحفظة: " + shortAddr;
+            walletStatusSub.innerText = shortAddr;
             walletBtn.classList.add("connected");
-            walletDisplay.innerText = "✅ المحفظة المسجلة: " + connectedWalletAddress;
+            walletDisplay.innerText = connectedWalletAddress;
           }
           if (data.offline_mined) {
             unclaimed += data.offline_mined;
@@ -754,10 +847,23 @@ MINI_APP_HTML = """<!DOCTYPE html>
     function refreshScreen() {
       totalAssetsEl.innerText = (appOlk + unclaimed).toFixed(4) + " OLK";
       appBalEl.innerText = appOlk.toFixed(2) + " OLK";
-      tonAvailTextEl.innerText = appTon.toFixed(4) + " TON";
+      appTonEl.innerText = appTon.toFixed(4) + " TON";
       unclaimedValEl.innerText = unclaimed.toFixed(6);
       speedValEl.innerText = speed.toFixed(2);
       levelDisplayEl.innerText = minerLevel;
+      availableOlkConvert.innerText = "المتاح: " + appOlk.toFixed(2);
+    }
+
+    // آلة حاسبة تفاعلية للتحويل اليدوي
+    function calculateConvertPreview() {
+      const amt = parseFloat(convertInput.value) || 0;
+      const tonVal = amt / 10000;
+      convertPreview.innerText = tonVal.toFixed(4) + " TON";
+    }
+
+    function setMaxConvert() {
+      convertInput.value = Math.floor(appOlk);
+      calculateConvertPreview();
     }
 
     setInterval(() => {
@@ -813,22 +919,32 @@ MINI_APP_HTML = """<!DOCTYPE html>
       alert(`🎉 تم شراء جهاز التعدين بنجاح! السرعة الآن: ${speed.toFixed(2)} TH/s`);
     }
 
+    // التحويل اليدوي للكمية المحددة فقط
     async function convertOlkDirect() {
-      if (appOlk < 1000) {
-        alert("⚠️ يلزمك 1,000 OLK على الأقل لتحويلها إلى 0.1 TON!");
+      const amountToConvert = parseFloat(convertInput.value);
+      if (!amountToConvert || amountToConvert <= 0) {
+        alert("⚠️ يرجى كتابة كمية OLK التي ترغب في تحويلها أولاً!");
+        return;
+      }
+      if (amountToConvert > appOlk) {
+        alert("⚠️ الكمية المدخلة أكبر من رصيدك المتاح في التطبيق!");
         return;
       }
       const res = await fetch("/api/convert", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId })
+        body: JSON.stringify({ user_id: userId, amount: amountToConvert })
       });
       const data = await res.json();
       if (data.ok) {
         appOlk = data.olk_balance;
         appTon = data.ton_balance;
+        convertInput.value = "";
+        calculateConvertPreview();
         refreshScreen();
-        alert("✅ تم تحويل رصيد OLK إلى TON بنجاح!");
+        alert(`✅ تم تحويل ${amountToConvert} OLK إلى ${(amountToConvert / 10000).toFixed(4)} TON بنجاح!`);
+      } else {
+        alert(data.msg);
       }
     }
 
@@ -871,7 +987,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         return;
       }
       if (appTon < 0.1) {
-        alert("⚠️ الحد الأدنى للسحب هو 0.1 TON!");
+        alert("⚠️ رصيدك أقل من الحد الأدنى للسحب وهو 0.1 TON!");
         return;
       }
       const res = await fetch("/api/withdraw", {
@@ -883,7 +999,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       if (data.ok) {
         appTon = 0;
         refreshScreen();
-        alert("✅ تم إرسال طلب سحب 0.1 TON بنجاح للمراجعة!");
+        alert("✅ تم تسجيل طلب سحب TON بنجاح وسيتم التحويل لمحفظتك قريباً!");
       } else {
         alert(data.msg);
       }
@@ -1056,21 +1172,30 @@ async def api_upgrade_rig(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
+# مسار تحويل OLK إلى TON مع دعم الكميات اليدوية
 async def api_convert(request):
     try:
         data = await request.json()
         user_id = int(data.get("user_id"))
+        amount = float(data.get("amount", 0))
+
+        if amount <= 0:
+            return web.json_response({"ok": False, "msg": "يرجى تحديد كمية صحيحة"})
+
         async with aiosqlite.connect("olka_vip.db") as db:
             async with db.execute("SELECT olk_balance, ton_balance FROM users WHERE user_id = ?", (user_id,)) as cur:
                 row = await cur.fetchone()
-                if not row or row[0] < 1000:
-                    return web.json_response({"ok": False, "msg": "تحتاج 1,000 OLK على الأقل للتحويل!"})
-                olk = row[0]
-                ton_add = olk / CONVERSION_RATE
-                new_ton = row[1] + ton_add
-                await db.execute("UPDATE users SET olk_balance = 0.0, ton_balance = ? WHERE user_id = ?", (new_ton, user_id))
+                if not row or row[0] < amount:
+                    return web.json_response({"ok": False, "msg": "رصيد OLK غير كافٍ للتحويل"})
+                
+                olk_current, ton_current = row[0], row[1]
+                ton_add = amount / CONVERSION_RATE
+                new_olk = olk_current - amount
+                new_ton = ton_current + ton_add
+
+                await db.execute("UPDATE users SET olk_balance = ?, ton_balance = ? WHERE user_id = ?", (new_olk, new_ton, user_id))
                 await db.commit()
-                return web.json_response({"ok": True, "olk_balance": 0.0, "ton_balance": new_ton})
+                return web.json_response({"ok": True, "olk_balance": new_olk, "ton_balance": new_ton})
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
@@ -1162,7 +1287,7 @@ def main_dashboard_keyboard(user_id: int):
     app_url = f"{WEBAPP_URL}?user_id={user_id}"
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="⛏️ فتح جهاز التعدين السحابي (OLK App) 🚀", web_app=WebAppInfo(url=app_url))
+            InlineKeyboardButton(text="⛏️ فتح جهاز التعدين والمحفظة (OLK App) 🚀", web_app=WebAppInfo(url=app_url))
         ],
         [
             InlineKeyboardButton(text="⚡ مكافأة يومية (+2 OLK)", callback_data="claim"),
@@ -1330,10 +1455,10 @@ async def start_handler(message: Message, command: CommandObject):
         f"👑 **لوحة تحكم معدن OLKA VIP:**\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
         f"🆔 المعرّف: `{user_id}`\n"
-        f"💰 رصيد OLK المحفوظ: `{user[1]:.2f} OLK`\n"
-        f"💎 رصيد TON المتاح: `{user[2]:.4f} TON`\n"
+        f"🪙 رصيد OLK: `{user[1]:.2f} OLK`\n"
+        f"💎 رصيد TON: `{user[2]:.4f} TON`\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "🚀 اضغط على زر جهاز التعدين بالأسفل لفتح اللعبة وربط محفظة TON!"
+        "🚀 اضغط على زر جهاز التعدين بالأسفل لفتح اللعبة والمحفظة!"
     )
     await message.answer(dash_text, parse_mode="Markdown", reply_markup=main_dashboard_keyboard(user_id))
 
@@ -1430,13 +1555,13 @@ async def balance_handler(callback: CallbackQuery):
         f"🪙 **رصيد OLK:** `{olk:.2f} OLK`\n"
         f"💎 **رصيد TON:** `{ton:.4f} TON`\n"
         f"📫 **المحفظة المتصلة:** {wallet_info}\n\n"
-        f"💡 سعر الصرف: `{CONVERSION_RATE} OLK = 1 TON`\n"
+        f"💡 سعر الصرف: `1 TON = {CONVERSION_RATE} OLK`\n"
         f"💳 الحد الأدنى للسحب: `{MIN_WITHDRAW_TON} TON`\n"
         "━━━━━━━━━━━━━━━━━━━━━━"
     )
     buttons = InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="🔄 تحويل إلى TON", callback_data="convert"),
+            InlineKeyboardButton(text="🔄 صرافة TON", callback_data="convert"),
             InlineKeyboardButton(text="💳 سحب TON", callback_data="withdraw")
         ],
         [InlineKeyboardButton(text="🔙 العودة للرئيسية", callback_data="back_home")]
@@ -1475,16 +1600,11 @@ async def convert_handler(callback: CallbackQuery):
             row = await cursor.fetchone()
             olk = row[0] if row else 0.0
 
-        if olk < 1000:
-            await callback.answer("⚠️ تحتاج إلى 1,000 OLK على الأقل لتحويلها إلى 0.1 TON!", show_alert=True)
-            return
-
-        ton_added = olk / CONVERSION_RATE
-        await db.execute("UPDATE users SET olk_balance = 0.0, ton_balance = ton_balance + ? WHERE user_id = ?", (ton_added, user_id))
-        await db.commit()
-
-    await callback.answer(f"✅ تم تحويل {olk:.2f} OLK إلى {ton_added:.4f} TON بنجاح!", show_alert=True)
-    await balance_handler(callback)
+    await callback.message.answer(
+        f"🪙 **صرافة OLK إلى TON:**\n\nرصيدك الحالي: `{olk:.2f} OLK`\n\n💡 للتحويل بالكمية التي تريدها بالضبط، افتح تبويب **المحفظة** من داخل الـ Mini App واكتب المبلغ المطلوب في حاسبة التحويل!",
+        parse_mode="Markdown"
+    )
+    await callback.answer()
 
 @dp.callback_query(F.data == "withdraw")
 async def withdraw_start(callback: CallbackQuery):
@@ -1539,8 +1659,8 @@ async def back_home_handler(callback: CallbackQuery):
         f"👑 **لوحة تحكم معدن OLKA VIP:**\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
         f"🆔 المعرّف: `{user_id}`\n"
-        f"💰 رصيد OLK المحفوظ: `{user[1]:.2f} OLK`\n"
-        f"💎 رصيد TON المتاح: `{user[2]:.4f} TON`\n"
+        f"🪙 رصيد OLK: `{user[1]:.2f} OLK`\n"
+        f"💎 رصيد TON: `{user[2]:.4f} TON`\n"
         "━━━━━━━━━━━━━━━━━━━━━━"
     )
     await callback.message.edit_text(dash_text, parse_mode="Markdown", reply_markup=main_dashboard_keyboard(user_id))
@@ -1550,7 +1670,7 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("OLK Ultra Engine with Perfect Scrolling & Big TON Wallet Banner is live...")
+    print("OLK Ultra Engine with Custom Conversion Calculator & Clean Numbers is live...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
