@@ -17,16 +17,13 @@ BOT_TOKEN = "8707730826:AAExJ7ZSQe9YFy8Y0O2eG3uPCAwVa_vG6Qc"
 ADMIN_ID = 1932161126
 SPONSOR_CHANNEL = "@olka_ad"
 
-# عنوان محفظة المشروع المستلمة للإيداعات (ضع محفظتك هنا)
 PROJECT_TON_WALLET = "UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJKZ"
 
-# الضوابط الاقتصادية
-CONVERSION_RATE = 10000  # 10,000 OLK = 1 TON
-MIN_WITHDRAW_TON = 0.1   # الحد الأدنى للسحب 0.1 TON (يتطلب 1,000 OLK)
-REFERRAL_REWARD = 5.0    # مكافأة الإحالة
-SIGNUP_BONUS = 5.0       # هدية التوثيق
+CONVERSION_RATE = 10000
+MIN_WITHDRAW_TON = 0.1
+REFERRAL_REWARD = 5.0
+SIGNUP_BONUS = 5.0
 
-# قنوات المهام
 CHANNELS_TASKS = [
     {
         "id": "task_chan_main",
@@ -52,13 +49,12 @@ MINI_APP_HTML = """<!DOCTYPE html>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>تعدين OLK VIP</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <!-- مكتبة TON Connect الرسمية للربط والإيداع والسحب -->
   <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     :root {
       --bg-main: #060a12;
-      --card-bg: rgba(15, 23, 42, 0.78);
+      --card-bg: rgba(15, 23, 42, 0.85);
       --card-border: rgba(45, 66, 107, 0.55);
       --gold-primary: #f59e0b;
       --gold-glow: rgba(245, 158, 11, 0.4);
@@ -76,7 +72,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       padding: 0;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
-    body {
+    html, body {
       background-color: var(--bg-main);
       background-image: 
         linear-gradient(rgba(30, 41, 67, 0.22) 1px, transparent 1px),
@@ -84,15 +80,15 @@ MINI_APP_HTML = """<!DOCTYPE html>
       background-size: 24px 24px;
       color: #ffffff;
       min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
+      height: 100%;
       overflow: hidden;
     }
+    /* حاوية التمرير الرئيسية - تم حل مشكلة النزول والتمرير */
     .main-scroll-view {
-      flex: 1;
+      height: 100vh;
       overflow-y: auto;
-      padding: 12px 14px 85px 14px;
+      -webkit-overflow-scrolling: touch;
+      padding: 12px 14px 130px 14px; /* مساحة كافية للنزول تحت الشريط السفلي */
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -106,8 +102,16 @@ MINI_APP_HTML = """<!DOCTYPE html>
       color: #ffffff;
       margin-bottom: 12px;
       display: flex;
-      justify-content: space-between;
+      justify-content: center; /* توسيط العنوان بعد إزالة العنصر */
       align-items: center;
+      position: relative;
+    }
+    .header-signal {
+      position: absolute;
+      right: 4px;
+      font-size: 12px;
+      color: var(--accent-green);
+      font-weight: 600;
     }
     .assets-container {
       width: 100%;
@@ -136,22 +140,71 @@ MINI_APP_HTML = """<!DOCTYPE html>
       font-size: 12px;
       font-weight: 700;
     }
-    .assets-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-    .asset-pill {
-      background: rgba(6, 11, 22, 0.85);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 14px;
-      padding: 8px 12px;
+
+    /* تعديل وتكبير كرت ربط المحفظة */
+    .wallet-connection-banner {
+      width: 100%;
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.2), rgba(6, 182, 212, 0.15));
+      border: 1.5px solid rgba(56, 189, 248, 0.45);
+      border-radius: 16px;
+      padding: 12px 16px;
+      margin-top: 10px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 12px;
-      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 15px rgba(2, 132, 199, 0.25);
     }
+    .wallet-connection-banner:active {
+      transform: scale(0.98);
+    }
+    .wallet-banner-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .wallet-icon-box {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #0284c7, #0ea5e9);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: #ffffff;
+      box-shadow: 0 0 12px rgba(14, 165, 233, 0.5);
+    }
+    .wallet-banner-info {
+      display: flex;
+      flex-direction: column;
+    }
+    .wallet-banner-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: #ffffff;
+    }
+    .wallet-banner-sub {
+      font-size: 11px;
+      color: #93c5fd;
+      font-weight: 600;
+    }
+    .wallet-status-tag {
+      background: #0284c7;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .wallet-status-tag.connected {
+      background: rgba(34, 197, 94, 0.25);
+      color: #4ade80;
+      border-color: #22c55e;
+    }
+
     .page-tab {
       display: none;
       width: 100%;
@@ -168,8 +221,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
       width: 100%;
       background: var(--card-bg);
       border: 1px solid var(--card-border);
-      border-radius: 26px;
-      padding: 16px;
+      border-radius: 24px;
+      padding: 16px 14px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -182,9 +235,9 @@ MINI_APP_HTML = """<!DOCTYPE html>
       align-items: center;
       gap: 8px;
       background: rgba(255, 255, 255, 0.06);
-      padding: 6px 14px;
+      padding: 5px 12px;
       border-radius: 20px;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 800;
       border: 1px solid rgba(255, 255, 255, 0.08);
     }
@@ -199,11 +252,11 @@ MINI_APP_HTML = """<!DOCTYPE html>
     .unclaimed-subtitle {
       font-size: 11px;
       color: var(--text-muted);
-      margin-top: 12px;
+      margin-top: 10px;
       font-weight: 600;
     }
     .unclaimed-counter {
-      font-size: 32px;
+      font-size: 30px;
       font-weight: 900;
       color: #ffffff;
       margin-top: 2px;
@@ -214,36 +267,36 @@ MINI_APP_HTML = """<!DOCTYPE html>
     }
     .unclaimed-counter span {
       color: var(--gold-primary);
-      font-size: 20px;
+      font-size: 18px;
     }
     .hashrate-capsule {
       background: rgba(15, 23, 42, 0.75);
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 20px;
-      padding: 4px 14px;
+      padding: 4px 12px;
       display: flex;
       align-items: center;
       gap: 6px;
       font-size: 12px;
       color: #93c5fd;
       font-weight: 700;
-      margin-top: 6px;
+      margin-top: 4px;
     }
     .central-coin-stage {
-      margin: 20px 0 14px 0;
+      margin: 16px 0 12px 0;
       position: relative;
       display: flex;
       justify-content: center;
       align-items: center;
     }
     .coin-3d {
-      width: 210px;
-      height: 210px;
+      width: 195px;
+      height: 195px;
       border-radius: 50%;
       background: radial-gradient(circle at 35% 35%, #fde047 0%, #eab308 35%, #ca8a04 70%, #713f12 100%);
       border: 7px solid #fef08a;
       outline: 5px solid rgba(245, 158, 11, 0.45);
-      box-shadow: 0 0 45px var(--gold-glow), inset 0 0 20px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 0 40px var(--gold-glow), inset 0 0 20px rgba(0, 0, 0, 0.5);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -253,8 +306,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
     }
     .coin-3d:active { transform: scale(0.95); }
     .coin-inner-details {
-      width: 170px;
-      height: 170px;
+      width: 155px;
+      height: 155px;
       border-radius: 50%;
       border: 2px dashed rgba(254, 240, 138, 0.6);
       display: flex;
@@ -263,12 +316,12 @@ MINI_APP_HTML = """<!DOCTYPE html>
       justify-content: center;
     }
     .coin-symbol {
-      font-size: 54px;
+      font-size: 48px;
       color: #ffffff;
       text-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
     }
     .coin-name {
-      font-size: 24px;
+      font-size: 22px;
       font-weight: 900;
       color: #ffffff;
       letter-spacing: 2px;
@@ -282,9 +335,9 @@ MINI_APP_HTML = """<!DOCTYPE html>
       font-weight: 900;
       border: none;
       border-radius: 16px;
-      padding: 14px;
+      padding: 13px;
       font-size: 14px;
-      margin-top: 10px;
+      margin-top: 8px;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -296,9 +349,9 @@ MINI_APP_HTML = """<!DOCTYPE html>
     .hero-actions-grid {
       width: 100%;
       display: grid;
-      grid-template-columns: 1fr 1.2fr;
-      gap: 12px;
-      margin-top: 14px;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
     }
     .btn-upgrade-rig {
       background: linear-gradient(135deg, #1d4ed8, #3b82f6);
@@ -306,7 +359,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       font-weight: 800;
       border: none;
       border-radius: 16px;
-      padding: 14px;
+      padding: 13px;
       font-size: 13px;
       cursor: pointer;
       display: flex;
@@ -320,14 +373,13 @@ MINI_APP_HTML = """<!DOCTYPE html>
       font-weight: 800;
       border: none;
       border-radius: 16px;
-      padding: 14px;
+      padding: 13px;
       font-size: 12px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 6px;
-      transition: background 0.2s;
     }
     .btn-wallet-link.connected {
       background: rgba(34, 197, 94, 0.2);
@@ -360,8 +412,9 @@ MINI_APP_HTML = """<!DOCTYPE html>
       left: 0;
       right: 0;
       height: 68px;
-      background: #060a12;
+      background: rgba(6, 10, 18, 0.95);
       border-top: 1px solid rgba(43, 62, 99, 0.4);
+      backdrop-filter: blur(15px);
       display: flex;
       justify-content: space-around;
       align-items: center;
@@ -403,11 +456,11 @@ MINI_APP_HTML = """<!DOCTYPE html>
 </head>
 <body>
 
+  <!-- الحاوية القابلة للتمرير بالكامل دون أي حجب -->
   <div class="main-scroll-view">
     <div class="top-header">
-      <div style="font-size:12px; color:var(--text-muted);"><i class="fa-solid fa-server"></i> سحابي 24/7</div>
+      <div class="header-signal"><i class="fa-solid fa-signal"></i> مباشر</div>
       <div>تعدين OLK VIP</div>
-      <div style="font-size:12px; color:var(--accent-green);"><i class="fa-solid fa-signal"></i> مباشر</div>
     </div>
 
     <!-- كرت الأصول المحفوظة -->
@@ -416,15 +469,24 @@ MINI_APP_HTML = """<!DOCTYPE html>
         <div class="assets-total">الإجمالي: <span id="total-assets">0.0000 OLK</span></div>
         <div class="assets-badge"><i class="fa-solid fa-shield-halved"></i> أصولي المحفوظة</div>
       </div>
-      <div class="assets-grid">
-        <div class="asset-pill">
-          <span id="app-balance-val">0.00 OLK</span>
-          <span style="color:var(--text-muted);">في التطبيق</span>
+      
+      <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(6, 11, 22, 0.85); padding:10px 14px; border-radius:14px; border:1px solid rgba(255,255,255,0.08);">
+        <span style="font-size:12px; color:var(--text-muted);">رصيد التطبيق:</span>
+        <strong id="app-balance-val" style="color:#ffffff; font-size:14px;">0.00 OLK</strong>
+      </div>
+
+      <!-- الزر المطور والكبير لربط محفظة TON -->
+      <div class="wallet-connection-banner" onclick="handleConnectWalletClick()">
+        <div class="wallet-banner-left">
+          <div class="wallet-icon-box">
+            <i class="fa-solid fa-wallet"></i>
+          </div>
+          <div class="wallet-banner-info">
+            <span class="wallet-banner-title">محفظة TON (Telegram / Tonkeeper)</span>
+            <span class="wallet-banner-sub" id="wallet-status-sub">اضغط لربط المحفظة مباشرة</span>
+          </div>
         </div>
-        <div class="asset-pill" onclick="handleConnectWalletClick()" style="cursor:pointer;">
-          <span style="color:#60a5fa;" id="wallet-status-label">اتصال</span>
-          <span style="color:var(--text-muted);">TON <i class="fa-solid fa-wallet"></i></span>
-        </div>
+        <div class="wallet-status-tag" id="wallet-status-label">اتصال</div>
       </div>
     </div>
 
@@ -490,17 +552,15 @@ MINI_APP_HTML = """<!DOCTYPE html>
         <button class="btn-claim-rewards" style="margin-top:2px;" onclick="convertOlkDirect()">تحويل رصيد OLK إلى TON 🔄</button>
         
         <hr style="border:0; border-top:1px solid var(--card-border); margin:6px 0;">
-        <div style="font-size:12px; color:#cbd5e1; margin-bottom:4px;">المحفظة المتصلة (Telegram / Tonkeeper):</div>
+        <div style="font-size:12px; color:#cbd5e1; margin-bottom:4px;">المحفظة المتصلة بالسحب:</div>
         <div id="connected-wallet-display" style="font-size:12px; color:#93c5fd; background:rgba(0,0,0,0.4); padding:10px; border-radius:12px; word-break:break-all;">
           ⚠️ لم يتم ربط محفظة TON بعد
         </div>
 
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:6px;">
-          <!-- زر إيداع TON مباشر لشراء رصيد تعدين فوري -->
           <button class="btn-upgrade-rig" style="background:#059669;" onclick="depositTonDirect()">
             <i class="fa-solid fa-arrow-down"></i> إيداع 0.1 TON
           </button>
-          <!-- زر سحب مباشر إلى محفظة المستخدم -->
           <button class="btn-upgrade-rig" onclick="requestWithdrawalToConnectedWallet()">
             <i class="fa-solid fa-arrow-up"></i> سحب 0.1 TON
           </button>
@@ -550,7 +610,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- صفحة 5: المهام مع فحص القنوات الحقيقي -->
+    <!-- صفحة 5: المهام -->
     <div class="page-tab" id="tab-tasks">
       <div class="card-panel">
         <div style="font-weight:bold; color:var(--gold-primary); font-size:15px;"><i class="fa-solid fa-list-check"></i> مهام التحقق من القنوات</div>
@@ -569,7 +629,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
     </div>
   </div>
 
-  <!-- شريط التنقل السفلي -->
+  <!-- شريط التنقل السفلي الثابت -->
   <div class="bottom-bar">
     <div class="nav-link" onclick="switchNav('wallet', this)">
       <i class="fa-solid fa-wallet"></i>
@@ -596,7 +656,10 @@ MINI_APP_HTML = """<!DOCTYPE html>
 
   <script>
     const tg = window.Telegram?.WebApp;
-    if (tg) { tg.ready(); tg.expand(); }
+    if (tg) { 
+      tg.ready(); 
+      tg.expand(); 
+    }
 
     const urlParams = new URLSearchParams(window.location.search);
     const userId = tg?.initDataUnsafe?.user?.id || urlParams.get('user_id') || 1932161126;
@@ -615,11 +678,11 @@ MINI_APP_HTML = """<!DOCTYPE html>
     const levelDisplayEl = document.getElementById("level-display");
     const tonAvailTextEl = document.getElementById("ton-available-text");
     const walletStatusLabel = document.getElementById("wallet-status-label");
+    const walletStatusSub = document.getElementById("wallet-status-sub");
     const walletBtn = document.getElementById("btn-connect-wallet");
     const walletBtnText = document.getElementById("wallet-btn-text");
     const walletDisplay = document.getElementById("connected-wallet-display");
 
-    // تهيئة مكوّن TON Connect الرسمي
     const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
       manifestUrl: window.location.origin + '/tonconnect-manifest.json'
     });
@@ -629,7 +692,9 @@ MINI_APP_HTML = """<!DOCTYPE html>
         connectedWalletAddress = wallet.account.address;
         const shortAddr = connectedWalletAddress.slice(0, 4) + '...' + connectedWalletAddress.slice(-4);
         walletBtnText.innerText = shortAddr;
-        walletStatusLabel.innerText = shortAddr;
+        walletStatusLabel.innerText = "متصل ✅";
+        walletStatusLabel.classList.add("connected");
+        walletStatusSub.innerText = "المحفظة: " + shortAddr;
         walletBtn.classList.add("connected");
         walletDisplay.innerText = "✅ متصل: " + connectedWalletAddress;
 
@@ -642,6 +707,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
         connectedWalletAddress = null;
         walletBtnText.innerText = "CONNECT WALLET";
         walletStatusLabel.innerText = "اتصال";
+        walletStatusLabel.classList.remove("connected");
+        walletStatusSub.innerText = "اضغط لربط المحفظة مباشرة";
         walletBtn.classList.remove("connected");
         walletDisplay.innerText = "⚠️ لم يتم ربط محفظة TON بعد";
       }
@@ -668,7 +735,9 @@ MINI_APP_HTML = """<!DOCTYPE html>
             connectedWalletAddress = data.saved_wallet;
             const shortAddr = connectedWalletAddress.slice(0, 4) + '...' + connectedWalletAddress.slice(-4);
             walletBtnText.innerText = shortAddr;
-            walletStatusLabel.innerText = shortAddr;
+            walletStatusLabel.innerText = "مسجلة ✅";
+            walletStatusLabel.classList.add("connected");
+            walletStatusSub.innerText = "المحفظة: " + shortAddr;
             walletBtn.classList.add("connected");
             walletDisplay.innerText = "✅ المحفظة المسجلة: " + connectedWalletAddress;
           }
@@ -691,7 +760,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       levelDisplayEl.innerText = minerLevel;
     }
 
-    // معادلة التعدين الموزونة والصعبة
     setInterval(() => {
       unclaimed += (speed * 0.000015);
       unclaimedValEl.innerText = unclaimed.toFixed(6);
@@ -764,7 +832,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       }
     }
 
-    // إيداع TON مباشر من خلال نافذة المحفظة
     async function depositTonDirect() {
       if (!tonConnectUI.connected) {
         alert("❌ يرجى ربط محفظة TON أولاً!");
@@ -775,15 +842,14 @@ MINI_APP_HTML = """<!DOCTYPE html>
         validUntil: Math.floor(Date.now() / 1000) + 360,
         messages: [
           {
-            address: "UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJKZ", // عنوان محفظة المشروع
-            amount: "100000000" // 0.1 TON بوحدة النانو (10^9)
+            address: "UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJKZ",
+            amount: "100000000"
           }
         ]
       };
       try {
         const result = await tonConnectUI.sendTransaction(transaction);
         if (result) {
-          // إضافة الرصيد بعد نجاح الإيداع
           appOlk += 1000;
           refreshScreen();
           await fetch("/api/claim_passive", {
@@ -1484,7 +1550,7 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("OLK Ultra Engine with 0.1 TON Economy & Direct TON Connect is live...")
+    print("OLK Ultra Engine with Perfect Scrolling & Big TON Wallet Banner is live...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
