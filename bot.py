@@ -4,10 +4,10 @@ import time
 import os
 from aiohttp import web
 from aiogram import Bot, Dispatcher, F
-from aiogram.filters import CommandStart
+from aiogram.filters import CommandStart, CommandObject
 from aiogram.types import (
     Message, InlineKeyboardMarkup, InlineKeyboardButton,
-    CallbackQuery, ReplyKeyboardMarkup, KeyboardButton
+    CallbackQuery, ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
 )
 
 BOT_TOKEN = "8707730826:AAExJ7ZSQe9YFy8Y0O2eG3uPCAwVa_vG6Qc"
@@ -15,13 +15,17 @@ ADMIN_ID = 1932161126
 SPONSOR_CHANNEL = "@olka_ad"
 CONVERSION_RATE = 100
 MIN_WITHDRAW_GRAM = 5
+REFERRAL_REWARD = 100.0
+
+# رابط تطبيق الويب الخاص بك على Render
+WEBAPP_URL = "https://olka-bot-service.onrender.com"
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
 withdraw_state = {}
 
-# واجهة الويب الاحترافية متعددة الصفحات (AAA Mini App)
+# واجهة الويب المتطورة (Mini App)
 MINI_APP_HTML = """<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -82,8 +86,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       from { opacity: 0; transform: translateY(6px); }
       to { opacity: 1; transform: translateY(0); }
     }
-
-    /* الشريط العلوي */
     .top-bar {
       width: 100%;
       display: flex;
@@ -131,8 +133,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       border: 1px solid rgba(52, 211, 153, 0.3);
       font-weight: 600;
     }
-
-    /* عداد الرصيد */
     .score-container {
       text-align: center;
       margin: 10px 0;
@@ -168,8 +168,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       color: #78350f;
       border: 2px solid #fef08a;
     }
-
-    /* منطقة العملة */
     .coin-wrapper {
       position: relative;
       margin: 25px 0;
@@ -235,8 +233,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       0% { opacity: 1; transform: translateY(0) scale(1); }
       100% { opacity: 0; transform: translateY(-100px) scale(1.35); }
     }
-
-    /* شريط الطاقة */
     .energy-card {
       width: 100%;
       background: var(--card-surface);
@@ -267,8 +263,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       border-radius: 12px;
       transition: width 0.15s ease-out;
     }
-
-    /* القوائم والبطاقات (صفحات المهام، التطوير، الإحالة) */
     .section-title {
       font-size: 18px;
       font-weight: 800;
@@ -332,8 +326,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       border: 1px solid rgba(52, 211, 153, 0.3);
       cursor: default;
     }
-
-    /* الشريط السفلي للتنقل */
     .bottom-nav {
       position: fixed;
       bottom: 12px;
@@ -377,7 +369,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
 <body>
 
   <div class="main-view">
-    <!-- الشريط العلوي المستمر -->
     <div class="top-bar">
       <div class="user-profile">
         <div class="avatar-icon" id="user-avatar">O</div>
@@ -389,7 +380,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       <div class="server-status">🟢 متصل بالسيرفر</div>
     </div>
 
-    <!-- الصفحة 1: التعدين الرئيسي -->
     <div class="page active" id="page-mine">
       <div class="score-container">
         <div class="score-title">إجمالي رصيد التعدين (OLK)</div>
@@ -418,7 +408,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- الصفحة 2: متجر التطويرات (Boosters) -->
     <div class="page" id="page-boost">
       <div class="section-title"><i class="fa-solid fa-rocket"></i> تطويرات التعدين الخارقة</div>
 
@@ -456,7 +445,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- الصفحة 3: المهام والمكافآت (Tasks) -->
     <div class="page" id="page-tasks">
       <div class="section-title"><i class="fa-solid fa-list-check"></i> المهام والمكافآت السريعة</div>
 
@@ -483,12 +471,11 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- الصفحة 4: الإحالة والأصدقاء (Frens) -->
     <div class="page" id="page-frens">
       <div class="section-title"><i class="fa-solid fa-user-group"></i> نظام دعوة الأصدقاء</div>
 
       <div class="card-item" style="flex-direction:column; align-items:flex-start; gap:10px;">
-        <div style="font-size:13px; color:#cbd5e1;">شارك رابط الإحالة الخاص بك واحصل على <strong>100 OLK</strong> فوراً لكل صديق يسجل في البوت!</div>
+        <div style="font-size:13px; color:#cbd5e1;">شارك رابط الإحالة الخاص بك واحصل على <strong>100 OLK</strong> فوراً لكل صديق يسجل ويوثق حسابه في البوت!</div>
         <button class="btn-action" style="width:100%; padding:12px; font-size:14px;" onclick="copyInviteLink()"><i class="fa-solid fa-copy"></i> نسخ رابط الدعوة الخاص بي</button>
       </div>
 
@@ -507,7 +494,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
     </div>
   </div>
 
-  <!-- شريط التنقل السفلي الاحترافي -->
   <div class="bottom-nav">
     <div class="nav-btn active" onclick="switchTab('mine', this)">
       <i class="fa-solid fa-pickaxe"></i>
@@ -570,7 +556,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
 
     renderUI();
 
-    // استعادة الطاقة تدريجياً
     setInterval(() => {
       if (energy < maxEnergy) {
         energy = Math.min(maxEnergy, energy + 4);
@@ -579,7 +564,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       }
     }, 1000);
 
-    // النقر التفاعلي
     coinBtn.addEventListener("pointerdown", (event) => {
       if (energy < clickPower) {
         if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred("error");
@@ -593,15 +577,15 @@ MINI_APP_HTML = """<!DOCTYPE html>
       localStorage.setItem("olk_v2_balance", balance);
       localStorage.setItem("olk_v2_energy", energy);
 
-      if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred("medium");
+      if (tg?.HapticFeedback) {
+        tg.HapticFeedback.impactOccurred("medium");
+      }
 
-      // تأثير انحناء العملة عند الضغط (3D Tilt)
       const rect = coinBtn.getBoundingClientRect();
       const x = event.clientX - rect.left - rect.width / 2;
       const y = event.clientY - rect.top - rect.height / 2;
       coinBtn.style.transform = `scale(0.94) rotateX(${-y/10}deg) rotateY(${x/10}deg)`;
 
-      // الرقم العائم
       const floatEl = document.createElement("div");
       floatEl.className = "float-num";
       floatEl.innerText = "+" + clickPower;
@@ -616,7 +600,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       coinBtn.style.transform = "scale(1) rotateX(0deg) rotateY(0deg)";
     });
 
-    // التنقل بين التبويبات
     function switchTab(tabId, el) {
       document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
       document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
@@ -625,7 +608,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
     }
 
-    // التطويرات (Boosts)
     function upgradeMultiTap() {
       if (balance >= 100) {
         balance -= 100;
@@ -664,7 +646,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       alert("⚡ تم ملء الطاقة بالكامل مجاناً!");
     }
 
-    // المهام
     function completeTask(taskName, reward, link) {
       window.open(link, "_blank");
       setTimeout(() => {
@@ -693,7 +674,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
     function copyInviteLink() {
       const botUser = "OlkaVip_bot";
       const userId = tgUser?.id || "123456";
-      const inviteUrl = `https://t.me/${botUser}?start=ref_${userId}`;
+      const inviteUrl = `https://t.me/${botUser}?start=${userId}`;
       navigator.clipboard.writeText(inviteUrl);
       if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
       alert("✅ تم نسخ رابط الدعوة الخاص بك!");
@@ -711,9 +692,20 @@ async def init_db():
             phone_number TEXT UNIQUE,
             olk_balance REAL DEFAULT 0.0,
             gram_balance REAL DEFAULT 0.0,
-            last_claim INTEGER DEFAULT 0
+            last_claim INTEGER DEFAULT 0,
+            referred_by INTEGER DEFAULT NULL,
+            ref_reward_claimed INTEGER DEFAULT 0
         )
         """)
+        try:
+            await db.execute("ALTER TABLE users ADD COLUMN referred_by INTEGER DEFAULT NULL")
+        except Exception:
+            pass
+        try:
+            await db.execute("ALTER TABLE users ADD COLUMN ref_reward_claimed INTEGER DEFAULT 0")
+        except Exception:
+            pass
+
         await db.execute("""
         CREATE TABLE IF NOT EXISTS withdrawals (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -727,20 +719,24 @@ async def init_db():
 
 def get_contact_keyboard():
     return ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="📱 توثيق الحساب برقم الهاتف", request_contact=True)]],
+        keyboard=[[KeyboardButton(text="⚡ توثيق الحساب والمطالبة بـ 10 OLK 🚀", request_contact=True)]],
         resize_keyboard=True,
         one_time_keyboard=True
     )
 
-def main_menu():
+def main_dashboard_keyboard(user_id: int):
+    # زر الويب المباشر المدمج في الرسالة
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="⛏️ تعدين OLK اليومي", callback_data="claim"),
-            InlineKeyboardButton(text="🔄 تحويل إلى Gram", callback_data="convert")
+            InlineKeyboardButton(text="🎮 إطلاق لعبة OLKA VIP (Mini App) 🚀", web_app=WebAppInfo(url=WEBAPP_URL))
         ],
         [
-            InlineKeyboardButton(text="💰 المحفظة والرصيد", callback_data="balance"),
-            InlineKeyboardButton(text="💳 طلب سحب Gram", callback_data="withdraw")
+            InlineKeyboardButton(text="⚡ تعدين فوري", callback_data="claim"),
+            InlineKeyboardButton(text="🔄 صرافة Gram", callback_data="convert")
+        ],
+        [
+            InlineKeyboardButton(text="💳 المحفظة والسحب", callback_data="balance"),
+            InlineKeyboardButton(text="👥 دعوة الأصدقاء", callback_data="referral")
         ],
         [
             InlineKeyboardButton(text="📢 قناة OLKA AD الرسمية", url="https://t.me/olka_ad")
@@ -755,60 +751,127 @@ async def check_subscription(user_id: int) -> bool:
         return True
 
 @dp.message(CommandStart())
-async def start_handler(message: Message):
+async def start_handler(message: Message, command: CommandObject):
     user_id = message.from_user.id
+    ref_param = command.args
 
     async with aiosqlite.connect("olka_vip.db") as db:
-        async with db.execute("SELECT phone_number FROM users WHERE user_id = ?", (user_id,)) as cursor:
+        async with db.execute("SELECT phone_number, olk_balance, gram_balance FROM users WHERE user_id = ?", (user_id,)) as cursor:
             user = await cursor.fetchone()
 
+        if not user and ref_param:
+            try:
+                referrer_id = int(ref_param.replace("ref_", ""))
+                if referrer_id != user_id:
+                    await db.execute("""
+                        INSERT INTO users (user_id, referred_by) VALUES (?, ?)
+                        ON CONFLICT(user_id) DO NOTHING
+                    """, (user_id, referrer_id))
+                    await db.commit()
+            except ValueError:
+                pass
+
     if not user or not user[0]:
-        await message.answer(
-            "👋 مرحباً بك في مشروع OLKA VIP EMPIRE!\n\n🔒 لحماية البوت من التكرار، يرجى توثيق حسابك بمشاركة رقم هاتفك لمرة واحدة فقط:",
-            reply_markup=get_contact_keyboard()
+        welcome_banner = (
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
+            "🌟 **مرحباً بك في إمبراطورية OLKA VIP** 🌟\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            "⛏️ انضم الآن لأقوى مجتمع تعدين سحابي للعبة **OLKA VIP EMPIRE** على تليجرام.\n\n"
+            "🎁 **هدية التسجيل الفوري:** `+10 OLK`\n"
+            "🛡️ **الحماية:** لمنع الحسابات الوهمية والتكرار، يلزم توثيق هويتك بمشاركة رقم الهاتف لمرة واحدة فقط.\n\n"
+            "👇 **اضغط على الزر بالأسفل للتوثيق والبدء فوراً:**"
         )
+        await message.answer(welcome_banner, parse_mode="Markdown", reply_markup=get_contact_keyboard())
         return
 
     if not await check_subscription(user_id):
+        sub_banner = (
+            "⚠️ **خطوة أخيرة لتفعيل حسابك!**\n\n"
+            f"يرجى الانضمام إلى قناتنا الرسمية لتبقى على اطلاع بآخر أخبار التوزيع والإدراج:\n"
+            f"📢 **{SPONSOR_CHANNEL}**"
+        )
         await message.answer(
-            f"⚠️ للمتابعة داخل البوت، يجب أولاً الانضمام لقناتنا الرسمية:\n{SPONSOR_CHANNEL}",
+            sub_banner,
+            parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="انضم للقناة الآن 📢", url="https://t.me/olka_ad")],
-                [InlineKeyboardButton(text="تحقق من الاشتراك ✅", callback_data="verify_sub")]
+                [InlineKeyboardButton(text="📢 انضم إلى القناة الآن", url="https://t.me/olka_ad")],
+                [InlineKeyboardButton(text="✅ تحقق من انضمامي", callback_data="verify_sub")]
             ])
         )
         return
 
-    await message.answer("🪙 مرحباً بك في لوحة تحكم OLKA VIP EMPIRE:\nاضغط على زر **Open** بالأسفل لدخول عالم التعدين والمهام!", reply_markup=main_menu())
+    user_name = message.from_user.first_name or "المعدّن"
+    dash_text = (
+        f"👑 **مرحباً بك في لوحة تحكم OLKA VIP يا {user_name}!**\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"🆔 **معرّف الحساب:** `{user_id}`\n"
+        f"💎 **رتبة الحساب:** VIP Miner ⚡\n"
+        f"💰 **رصيد التعدين الحالي:** `{user[1]:.2f} OLK`\n"
+        f"💳 **رصيد محفظة السحب:** `{user[2]:.4f} Gram`\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        "🚀 **يمكنك النقر والتعدين عبر Mini App أو استخدام خيارات التحكم أدناه:**"
+    )
+    await message.answer(dash_text, parse_mode="Markdown", reply_markup=main_dashboard_keyboard(user_id))
 
 @dp.message(F.contact)
 async def contact_handler(message: Message):
     contact = message.contact
-    if contact.user_id != message.from_user.id:
+    user_id = message.from_user.id
+
+    if contact.user_id != user_id:
         await message.answer("❌ يجب إرسال رقم هاتفك الخاص بك فقط!")
         return
 
     async with aiosqlite.connect("olka_vip.db") as db:
         async with db.execute("SELECT user_id FROM users WHERE phone_number = ?", (contact.phone_number,)) as cursor:
             existing = await cursor.fetchone()
-            if existing and existing[0] != message.from_user.id:
+            if existing and existing[0] != user_id:
                 await message.answer("⛔ هذا الرقم مستخدم مسبقاً في حساب آخر!")
                 return
 
         await db.execute("""
             INSERT INTO users (user_id, phone_number, olk_balance) VALUES (?, ?, 10.0)
             ON CONFLICT(user_id) DO UPDATE SET phone_number = excluded.phone_number
-        """, (message.from_user.id, contact.phone_number))
+        """, (user_id, contact.phone_number))
         await db.commit()
 
-    await message.answer("✅ تم توثيق حسابك بنجاح وحصلت على مكافأة ترحيبية +10 OLK!", reply_markup=main_menu())
+        async with db.execute("SELECT referred_by, ref_reward_claimed FROM users WHERE user_id = ?", (user_id,)) as cursor:
+            ref_row = await cursor.fetchone()
+
+        if ref_row and ref_row[0] and ref_row[1] == 0:
+            referrer_id = ref_row[0]
+            await db.execute("UPDATE users SET olk_balance = olk_balance + ? WHERE user_id = ?", (REFERRAL_REWARD, referrer_id))
+            await db.execute("UPDATE users SET ref_reward_claimed = 1 WHERE user_id = ?", (user_id,))
+            await db.commit()
+
+            try:
+                invited_name = message.from_user.first_name or "مستخدم جديد"
+                await bot.send_message(
+                    chat_id=referrer_id,
+                    text=(
+                        "🎉 **إحالة ناجحة جديدة!**\n\n"
+                        f"👤 صديقك: **{invited_name}** أكمل التوثيق بنجاح.\n"
+                        f"💰 **تمت إضافة +{REFERRAL_REWARD:.0f} OLK إلى محفظتك مباشرة!**"
+                    ),
+                    parse_mode="Markdown"
+                )
+            except Exception:
+                pass
+
+    success_text = (
+        "✅ **تم توثيق الحساب بنجاح!**\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        "🎁 تمت إضافة **+10.00 OLK** كهدية ترحيبية إلى رصيدك.\n\n"
+        "اضغط على زر إطلاق اللعبة وابدأ في التعدين فوراً!"
+    )
+    await message.answer(success_text, parse_mode="Markdown", reply_markup=main_dashboard_keyboard(user_id))
 
 @dp.callback_query(F.data == "verify_sub")
 async def verify_sub_handler(callback: CallbackQuery):
     if await check_subscription(callback.from_user.id):
-        await callback.message.edit_text("✅ تم التحقق من الاشتراك بنجاح!", reply_markup=main_menu())
+        await callback.message.edit_text("✅ **تم التحقق بنجاح!** مرحباً بك في الإمبراطورية.", parse_mode="Markdown", reply_markup=main_dashboard_keyboard(callback.from_user.id))
     else:
-        await callback.answer("❌ لم تنضم للقناة بعد، اضغط على الرابط وانضم أولاً.", show_alert=True)
+        await callback.answer("❌ لم تنضم للقناة بعد، اضغط على الرابط أعلاه وانضم أولاً.", show_alert=True)
 
 @dp.callback_query(F.data == "claim")
 async def claim_handler(callback: CallbackQuery):
@@ -825,14 +888,14 @@ async def claim_handler(callback: CallbackQuery):
             rem = cooldown - (current_time - last_claim)
             hours = rem // 3600
             mins = (rem % 3600) // 60
-            await callback.answer(f"⏳ يمكنك المطالبة مجدداً بعد: {hours} ساعة و {mins} دقيقة.", show_alert=True)
+            await callback.answer(f"⏳ يمكنك استلام التعدين مجدداً بعد: {hours} ساعة و {mins} دقيقة.", show_alert=True)
             return
 
         await db.execute("UPDATE users SET olk_balance = olk_balance + 20.0, last_claim = ? WHERE user_id = ?", (current_time, user_id))
         await db.commit()
 
-    await callback.answer("✅ تمت إضافة 20 OLK إلى رصيدك بنجاح!", show_alert=True)
-    await callback.message.edit_text("🎉 تم استلام التعدين اليومي بنجاح.", reply_markup=main_menu())
+    await callback.answer("✅ استلمت +20 OLK بنجاح!", show_alert=True)
+    await callback.message.edit_text("🎉 **تم استلام التعدين اليومي بنجاح (+20 OLK)!**", parse_mode="Markdown", reply_markup=main_dashboard_keyboard(user_id))
 
 @dp.callback_query(F.data == "balance")
 async def balance_handler(callback: CallbackQuery):
@@ -842,8 +905,56 @@ async def balance_handler(callback: CallbackQuery):
             row = await cursor.fetchone()
             olk, gram = row if row else (0.0, 0.0)
 
-    text = f"📊 محفظتك في OLKA VIP:\n\n• رصيد OLK: {olk:.2f} OLK\n• رصيد Gram: {gram:.4f} Gram\n\n💡 سعر الصرف: كل {CONVERSION_RATE} OLK = 1 Gram\n💳 الحد الأدنى للسحب: {MIN_WITHDRAW_GRAM} Gram"
-    await callback.message.edit_text(text, reply_markup=main_menu())
+    text = (
+        "💼 **المحفظة الاستثمارية لـ OLKA VIP:**\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"🪙 **رصيد عملة OLK:** `{olk:.2f} OLK`\n"
+        f"💎 **رصيد Gram القابل للسحب:** `{gram:.4f} Gram`\n\n"
+        f"💡 **معدل التحويل:** كل `{CONVERSION_RATE} OLK` = `1 Gram`\n"
+        f"💳 **الحد الأدنى للسحب:** `{MIN_WITHDRAW_GRAM} Gram`\n"
+        "━━━━━━━━━━━━━━━━━━━━━━"
+    )
+    buttons = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="🔄 تحويل الرصيد إلى Gram", callback_data="convert"),
+            InlineKeyboardButton(text="💳 سحب أرباح Gram", callback_data="withdraw")
+        ],
+        [
+            InlineKeyboardButton(text="🔙 العودة للرئيسية", callback_data="back_home")
+        ]
+    ])
+    await callback.message.edit_text(text, parse_mode="Markdown", reply_markup=buttons)
+
+@dp.callback_query(F.data == "referral")
+async def referral_handler(callback: CallbackQuery):
+    user_id = callback.from_user.id
+    async with aiosqlite.connect("olka_vip.db") as db:
+        async with db.execute("SELECT COUNT(*) FROM users WHERE referred_by = ? AND phone_number IS NOT NULL", (user_id,)) as cursor:
+            row = await cursor.fetchone()
+            ref_count = row[0] if row else 0
+
+    bot_info = await bot.get_me()
+    ref_link = f"https://t.me/{bot_info.username}?start={user_id}"
+
+    text = (
+        "👥 **نظام الشركاء والإحالات الملكي (VIP Affiliate):**\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"🤝 **عدد أصدقائك الموثقين:** `{ref_count} صديق`\n"
+        f"🎁 **أرباحك لكل إحالة:** `+{REFERRAL_REWARD:.0f} OLK` فوراً\n\n"
+        f"🔗 **رابط الإحالة الحصري الخاص بك:**\n"
+        f"`{ref_link}`\n\n"
+        "💡 *اضغط على الرابط بالأعلى لنسخه وشاركه مع أصدقائك في المجموعات والقنوات!*\n"
+        "━━━━━━━━━━━━━━━━━━━━━━"
+    )
+    buttons = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="📤 مشاركة مع الأصدقاء", url=f"https://t.me/share/url?url={ref_link}&text=انضم%20معي%20في%20لعبة%20تعدين%20OLKA%20VIP%20واربح%20عملات%20رقمية%20مجاناً!")
+        ],
+        [
+            InlineKeyboardButton(text="🔙 العودة للرئيسية", callback_data="back_home")
+        ]
+    ])
+    await callback.message.edit_text(text, parse_mode="Markdown", reply_markup=buttons)
 
 @dp.callback_query(F.data == "convert")
 async def convert_handler(callback: CallbackQuery):
@@ -854,14 +965,14 @@ async def convert_handler(callback: CallbackQuery):
             olk = row[0] if row else 0.0
 
         if olk < CONVERSION_RATE:
-            await callback.answer(f"⚠️ تحتاج إلى {CONVERSION_RATE} OLK على الأقل للتحويل.", show_alert=True)
+            await callback.answer(f"⚠️ تحتاج إلى {CONVERSION_RATE} OLK على الأقل للتحويل!", show_alert=True)
             return
 
         gram_added = olk / CONVERSION_RATE
         await db.execute("UPDATE users SET olk_balance = 0.0, gram_balance = gram_balance + ? WHERE user_id = ?", (gram_added, user_id))
         await db.commit()
 
-    await callback.answer(f"✅ تم تحويل {olk:.2f} OLK إلى {gram_added:.4f} Gram بنجاح!", show_alert=True)
+    await callback.answer(f"✅ تم تحويل {olk:.2f} OLK بنجاح!", show_alert=True)
     await balance_handler(callback)
 
 @dp.callback_query(F.data == "withdraw")
@@ -877,7 +988,12 @@ async def withdraw_start(callback: CallbackQuery):
         return
 
     withdraw_state[user_id] = True
-    await callback.message.answer(f"💳 الرصيد المتاح للسحب: {gram:.4f} Gram\n\n📝 أرسل الآن عنوان محفظتك (TON / Gram Wallet):")
+    await callback.message.answer(
+        f"💳 **طلب سحب جديد:**\n\n"
+        f"• الرصيد القابل للسحب: `{gram:.4f} Gram`\n\n"
+        f"📝 **أرسل الآن عنوان محفظتك (TON / Gram Wallet) كرسالة نصية:**",
+        parse_mode="Markdown"
+    )
     await callback.answer()
 
 @dp.message(F.text)
@@ -903,20 +1019,54 @@ async def process_address(message: Message):
         await db.execute("UPDATE users SET gram_balance = 0.0 WHERE user_id = ?", (user_id,))
         await db.commit()
 
-    await message.answer(f"✅ تم تسجيل طلب السحب بنجاح!\n\n• الكمية: {gram_balance:.4f} Gram\n• المحفظة: {wallet_address}\n\nستتم مراجعة الطلب والتحويل قريباً.", reply_markup=main_menu())
+    confirm_msg = (
+        "✅ **تم استلام وتسجيل طلب السحب بنجاح!**\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"💰 **المبلغ:** `{gram_balance:.4f} Gram`\n"
+        f"📫 **عنوان المحفظة:** `{wallet_address}`\n"
+        "⏳ **الحالة:** قيد المعالجة (تتم المراجعة والتحويل خلال 24 ساعة)\n"
+        "━━━━━━━━━━━━━━━━━━━━━━"
+    )
+    await message.answer(confirm_msg, parse_mode="Markdown", reply_markup=main_dashboard_keyboard(user_id))
 
-    admin_notification = f"🚨 طلب سحب جديد من OLKA VIP!\n\n👤 المعرف: {user_id} (@{message.from_user.username or 'بدون'})\n📱 الهاتف: {phone}\n💰 المبلغ: {gram_balance:.4f} Gram\n📫 عنوان المحفظة:\n{wallet_address}"
+    admin_notification = (
+        f"🚨 **إشعار طلب سحب جديد (OLKA VIP)**\n\n"
+        f"👤 المعرف: `{user_id}` (@{message.from_user.username or 'بدون'})\n"
+        f"📱 الهاتف: `{phone}`\n"
+        f"💰 المبلغ: `{gram_balance:.4f} Gram`\n"
+        f"📫 المحفظة المستلمة:\n`{wallet_address}`"
+    )
     try:
-        await bot.send_message(chat_id=ADMIN_ID, text=admin_notification)
+        await bot.send_message(chat_id=ADMIN_ID, text=admin_notification, parse_mode="Markdown")
     except Exception as e:
         print(f"تعذر إرسال الإشعار للمسؤول: {e}")
+
+@dp.callback_query(F.data == "back_home")
+async def back_home_handler(callback: CallbackQuery):
+    user_id = callback.from_user.id
+    async with aiosqlite.connect("olka_vip.db") as db:
+        async with db.execute("SELECT phone_number, olk_balance, gram_balance FROM users WHERE user_id = ?", (user_id,)) as cursor:
+            user = await cursor.fetchone()
+
+    user_name = callback.from_user.first_name or "المعدّن"
+    dash_text = (
+        f"👑 **مرحباً بك مجدداً في لوحة تحكم OLKA VIP يا {user_name}!**\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"🆔 **معرّف الحساب:** `{user_id}`\n"
+        f"💎 **رتبة الحساب:** VIP Miner ⚡\n"
+        f"💰 **رصيد التعدين الحالي:** `{user[1]:.2f} OLK`\n"
+        f"💳 **رصيد محفظة السحب:** `{user[2]:.4f} Gram`\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        "🚀 **يمكنك النقر والتعدين عبر Mini App أو استخدام خيارات التحكم أدناه:**"
+    )
+    await callback.message.edit_text(dash_text, parse_mode="Markdown", reply_markup=main_dashboard_keyboard(user_id))
 
 async def web_handler(request):
     return web.Response(text=MINI_APP_HTML, content_type="text/html")
 
 async def main():
     await init_db()
-    print("Bot is running with Advanced Multi-Tab Web App...")
+    print("Bot is running with Next-Gen VIP UI...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
