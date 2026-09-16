@@ -23,7 +23,6 @@ PROJECT_TON_WALLET = "UQB3Xs8jkbebkVumWJlnEmDkjN4YXsZuHPrXSpZT1RtmZrCB"
 CONVERSION_RATE = 10000
 MIN_WITHDRAW_TON = 0.1
 
-# القيم الجديدة المطلوبة
 REFERRAL_REWARD = 80.0
 SIGNUP_BONUS = 50.0
 
@@ -566,7 +565,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
       align-items: center;
       justify-content: center;
     }
-    #banned-overlay {
+
+    #banned-overlay, #channel-lock-overlay {
       display: none;
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
@@ -582,10 +582,29 @@ MINI_APP_HTML = """<!DOCTYPE html>
 </head>
 <body>
 
+  <!-- شاشة الحظر التلقائي عند التعدد -->
   <div id="banned-overlay">
     <i class="fa-solid fa-triangle-exclamation" style="font-size:60px; color:#ef4444; margin-bottom:16px;"></i>
     <h2 style="color:#ef4444; margin-bottom:8px;">⛔ تم حظر هذا الحساب!</h2>
     <p style="font-size:13px; color:#cbd5e1; line-height:1.6;">تم اكتشاف وجود أكثر من حساب مسجل من نفس الجهاز أو نفس الشبكة. يمنع نظام OLKA VIP تكرار الحسابات بشكل قاطع لضمان نزاهة التعدين.</p>
+  </div>
+
+  <!-- قفل الاشتراك الإجباري في القناة من داخل الويب -->
+  <div id="channel-lock-overlay">
+    <i class="fa-brands fa-telegram" style="font-size:65px; color:#38bdf8; margin-bottom:16px;"></i>
+    <h2 style="color:#ffffff; margin-bottom:8px;">📢 خطوة أخيرة للتفعيل!</h2>
+    <p style="font-size:13px; color:#cbd5e1; line-height:1.6; margin-bottom:20px;">
+      لتفعيل جهاز التعدين واستلام مكافأة البداية، يجب الانضمام إلى قناة المشروع الرسمية:
+      <br><strong style="color:#f59e0b;">@olka_ad</strong>
+    </p>
+    <div style="display:flex; flex-direction:column; gap:10px; width:100%; max-width:280px;">
+      <button class="btn-upgrade-rig" onclick="window.open('https://t.me/olka_ad', '_blank')">
+        <i class="fa-brands fa-telegram"></i> انضم إلى القناة الآن
+      </button>
+      <button class="btn-claim-rewards" onclick="recheckChannelSubscription()">
+        <i class="fa-solid fa-rotate-right"></i> تحقق من الاشتراك وتفعيل التعدين
+      </button>
+    </div>
   </div>
 
   <div class="main-scroll-view">
@@ -599,7 +618,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- كرت الأصول المحفوظة -->
     <div class="assets-container">
       <div class="assets-title-row">
         <div class="assets-total"><span data-i18n="total_label">الإجمالي:</span> <span id="total-assets">0.0000 OLK</span></div>
@@ -741,7 +759,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
     <div class="page-tab" id="tab-frens">
       <div class="card-panel">
         <div style="font-weight:bold; color:#bef264; font-size:15px;"><i class="fa-solid fa-users"></i> <span data-i18n="frens_title">شبكة التعدين التشاركية (الإحالات)</span></div>
-        <div style="font-size:13px; color:#cbd5e1;" data-i18n="frens_desc">شارك رابط جهازك واحصل على <strong>80 OLK</strong> مجاناً فور توثيق صديقك لحسابه!</div>
+        <div style="font-size:13px; color:#cbd5e1;" data-i18n="frens_desc">شارك رابط جهازك واحصل على <strong>80 OLK</strong> مجاناً فور دخول صديقك لتطبيق الويب وتفعيل التعدين!</div>
         <button class="btn-upgrade-rig" style="width:100%;" onclick="copyReferralLink()">
           <i class="fa-solid fa-copy"></i> <span data-i18n="btn_copy_ref">نسخ رابط الدعوة الخاص بي</span>
         </button>
@@ -882,7 +900,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         btn_deposit: "إيداع 0.1 TON",
         btn_withdraw: "سحب TON المحدد",
         frens_title: "شبكة التعدين التشاركية (الإحالات)",
-        frens_desc: "شارك رابط جهازك واحصل على 80 OLK مجاناً فور توثيق صديقك لحسابه!",
+        frens_desc: "شارك رابط جهازك واحصل على 80 OLK مجاناً فور دخول صديقك لتطبيق الويب وتفعيل التعدين!",
         btn_copy_ref: "نسخ رابط الدعوة الخاص بي",
         miners_title: "ترقية أجهزة التعدين",
         pay_via_ton: "الدفع عبر رصيد TON",
@@ -921,7 +939,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         btn_deposit: "Deposit 0.1 TON",
         btn_withdraw: "Withdraw Selected TON",
         frens_title: "Mining Referral Network",
-        frens_desc: "Share your invite link and get 80 OLK free as soon as your friend verifies their account!",
+        frens_desc: "Share your invite link and get 80 OLK free once your friend opens the web app and activates mining!",
         btn_copy_ref: "Copy My Referral Link",
         miners_title: "Upgrade Mining Hardware",
         pay_via_ton: "Pay via TON Balance",
@@ -960,7 +978,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         btn_deposit: "Депозит 0.1 TON",
         btn_withdraw: "Вывести выбранный TON",
         frens_title: "Партнерская сеть майнинга",
-        frens_desc: "Делитесь ссылкой и получайте 80 OLK бесплатно, как только друг подтвердит аккаунт!",
+        frens_desc: "Делитесь ссылкой и получайте 80 OLK бесплатно, когда друг войдет в приложение и запустит майнинг!",
         btn_copy_ref: "Скопировать мою ссылку",
         miners_title: "Улучшение оборудования",
         pay_via_ton: "Оплата с баланса TON",
@@ -1069,6 +1087,13 @@ MINI_APP_HTML = """<!DOCTYPE html>
           document.getElementById("banned-overlay").style.display = "flex";
           return;
         }
+        if (data.need_sub) {
+          document.getElementById("channel-lock-overlay").style.display = "flex";
+          return;
+        } else {
+          document.getElementById("channel-lock-overlay").style.display = "none";
+        }
+
         if (data.ok) {
           appOlk = data.olk_balance;
           appTon = data.ton_balance;
@@ -1091,6 +1116,15 @@ MINI_APP_HTML = """<!DOCTYPE html>
         }
       } catch (err) {
         console.error("Data load failed", err);
+      }
+    }
+
+    async function recheckChannelSubscription() {
+      await loadData();
+      if (document.getElementById("channel-lock-overlay").style.display === "none") {
+        alert("🎉 تم التحقق بنجاح! تم تفعيل جهاز التعدين الخاص بك.");
+      } else {
+        alert("❌ لم يتم العثور على اشتراكك في القناة بعد! تأكد من الانضمام ثم حاول مجدداً.");
       }
     }
 
@@ -1124,7 +1158,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       if (val > appTon) withdrawAmountInput.value = appTon.toFixed(4);
     }
 
-    // مضاعفة سرعة التعدين للضعف فعلياً (0.000030 بدلاً من 0.000015) مع ثبات TH/s
     setInterval(() => {
       unclaimed += (speed * 0.000030);
       unclaimedValEl.innerText = unclaimed.toFixed(6);
@@ -1336,7 +1369,8 @@ async def init_db():
             saved_wallet TEXT DEFAULT NULL,
             ip_address TEXT DEFAULT NULL,
             device_fingerprint TEXT DEFAULT NULL,
-            is_banned INTEGER DEFAULT 0
+            is_banned INTEGER DEFAULT 0,
+            activated_miner INTEGER DEFAULT 0
         )
         """)
         for col_def in [
@@ -1350,7 +1384,8 @@ async def init_db():
             "saved_wallet TEXT DEFAULT NULL",
             "ip_address TEXT DEFAULT NULL",
             "device_fingerprint TEXT DEFAULT NULL",
-            "is_banned INTEGER DEFAULT 0"
+            "is_banned INTEGER DEFAULT 0",
+            "activated_miner INTEGER DEFAULT 0"
         ]:
             try:
                 await db.execute(f"ALTER TABLE users ADD COLUMN {col_def}")
@@ -1386,6 +1421,7 @@ async def api_save_wallet(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
+# مسار الويب الأساسي: فحص الحظر + التحقق من القناة + تفعيل الإحالة المعلقة بعد اجتياز الحماية
 async def api_get_user(request):
     try:
         user_id = int(request.query.get("user_id", 0))
@@ -1393,13 +1429,23 @@ async def api_get_user(request):
         client_ip = request.headers.get("X-Forwarded-For", request.remote).split(",")[0].strip()
         now = int(time.time())
 
+        # 1. التحقق من اشتراك المستخدم في القناة الرسمية عبر البوت
+        is_sub = True
+        try:
+            member = await bot.get_chat_member(chat_id=SPONSOR_CHANNEL, user_id=user_id)
+            if member.status in ["left", "kicked"]:
+                is_sub = False
+        except Exception:
+            is_sub = True  # في حال كان البوت غير مشرف أو حدث خطأ مؤقت لا يعطل المستخدمين
+
         async with aiosqlite.connect("olka_vip.db") as db:
-            async with db.execute("SELECT is_banned, olk_balance, ton_balance, mining_speed, miner_level, last_mining_timestamp, saved_wallet, ip_address, device_fingerprint FROM users WHERE user_id = ?", (user_id,)) as cur:
+            async with db.execute("SELECT is_banned, olk_balance, ton_balance, mining_speed, miner_level, last_mining_timestamp, saved_wallet, referred_by, ref_reward_claimed, activated_miner FROM users WHERE user_id = ?", (user_id,)) as cur:
                 row = await cur.fetchone()
 
             if row and row[0] == 1:
                 return web.json_response({"ok": False, "banned": True})
 
+            # فحص ومنع تعدد الحسابات
             if client_fp:
                 async with db.execute("SELECT user_id FROM users WHERE (device_fingerprint = ? OR ip_address = ?) AND user_id != ?", (client_fp, client_ip, user_id)) as cur:
                     duplicate = await cur.fetchone()
@@ -1416,12 +1462,34 @@ async def api_get_user(request):
                             pass
                         return web.json_response({"ok": False, "banned": True})
 
+            # إذا لم يكن مشتركاً في القناة، تظهر شاشة القفل داخل الويب
+            if not is_sub:
+                return web.json_response({"ok": True, "need_sub": True})
+
+            # المستخدم حقيقي ومشترك في القناة: تفعيل الحساب وصرف الإحالة المعلقة لأول مرة
             if row:
-                olk, ton, speed, lvl, last_ts, saved_wallet = row[1], row[2], row[3], row[4], row[5], row[6]
+                olk, ton, speed, lvl, last_ts, saved_wallet, ref_by, ref_claimed, activated = row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9]
+                
+                # تفعيل التعدين للمستخدم الجديد وإعطاء مكافأة البداية
+                if activated == 0:
+                    olk += SIGNUP_BONUS
+                    await db.execute("UPDATE users SET activated_miner = 1, olk_balance = ? WHERE user_id = ?", (olk, user_id))
+                    
+                    # صرف مكافأة الإحالة 80 OLK للشخص الذي دعاه بعد التأكد 100% أنه حساب حقيقي ونظيف
+                    if ref_by and ref_claimed == 0:
+                        await db.execute("UPDATE users SET olk_balance = olk_balance + ? WHERE user_id = ?", (REFERRAL_REWARD, ref_by))
+                        await db.execute("UPDATE users SET ref_reward_claimed = 1 WHERE user_id = ?", (user_id,))
+                        try:
+                            await bot.send_message(
+                                chat_id=ref_by,
+                                text=f"🎉 **إحالة مؤكدة وناجحة!**\nقام صديقك بالدخول للتطبيق وتفعيل جهاز التعدين.\n💰 تمت إضافة **+{REFERRAL_REWARD:.0f} OLK** إلى محفظتك بنجاح!"
+                            )
+                        except Exception:
+                            pass
+
                 offline_mined = 0.0
                 if last_ts > 0:
                     diff = min(now - last_ts, 86400)
-                    # مضاعفة الأرباح في الخلفية بالتوافق مع التعدين الحي
                     offline_mined = diff * (speed * 0.000030 * 10)
                 
                 await db.execute("UPDATE users SET last_mining_timestamp = ?, ip_address = ?, device_fingerprint = ? WHERE user_id = ?",
@@ -1429,6 +1497,7 @@ async def api_get_user(request):
                 await db.commit()
                 return web.json_response({
                     "ok": True,
+                    "need_sub": False,
                     "banned": False,
                     "olk_balance": olk,
                     "ton_balance": ton,
@@ -1438,11 +1507,12 @@ async def api_get_user(request):
                     "offline_mined": offline_mined
                 })
             else:
-                await db.execute("INSERT OR IGNORE INTO users (user_id, last_mining_timestamp, mining_speed, ip_address, device_fingerprint, olk_balance) VALUES (?, ?, 0.25, ?, ?, ?)",
+                await db.execute("INSERT OR IGNORE INTO users (user_id, last_mining_timestamp, mining_speed, ip_address, device_fingerprint, olk_balance, activated_miner) VALUES (?, ?, 0.25, ?, ?, ?, 1)",
                                  (user_id, now, client_ip, client_fp, SIGNUP_BONUS))
                 await db.commit()
                 return web.json_response({
                     "ok": True,
+                    "need_sub": False,
                     "banned": False,
                     "olk_balance": SIGNUP_BONUS,
                     "ton_balance": 0.0,
@@ -1611,7 +1681,6 @@ async def api_verify_channel_task(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
-# رابط الويب الحصري فقط تحت الرسالة
 def web_only_keyboard(user_id: int):
     app_url = f"{WEBAPP_URL}?user_id={user_id}"
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -1619,13 +1688,6 @@ def web_only_keyboard(user_id: int):
             InlineKeyboardButton(text="⚡ ابدأ التعدين الآن (Play Now) 🚀", web_app=WebAppInfo(url=app_url))
         ]
     ])
-
-async def check_subscription(user_id: int) -> bool:
-    try:
-        member = await bot.get_chat_member(chat_id=SPONSOR_CHANNEL, user_id=user_id)
-        return member.status not in ["left", "kicked"]
-    except Exception:
-        return True
 
 @dp.message(Command("admin"))
 async def admin_panel(message: Message):
@@ -1729,91 +1791,43 @@ async def start_handler(message: Message, command: CommandObject):
             await message.answer("⛔ **عذراً، هذا الحساب محظور نهائياً بسبب مخالفة شروط منع تعدد الحسابات.**")
             return
 
+        # تسجيل الإحالة كمعلقة فقط دون إضافة أي رصيد حالياً
         if not user and ref_param:
             try:
                 clean_ref = ref_param.replace("ref_", "")
                 referrer_id = int(clean_ref)
                 if referrer_id != user_id:
                     await db.execute("""
-                        INSERT INTO users (user_id, referred_by, last_mining_timestamp, mining_speed, olk_balance) VALUES (?, ?, ?, 0.25, ?)
+                        INSERT INTO users (user_id, referred_by, last_mining_timestamp, mining_speed, olk_balance, activated_miner) VALUES (?, ?, ?, 0.25, 0, 0)
                         ON CONFLICT(user_id) DO UPDATE SET referred_by = excluded.referred_by
-                    """, (user_id, referrer_id, now, SIGNUP_BONUS))
+                    """, (user_id, referrer_id, now))
                     await db.commit()
-                    
-                    # مكافأة الإحالة 80 OLK
-                    await db.execute("UPDATE users SET olk_balance = olk_balance + ? WHERE user_id = ?", (REFERRAL_REWARD, referrer_id))
-                    await db.commit()
-                    try:
-                        await bot.send_message(
-                            chat_id=referrer_id,
-                            text=f"🎉 **إحالة ناجحة جديدة!**\nانضم مستخدم جديد عبر رابطك وتمت إضافة **+{REFERRAL_REWARD:.0f} OLK** إلى حسابك!"
-                        )
-                    except Exception:
-                        pass
             except ValueError:
                 pass
         elif not user:
-            await db.execute("INSERT OR IGNORE INTO users (user_id, last_mining_timestamp, mining_speed, olk_balance) VALUES (?, ?, 0.25, ?)",
-                             (user_id, now, SIGNUP_BONUS))
+            await db.execute("INSERT OR IGNORE INTO users (user_id, last_mining_timestamp, mining_speed, olk_balance, activated_miner) VALUES (?, ?, 0.25, 0, 0)",
+                             (user_id, now))
             await db.commit()
 
-    if not await check_subscription(user_id):
-        sub_banner = (
-            "💎 **مرحباً بك في OLKA VIP Cloud**\n"
-            "──────────────────────\n"
-            "لتفعيل جهاز التعدين وبدء الربح، اشترك في القناة الرسمية أولاً:\n\n"
-            f"📢 {SPONSOR_CHANNEL}"
-        )
-        await message.answer(
-            sub_banner,
-            parse_mode="Markdown",
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="📢 انضم إلى القناة", url="https://t.me/olka_ad")],
-                [InlineKeyboardButton(text="✅ تأكيد الاشتراك", callback_data="verify_sub")]
-            ])
-        )
-        return
-
-    # الرسالة الجديدة الاحترافية المنظمة مع رابط الويب المباشر فقط
+    # الدخول المباشر إلى الويب دون طلب اشتراك داخل شات البوت
     welcome_text = (
         "⚡ **مرحباً بك في منصة OLKA VIP**\n"
         "──────────────────────\n"
         "🚀 **منظومة التعدين السحابي المباشر على شبكة TON**\n\n"
         "⛏️ **تعدين آلي 24/7:** يعمل جهازك السحابي دون انقطاع حتى عند إغلاق التطبيق.\n"
         "💎 **سحب مباشر:** تحويل فوري لأرباحك إلى عملة TON على محفظتك.\n"
-        "🎁 **هدية البداية:** تم إيداع **+50 OLK** في رصيدك مباشرة!\n"
+        "🎁 **هدية البداية:** يتم إيداع **+50 OLK** فور تشغيل التعدين في الويب!\n"
         "──────────────────────\n"
         "اضغط على الزر أدناه لتشغيل جهاز التعدين والتحكم بمحفظتك:"
     )
     await message.answer(welcome_text, parse_mode="Markdown", reply_markup=web_only_keyboard(user_id))
-
-@dp.callback_query(F.data == "verify_sub")
-async def verify_sub_handler(callback: CallbackQuery):
-    if await check_subscription(callback.from_user.id):
-        welcome_text = (
-            "⚡ **مرحباً بك في منصة OLKA VIP**\n"
-            "──────────────────────\n"
-            "🚀 **منظومة التعدين السحابي المباشر على شبكة TON**\n\n"
-            "⛏️ **تعدين آلي 24/7:** يعمل جهازك السحابي دون انقطاع حتى عند إغلاق التطبيق.\n"
-            "💎 **سحب مباشر:** تحويل فوري لأرباحك إلى عملة TON على محفظتك.\n"
-            "🎁 **هدية البداية:** تم إيداع **+50 OLK** في رصيدك مباشرة!\n"
-            "──────────────────────\n"
-            "اضغط على الزر أدناه لتشغيل جهاز التعدين والتحكم بمحفظتك:"
-        )
-        await callback.message.edit_text(
-            welcome_text,
-            parse_mode="Markdown",
-            reply_markup=web_only_keyboard(callback.from_user.id)
-        )
-    else:
-        await callback.answer("❌ لم تنضم للقناة بعد! انضم أولاً ثم اضغط تأكيد.", show_alert=True)
 
 async def web_handler(request):
     return web.Response(text=MINI_APP_HTML, content_type="text/html")
 
 async def main():
     await init_db()
-    print("OLK Ultra Engine with Pure Web Experience & 2x Hash Power is live...")
+    print("OLK Engine with Web-Only Gateway & Delayed Verified Referrals is live...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
