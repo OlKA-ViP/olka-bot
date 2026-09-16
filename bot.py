@@ -16,7 +16,10 @@ from aiogram.fsm.state import State, StatesGroup
 
 BOT_TOKEN = "8707730826:AAExJ7ZSQe9YFy8Y0O2eG3uPCAwVa_vG6Qc"
 ADMIN_ID = 1932161126
-SPONSOR_CHANNEL = "@olka_ad"
+
+# القناة الإجبارية الرسمية لتفعيل الويب
+SPONSOR_CHANNEL = "@OLKVIP"
+SPONSOR_CHANNEL_LINK = "https://t.me/OLKVIP"
 
 PROJECT_TON_WALLET = "UQB3Xs8jkbebkVumWJlnEmDkjN4YXsZuHPrXSpZT1RtmZrCB"
 
@@ -26,10 +29,11 @@ MIN_WITHDRAW_TON = 0.1
 REFERRAL_REWARD = 80.0
 SIGNUP_BONUS = 50.0
 
+# قناة المهام الاختيارية (داخل الويب فقط)
 CHANNELS_TASKS = [
     {
         "id": "task_chan_main",
-        "title": "قناة OLKA AD الرسمية",
+        "title": "قناة OLKA AD الإعلانية",
         "channel_id": "@olka_ad",
         "link": "https://t.me/olka_ad",
         "reward": 10.0
@@ -589,16 +593,16 @@ MINI_APP_HTML = """<!DOCTYPE html>
     <p id="ban-reason-text" style="font-size:13px; color:#cbd5e1; line-height:1.6;">تم اكتشاف وجود تكرار للحسابات من نفس الجهاز أو مخالفة لقوانين التعدين.</p>
   </div>
 
-  <!-- قفل الاشتراك الإجباري في القناة -->
+  <!-- قفل الاشتراك الإجباري في القناة الرسمية @OLKVIP -->
   <div id="channel-lock-overlay">
     <i class="fa-brands fa-telegram" style="font-size:65px; color:#38bdf8; margin-bottom:16px;"></i>
     <h2 style="color:#ffffff; margin-bottom:8px;">📢 خطوة أخيرة للتفعيل!</h2>
     <p style="font-size:13px; color:#cbd5e1; line-height:1.6; margin-bottom:20px;">
-      لتفعيل جهاز التعدين واستلام مكافأة البداية، يجب الانضمام إلى قناة المشروع الرسمية:
-      <br><strong style="color:#f59e0b;">@olka_ad</strong>
+      لتفعيل جهاز التعدين واستلام مكافأة البداية (+50 OLK)، يجب الانضمام إلى قناة المشروع الرسمية:
+      <br><strong style="color:#f59e0b;">@OLKVIP</strong>
     </p>
     <div style="display:flex; flex-direction:column; gap:10px; width:100%; max-width:280px;">
-      <button class="btn-upgrade-rig" onclick="window.open('https://t.me/olka_ad', '_blank')">
+      <button class="btn-upgrade-rig" onclick="window.open('https://t.me/OLKVIP', '_blank')">
         <i class="fa-brands fa-telegram"></i> انضم إلى القناة الآن
       </button>
       <button class="btn-claim-rewards" onclick="recheckChannelSubscription()">
@@ -803,14 +807,14 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- صفحة 5: المهام -->
+    <!-- صفحة 5: المهام (قناة olka_ad اختيارية للحصول على مكافأة إضافية) -->
     <div class="page-tab" id="tab-tasks">
       <div class="card-panel">
         <div style="font-weight:bold; color:var(--gold-primary); font-size:15px;"><i class="fa-solid fa-list-check"></i> <span data-i18n="tasks_title">مهام جمع عملة OLK المجانية</span></div>
         
         <div class="rig-item">
           <div>
-            <div style="font-weight:bold; font-size:13px;">قناة OLKA AD الرسمية</div>
+            <div style="font-weight:bold; font-size:13px;">قناة OLKA AD الإعلانية</div>
             <div style="font-size:11px; color:var(--gold-primary);">+10 OLK</div>
           </div>
           <div style="display:flex; gap:6px;">
@@ -1130,7 +1134,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       if (document.getElementById("channel-lock-overlay").style.display === "none") {
         alert("🎉 تم التحقق بنجاح! تم تفعيل جهاز التعدين الخاص بك.");
       } else {
-        alert("❌ لم يتم العثور على اشتراكك في القناة بعد! تأكد من الانضمام ثم حاول مجدداً.");
+        alert("❌ لم يتم العثور على اشتراكك في القناة الرسمية @OLKVIP بعد! تأكد من الانضمام ثم تحقق مجدداً.");
       }
     }
 
@@ -1431,6 +1435,7 @@ async def api_save_wallet(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
+# مسار الويب: فحص الاشتراك في @OLKVIP الحصرية، الحظر، وتفعيل الإحالات المؤكدة
 async def api_get_user(request):
     try:
         user_id = int(request.query.get("user_id", 0))
@@ -1438,6 +1443,7 @@ async def api_get_user(request):
         client_ip = request.headers.get("X-Forwarded-For", request.remote).split(",")[0].strip()
         now = int(time.time())
 
+        # التحقق الإجباري الحصري من اشتراك القناة الرسمية @OLKVIP
         is_sub = True
         try:
             member = await bot.get_chat_member(chat_id=SPONSOR_CHANNEL, user_id=user_id)
@@ -1453,9 +1459,9 @@ async def api_get_user(request):
             if row and row[0] == 1:
                 return web.json_response({"ok": False, "banned": True, "ban_reason": row[1] or "مخالفة شروط التعدين"})
 
-            # إذا كان المستخدم موثقاً ومضافاً للقائمة البيضاء، يتم تجاوز فحص البصمة نهائياً
             is_whitelisted = (row and row[11] == 1) or (user_id == ADMIN_ID)
 
+            # الحظر على مستوى الجهاز فقط وليس كامل شبكة الواي فاي
             if client_fp and not is_whitelisted:
                 async with db.execute("SELECT user_id FROM users WHERE device_fingerprint = ? AND user_id != ? AND is_whitelisted = 0", (client_fp, user_id)) as cur:
                     duplicate = await cur.fetchone()
@@ -1472,16 +1478,19 @@ async def api_get_user(request):
                             pass
                         return web.json_response({"ok": False, "banned": True, "ban_reason": "استخدام نفس الجهاز لعدة حسابات"})
 
+            # إظهار شاشة القفل داخل الويب إذا لم ينضم لقناة @OLKVIP
             if not is_sub:
                 return web.json_response({"ok": True, "need_sub": True})
 
             if row:
                 olk, ton, speed, lvl, last_ts, saved_wallet, ref_by, ref_claimed, activated = row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9], row[10]
                 
+                # تفعيل التعدين للمستخدم الجديد وإعطاء مكافأة البداية 50 OLK
                 if activated == 0:
                     olk += SIGNUP_BONUS
                     await db.execute("UPDATE users SET activated_miner = 1, olk_balance = ? WHERE user_id = ?", (olk, user_id))
                     
+                    # إرسال مكافأة الإحالة 80 OLK للشخص الذي دعاه بعد التحقق الحقيقي في الويب
                     if ref_by and ref_claimed == 0:
                         await db.execute("UPDATE users SET olk_balance = olk_balance + ? WHERE user_id = ?", (REFERRAL_REWARD, ref_by))
                         await db.execute("UPDATE users SET ref_reward_claimed = 1 WHERE user_id = ?", (user_id,))
@@ -1652,6 +1661,7 @@ async def api_withdraw(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
+# مهمة القناة الاختيارية
 async def api_verify_channel_task(request):
     try:
         data = await request.json()
@@ -1759,7 +1769,6 @@ async def unban_user_cmd(message: Message, command: CommandObject):
         return
 
     async with aiosqlite.connect("olka_vip.db") as db:
-        # فك الحظر وإضافة المستخدم إلى القائمة البيضاء الموثوقة لمنع حظره مجدداً
         await db.execute("UPDATE users SET is_banned = 0, ban_reason = NULL, is_whitelisted = 1 WHERE user_id = ?", (target_id,))
         await db.commit()
 
@@ -1879,7 +1888,7 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("OLK Engine with Safe Whitelist & Immune Unban System is running...")
+    print("OLK Engine with @OLKVIP Gateway is running...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
