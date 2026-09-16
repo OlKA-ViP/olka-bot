@@ -582,14 +582,14 @@ MINI_APP_HTML = """<!DOCTYPE html>
 </head>
 <body>
 
-  <!-- شاشة الحظر التلقائي عند التعدد أو الحظر اليدوي -->
+  <!-- شاشة الحظر التلقائي -->
   <div id="banned-overlay">
     <i class="fa-solid fa-triangle-exclamation" style="font-size:60px; color:#ef4444; margin-bottom:16px;"></i>
     <h2 style="color:#ef4444; margin-bottom:8px;">⛔ تم حظر هذا الحساب!</h2>
     <p id="ban-reason-text" style="font-size:13px; color:#cbd5e1; line-height:1.6;">تم اكتشاف وجود تكرار للحسابات من نفس الجهاز أو مخالفة لقوانين التعدين.</p>
   </div>
 
-  <!-- قفل الاشتراك الإجباري في القناة من داخل الويب -->
+  <!-- قفل الاشتراك الإجباري في القناة -->
   <div id="channel-lock-overlay">
     <i class="fa-brands fa-telegram" style="font-size:65px; color:#38bdf8; margin-bottom:16px;"></i>
     <h2 style="color:#ffffff; margin-bottom:8px;">📢 خطوة أخيرة للتفعيل!</h2>
@@ -1377,7 +1377,8 @@ async def init_db():
             device_fingerprint TEXT DEFAULT NULL,
             is_banned INTEGER DEFAULT 0,
             ban_reason TEXT DEFAULT NULL,
-            activated_miner INTEGER DEFAULT 0
+            activated_miner INTEGER DEFAULT 0,
+            is_whitelisted INTEGER DEFAULT 0
         )
         """)
         for col_def in [
@@ -1393,7 +1394,8 @@ async def init_db():
             "device_fingerprint TEXT DEFAULT NULL",
             "is_banned INTEGER DEFAULT 0",
             "ban_reason TEXT DEFAULT NULL",
-            "activated_miner INTEGER DEFAULT 0"
+            "activated_miner INTEGER DEFAULT 0",
+            "is_whitelisted INTEGER DEFAULT 0"
         ]:
             try:
                 await db.execute(f"ALTER TABLE users ADD COLUMN {col_def}")
@@ -1429,7 +1431,6 @@ async def api_save_wallet(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
-# مسار الويب: فحص الحظر، القناة، وتفعيل الإحالة المعلقة
 async def api_get_user(request):
     try:
         user_id = int(request.query.get("user_id", 0))
@@ -1437,7 +1438,6 @@ async def api_get_user(request):
         client_ip = request.headers.get("X-Forwarded-For", request.remote).split(",")[0].strip()
         now = int(time.time())
 
-        # التحقق من اشتراك القناة الإجباري
         is_sub = True
         try:
             member = await bot.get_chat_member(chat_id=SPONSOR_CHANNEL, user_id=user_id)
@@ -1447,17 +1447,19 @@ async def api_get_user(request):
             is_sub = True
 
         async with aiosqlite.connect("olka_vip.db") as db:
-            async with db.execute("SELECT is_banned, ban_reason, olk_balance, ton_balance, mining_speed, miner_level, last_mining_timestamp, saved_wallet, referred_by, ref_reward_claimed, activated_miner FROM users WHERE user_id = ?", (user_id,)) as cur:
+            async with db.execute("SELECT is_banned, ban_reason, olk_balance, ton_balance, mining_speed, miner_level, last_mining_timestamp, saved_wallet, referred_by, ref_reward_claimed, activated_miner, is_whitelisted FROM users WHERE user_id = ?", (user_id,)) as cur:
                 row = await cur.fetchone()
 
             if row and row[0] == 1:
-                return web.json_response({"ok": False, "banned": True, "ban_reason": row[1] or "مخالفة شروط منع تعدد الحسابات"})
+                return web.json_response({"ok": False, "banned": True, "ban_reason": row[1] or "مخالفة شروط التعدين"})
 
-            # الحظر التلقائي عند تطابق نفس الجهاز حصراً (وليس لمجرد نفس شبكة الـ IP)
-            if client_fp:
-                async with db.execute("SELECT user_id FROM users WHERE device_fingerprint = ? AND user_id != ?", (client_fp, user_id)) as cur:
+            # إذا كان المستخدم موثقاً ومضافاً للقائمة البيضاء، يتم تجاوز فحص البصمة نهائياً
+            is_whitelisted = (row and row[11] == 1) or (user_id == ADMIN_ID)
+
+            if client_fp and not is_whitelisted:
+                async with db.execute("SELECT user_id FROM users WHERE device_fingerprint = ? AND user_id != ? AND is_whitelisted = 0", (client_fp, user_id)) as cur:
                     duplicate = await cur.fetchone()
-                    if duplicate and user_id != ADMIN_ID:
+                    if duplicate:
                         await db.execute("UPDATE users SET is_banned = 1, ban_reason = ? WHERE user_id = ?", ("استخدام نفس الجهاز لعدة حسابات", user_id))
                         await db.commit()
                         try:
@@ -1470,20 +1472,16 @@ async def api_get_user(request):
                             pass
                         return web.json_response({"ok": False, "banned": True, "ban_reason": "استخدام نفس الجهاز لعدة حسابات"})
 
-            # فحص القناة داخل الويب
             if not is_sub:
                 return web.json_response({"ok": True, "need_sub": True})
 
-            # المستخدم اجتاز الحماية والاشتراك
             if row:
                 olk, ton, speed, lvl, last_ts, saved_wallet, ref_by, ref_claimed, activated = row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9], row[10]
                 
-                # تفعيل التعدين للمستخدم الجديد وإعطاء مكافأة البداية
                 if activated == 0:
                     olk += SIGNUP_BONUS
                     await db.execute("UPDATE users SET activated_miner = 1, olk_balance = ? WHERE user_id = ?", (olk, user_id))
                     
-                    # إرسال مكافأة الإحالة 80 OLK للشخص الذي دعاه بعد التحقق الحقيقي
                     if ref_by and ref_claimed == 0:
                         await db.execute("UPDATE users SET olk_balance = olk_balance + ? WHERE user_id = ?", (REFERRAL_REWARD, ref_by))
                         await db.execute("UPDATE users SET ref_reward_claimed = 1 WHERE user_id = ?", (user_id,))
@@ -1697,7 +1695,6 @@ def web_only_keyboard(user_id: int):
         ]
     ])
 
-# لوحة تحكم المسؤول
 @dp.message(Command("admin"))
 async def admin_panel(message: Message):
     if message.from_user.id != ADMIN_ID:
@@ -1719,11 +1716,10 @@ async def admin_panel(message: Message):
         "──────────────────────\n"
         "📢 لإرسال إذاعة: `/broadcast`\n"
         "⛔ لحظر مستخدم: `/ban USER_ID السبب`\n"
-        "✅ لفك حظر مستخدم: `/unban USER_ID`"
+        "✅ لفك حظر مستخدم وحمايته: `/unban USER_ID`"
     )
     await message.answer(admin_msg, parse_mode="Markdown")
 
-# أوامر الحظر وفك الحظر اليدوية
 @dp.message(Command("ban"))
 async def ban_user_cmd(message: Message, command: CommandObject):
     if message.from_user.id != ADMIN_ID:
@@ -1743,7 +1739,7 @@ async def ban_user_cmd(message: Message, command: CommandObject):
         return
 
     async with aiosqlite.connect("olka_vip.db") as db:
-        await db.execute("UPDATE users SET is_banned = 1, ban_reason = ? WHERE user_id = ?", (reason, target_id))
+        await db.execute("UPDATE users SET is_banned = 1, ban_reason = ?, is_whitelisted = 0 WHERE user_id = ?", (reason, target_id))
         await db.commit()
 
     await message.answer(f"✅ **تم حظر المستخدم بنجاح!**\n🆔 المعرف: `{target_id}`\n📝 السبب: `{reason}`", parse_mode="Markdown")
@@ -1763,11 +1759,11 @@ async def unban_user_cmd(message: Message, command: CommandObject):
         return
 
     async with aiosqlite.connect("olka_vip.db") as db:
-        # فك الحظر ومسح البصمة القديمة ليتمكن من التسجيل مجدداً دون مشاكل
-        await db.execute("UPDATE users SET is_banned = 0, ban_reason = NULL, device_fingerprint = NULL WHERE user_id = ?", (target_id,))
+        # فك الحظر وإضافة المستخدم إلى القائمة البيضاء الموثوقة لمنع حظره مجدداً
+        await db.execute("UPDATE users SET is_banned = 0, ban_reason = NULL, is_whitelisted = 1 WHERE user_id = ?", (target_id,))
         await db.commit()
 
-    await message.answer(f"✅ **تم فك الحظر عن المستخدم `{target_id}` بنجاح!**", parse_mode="Markdown")
+    await message.answer(f"✅ **تم فك الحظر عن المستخدم `{target_id}` بنجاح وإضافته للقائمة الموثوقة لمنع حظره مجدداً!**", parse_mode="Markdown")
 
 @dp.message(Command("broadcast"))
 async def start_broadcast(message: Message, state: FSMContext):
@@ -1849,7 +1845,6 @@ async def start_handler(message: Message, command: CommandObject):
             await message.answer(f"⛔ **عذراً، هذا الحساب محظور نهائياً.**\nسبب الحظر: `{reason}`", parse_mode="Markdown")
             return
 
-        # تسجيل الإحالة كمعلقة فقط دون رصيد
         if not user and ref_param:
             try:
                 clean_ref = ref_param.replace("ref_", "")
@@ -1884,7 +1879,7 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("OLK Ultra Engine with Custom Ban/Unban & Device-only Anti-Fraud is live...")
+    print("OLK Engine with Safe Whitelist & Immune Unban System is running...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
