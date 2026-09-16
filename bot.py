@@ -22,8 +22,10 @@ PROJECT_TON_WALLET = "UQB3Xs8jkbebkVumWJlnEmDkjN4YXsZuHPrXSpZT1RtmZrCB"
 
 CONVERSION_RATE = 10000
 MIN_WITHDRAW_TON = 0.1
-REFERRAL_REWARD = 5.0
-SIGNUP_BONUS = 5.0
+
+# القيم الجديدة المطلوبة
+REFERRAL_REWARD = 80.0
+SIGNUP_BONUS = 50.0
 
 CHANNELS_TASKS = [
     {
@@ -118,8 +120,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       align-items: center;
       width: 100%;
     }
-    
-    /* شريط علوي جديد وأنيق مع مبدل لغات كبير ومميز */
     .top-header {
       width: 100%;
       display: flex;
@@ -140,8 +140,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       border-radius: 12px;
       border: 1px solid rgba(34, 197, 94, 0.25);
     }
-    
-    /* أزرار اللغات المطورة والكبيرة */
     .lang-switch-box {
       display: flex;
       background: rgba(15, 23, 42, 0.95);
@@ -171,7 +169,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       box-shadow: 0 2px 10px rgba(37, 99, 235, 0.4);
       border: 1px solid rgba(255, 255, 255, 0.2);
     }
-
     .assets-container {
       width: 100%;
       background: var(--card-bg);
@@ -569,7 +566,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       align-items: center;
       justify-content: center;
     }
-
     #banned-overlay {
       display: none;
       position: fixed;
@@ -593,7 +589,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
   </div>
 
   <div class="main-scroll-view">
-    <!-- الشريط العلوي المطور مع أزرار اللغات الجديدة -->
     <div class="top-header">
       <div class="header-signal"><i class="fa-solid fa-signal"></i> <span data-i18n="live">مباشر</span></div>
       
@@ -746,7 +741,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
     <div class="page-tab" id="tab-frens">
       <div class="card-panel">
         <div style="font-weight:bold; color:#bef264; font-size:15px;"><i class="fa-solid fa-users"></i> <span data-i18n="frens_title">شبكة التعدين التشاركية (الإحالات)</span></div>
-        <div style="font-size:13px; color:#cbd5e1;" data-i18n="frens_desc">شارك رابط جهازك واحصل على <strong>5 OLK</strong> مجاناً فور توثيق صديقك لحسابه!</div>
+        <div style="font-size:13px; color:#cbd5e1;" data-i18n="frens_desc">شارك رابط جهازك واحصل على <strong>80 OLK</strong> مجاناً فور توثيق صديقك لحسابه!</div>
         <button class="btn-upgrade-rig" style="width:100%;" onclick="copyReferralLink()">
           <i class="fa-solid fa-copy"></i> <span data-i18n="btn_copy_ref">نسخ رابط الدعوة الخاص بي</span>
         </button>
@@ -887,7 +882,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         btn_deposit: "إيداع 0.1 TON",
         btn_withdraw: "سحب TON المحدد",
         frens_title: "شبكة التعدين التشاركية (الإحالات)",
-        frens_desc: "شارك رابط جهازك واحصل على 5 OLK مجاناً فور توثيق صديقك لحسابه!",
+        frens_desc: "شارك رابط جهازك واحصل على 80 OLK مجاناً فور توثيق صديقك لحسابه!",
         btn_copy_ref: "نسخ رابط الدعوة الخاص بي",
         miners_title: "ترقية أجهزة التعدين",
         pay_via_ton: "الدفع عبر رصيد TON",
@@ -926,7 +921,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         btn_deposit: "Deposit 0.1 TON",
         btn_withdraw: "Withdraw Selected TON",
         frens_title: "Mining Referral Network",
-        frens_desc: "Share your invite link and get 5 OLK free as soon as your friend verifies their account!",
+        frens_desc: "Share your invite link and get 80 OLK free as soon as your friend verifies their account!",
         btn_copy_ref: "Copy My Referral Link",
         miners_title: "Upgrade Mining Hardware",
         pay_via_ton: "Pay via TON Balance",
@@ -965,7 +960,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         btn_deposit: "Депозит 0.1 TON",
         btn_withdraw: "Вывести выбранный TON",
         frens_title: "Партнерская сеть майнинга",
-        frens_desc: "Делитесь ссылкой и получайте 5 OLK бесплатно, как только друг подтвердит аккаунт!",
+        frens_desc: "Делитесь ссылкой и получайте 80 OLK бесплатно, как только друг подтвердит аккаунт!",
         btn_copy_ref: "Скопировать мою ссылку",
         miners_title: "Улучшение оборудования",
         pay_via_ton: "Оплата с баланса TON",
@@ -1129,8 +1124,9 @@ MINI_APP_HTML = """<!DOCTYPE html>
       if (val > appTon) withdrawAmountInput.value = appTon.toFixed(4);
     }
 
+    // مضاعفة سرعة التعدين للضعف فعلياً (0.000030 بدلاً من 0.000015) مع ثبات TH/s
     setInterval(() => {
-      unclaimed += (speed * 0.000015);
+      unclaimed += (speed * 0.000030);
       unclaimedValEl.innerText = unclaimed.toFixed(6);
       totalAssetsEl.innerText = (appOlk + unclaimed).toFixed(4) + " OLK";
     }, 100);
@@ -1159,7 +1155,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
     }
 
     function manualBoostClick() {
-      unclaimed += (speed * 0.0005);
+      unclaimed += (speed * 0.0010);
       unclaimedValEl.innerText = unclaimed.toFixed(6);
       if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
     }
@@ -1425,7 +1421,8 @@ async def api_get_user(request):
                 offline_mined = 0.0
                 if last_ts > 0:
                     diff = min(now - last_ts, 86400)
-                    offline_mined = diff * (speed * 0.000015 * 10)
+                    # مضاعفة الأرباح في الخلفية بالتوافق مع التعدين الحي
+                    offline_mined = diff * (speed * 0.000030 * 10)
                 
                 await db.execute("UPDATE users SET last_mining_timestamp = ?, ip_address = ?, device_fingerprint = ? WHERE user_id = ?",
                                  (now, client_ip, client_fp, user_id))
@@ -1441,13 +1438,13 @@ async def api_get_user(request):
                     "offline_mined": offline_mined
                 })
             else:
-                await db.execute("INSERT OR IGNORE INTO users (user_id, last_mining_timestamp, mining_speed, ip_address, device_fingerprint) VALUES (?, ?, 0.25, ?, ?)",
-                                 (user_id, now, client_ip, client_fp))
+                await db.execute("INSERT OR IGNORE INTO users (user_id, last_mining_timestamp, mining_speed, ip_address, device_fingerprint, olk_balance) VALUES (?, ?, 0.25, ?, ?, ?)",
+                                 (user_id, now, client_ip, client_fp, SIGNUP_BONUS))
                 await db.commit()
                 return web.json_response({
                     "ok": True,
                     "banned": False,
-                    "olk_balance": 0.0,
+                    "olk_balance": SIGNUP_BONUS,
                     "ton_balance": 0.0,
                     "mining_speed": 0.25,
                     "miner_level": 1,
@@ -1614,19 +1611,12 @@ async def api_verify_channel_task(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
-def modern_welcome_keyboard(user_id: int):
+# رابط الويب الحصري فقط تحت الرسالة
+def web_only_keyboard(user_id: int):
     app_url = f"{WEBAPP_URL}?user_id={user_id}"
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="🚀 فتح جهاز التعدين والمحفظة (Play Now)", web_app=WebAppInfo(url=app_url))
-        ],
-        [
-            InlineKeyboardButton(text="📢 القناة الرسمية للمشروع", url="https://t.me/olka_ad"),
-            InlineKeyboardButton(text="👥 دعوة الأصدقاء", callback_data="referral")
-        ],
-        [
-            InlineKeyboardButton(text="💎 محفظتي وسحب الأرباح", callback_data="balance"),
-            InlineKeyboardButton(text="⚡ المكافأة اليومية", callback_data="claim")
+            InlineKeyboardButton(text="⚡ ابدأ التعدين الآن (Play Now) 🚀", web_app=WebAppInfo(url=app_url))
         ]
     ])
 
@@ -1650,12 +1640,12 @@ async def admin_panel(message: Message):
 
     admin_msg = (
         "👑 **لوحة تحكم إدارة المشروع (VIP Admin):**\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        "──────────────────────\n"
         f"👥 إجمالي المستخدمين: `{users_count}`\n"
         f"🪙 إجمالي عملات OLK: `{(total_olk or 0):.2f}`\n"
         f"💎 إجمالي عملات TON: `{(total_ton or 0):.4f}`\n"
         f"⏳ طلبات السحب المعلقة: `{pending_withdraws}`\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        "──────────────────────\n"
         "لإرسال إذاعة جماعية أرسل: `/broadcast`"
     )
     await message.answer(admin_msg, parse_mode="Markdown")
@@ -1750,12 +1740,13 @@ async def start_handler(message: Message, command: CommandObject):
                     """, (user_id, referrer_id, now, SIGNUP_BONUS))
                     await db.commit()
                     
+                    # مكافأة الإحالة 80 OLK
                     await db.execute("UPDATE users SET olk_balance = olk_balance + ? WHERE user_id = ?", (REFERRAL_REWARD, referrer_id))
                     await db.commit()
                     try:
                         await bot.send_message(
                             chat_id=referrer_id,
-                            text=f"🎉 **إحالة جديدة ناجحة!**\nانضم صديق جديد عبر رابطك وحصلت على **+{REFERRAL_REWARD:.0f} OLK** فوراً!"
+                            text=f"🎉 **إحالة ناجحة جديدة!**\nانضم مستخدم جديد عبر رابطك وتمت إضافة **+{REFERRAL_REWARD:.0f} OLK** إلى حسابك!"
                         )
                     except Exception:
                         pass
@@ -1768,123 +1759,61 @@ async def start_handler(message: Message, command: CommandObject):
 
     if not await check_subscription(user_id):
         sub_banner = (
-            "💎 **مرحباً بك في منظومة OLKA VIP السحابية!**\n"
-            "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "⚡ لتفعيل جهاز التعدين الخاص بك وحماية أرباحك، يرجى الانضمام إلى قناتنا الرسمية أولاً:\n\n"
-            f"📢 **القناة الرسمية:** {SPONSOR_CHANNEL}"
+            "💎 **مرحباً بك في OLKA VIP Cloud**\n"
+            "──────────────────────\n"
+            "لتفعيل جهاز التعدين وبدء الربح، اشترك في القناة الرسمية أولاً:\n\n"
+            f"📢 {SPONSOR_CHANNEL}"
         )
         await message.answer(
             sub_banner,
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="📢 انضم إلى القناة الآن", url="https://t.me/olka_ad")],
-                [InlineKeyboardButton(text="✅ تأكيد الانضمام وتفعيل الحساب", callback_data="verify_sub")]
+                [InlineKeyboardButton(text="📢 انضم إلى القناة", url="https://t.me/olka_ad")],
+                [InlineKeyboardButton(text="✅ تأكيد الاشتراك", callback_data="verify_sub")]
             ])
         )
         return
 
+    # الرسالة الجديدة الاحترافية المنظمة مع رابط الويب المباشر فقط
     welcome_text = (
-        "👑 **مرحباً بك في إمبراطورية OLKA VIP التعدينية!**\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "⚡ **أسرع وأقوى منصة تعدين سحابي على شبكة TON:**\n\n"
-        "⛏️ **التعدين التلقائي:** جهازك يعدّن عملة `OLK` على مدار الساعة حتى عند إغلاق الهاتف.\n"
-        "🔄 **صرافة فورية:** حوّل أرباحك من `OLK` إلى عملة `TON` مباشرة.\n"
-        "💳 **السحب المباشر:** اسحب أرباحك بنقرة واحدة إلى محفظتك (Tonkeeper أو Telegram Wallet).\n"
-        "🎁 **هدية البداية:** تمت إضافة `+5.00 OLK` إلى حسابك مجاناً!\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "👇 **اضغط على الزر بالأسفل لبدء التعدين وفتح المحفظة فوراً:**"
+        "⚡ **مرحباً بك في منصة OLKA VIP**\n"
+        "──────────────────────\n"
+        "🚀 **منظومة التعدين السحابي المباشر على شبكة TON**\n\n"
+        "⛏️ **تعدين آلي 24/7:** يعمل جهازك السحابي دون انقطاع حتى عند إغلاق التطبيق.\n"
+        "💎 **سحب مباشر:** تحويل فوري لأرباحك إلى عملة TON على محفظتك.\n"
+        "🎁 **هدية البداية:** تم إيداع **+50 OLK** في رصيدك مباشرة!\n"
+        "──────────────────────\n"
+        "اضغط على الزر أدناه لتشغيل جهاز التعدين والتحكم بمحفظتك:"
     )
-    await message.answer(welcome_text, parse_mode="Markdown", reply_markup=modern_welcome_keyboard(user_id))
+    await message.answer(welcome_text, parse_mode="Markdown", reply_markup=web_only_keyboard(user_id))
 
 @dp.callback_query(F.data == "verify_sub")
 async def verify_sub_handler(callback: CallbackQuery):
     if await check_subscription(callback.from_user.id):
+        welcome_text = (
+            "⚡ **مرحباً بك في منصة OLKA VIP**\n"
+            "──────────────────────\n"
+            "🚀 **منظومة التعدين السحابي المباشر على شبكة TON**\n\n"
+            "⛏️ **تعدين آلي 24/7:** يعمل جهازك السحابي دون انقطاع حتى عند إغلاق التطبيق.\n"
+            "💎 **سحب مباشر:** تحويل فوري لأرباحك إلى عملة TON على محفظتك.\n"
+            "🎁 **هدية البداية:** تم إيداع **+50 OLK** في رصيدك مباشرة!\n"
+            "──────────────────────\n"
+            "اضغط على الزر أدناه لتشغيل جهاز التعدين والتحكم بمحفظتك:"
+        )
         await callback.message.edit_text(
-            "🎉 **تم التحقق بنجاح! تم تشغيل محرك التعدين السحابي الخاص بك.**",
-            reply_markup=modern_welcome_keyboard(callback.from_user.id)
+            welcome_text,
+            parse_mode="Markdown",
+            reply_markup=web_only_keyboard(callback.from_user.id)
         )
     else:
         await callback.answer("❌ لم تنضم للقناة بعد! انضم أولاً ثم اضغط تأكيد.", show_alert=True)
-
-@dp.callback_query(F.data == "claim")
-async def claim_handler(callback: CallbackQuery):
-    user_id = callback.from_user.id
-    current_time = int(time.time())
-    cooldown = 86400
-
-    async with aiosqlite.connect("olka_vip.db") as db:
-        async with db.execute("SELECT last_claim FROM users WHERE user_id = ?", (user_id,)) as cursor:
-            row = await cursor.fetchone()
-            last_claim = row[0] if row else 0
-
-        if current_time - last_claim < cooldown:
-            rem = cooldown - (current_time - last_claim)
-            hours = rem // 3600
-            mins = (rem % 3600) // 60
-            await callback.answer(f"⏳ يمكنك استلام المكافأة اليومية مجدداً بعد: {hours} ساعة و {mins} دقيقة.", show_alert=True)
-            return
-
-        await db.execute("UPDATE users SET olk_balance = olk_balance + 2.0, last_claim = ? WHERE user_id = ?", (current_time, user_id))
-        await db.commit()
-
-    await callback.answer("✅ استلمت +2 OLK هدية يومية!", show_alert=True)
-
-@dp.callback_query(F.data == "balance")
-async def balance_handler(callback: CallbackQuery):
-    user_id = callback.from_user.id
-    async with aiosqlite.connect("olka_vip.db") as db:
-        async with db.execute("SELECT olk_balance, ton_balance, saved_wallet FROM users WHERE user_id = ?", (user_id,)) as cursor:
-            row = await cursor.fetchone()
-            olk, ton, saved_w = row if row else (0.0, 0.0, None)
-
-    friendly_saved = raw_to_user_friendly(saved_w)
-    wallet_info = f"`{friendly_saved}`" if friendly_saved else "⚠️ لم يتم ربط محفظة بعد"
-    text = (
-        "💼 **محفظتك في منصة OLKA VIP:**\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"🪙 **رصيد التعدين:** `{olk:.2f} OLK`\n"
-        f"💎 **رصيد السحب:** `{ton:.4f} TON`\n"
-        f"📫 **المحفظة المتصلة:** {wallet_info}\n\n"
-        f"💡 سعر الصرف: `1 TON = {CONVERSION_RATE} OLK`\n"
-        f"💳 الحد الأدنى للسحب: `{MIN_WITHDRAW_TON} TON`\n"
-        "━━━━━━━━━━━━━━━━━━━━━━"
-    )
-    buttons = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🚀 فتح المحفظة وإدارة السحب", web_app=WebAppInfo(url=f"{WEBAPP_URL}?user_id={user_id}"))]
-    ])
-    await callback.message.answer(text, parse_mode="Markdown", reply_markup=buttons)
-    await callback.answer()
-
-@dp.callback_query(F.data == "referral")
-async def referral_handler(callback: CallbackQuery):
-    user_id = callback.from_user.id
-    async with aiosqlite.connect("olka_vip.db") as db:
-        async with db.execute("SELECT COUNT(*) FROM users WHERE referred_by = ?", (user_id,)) as cursor:
-            row = await cursor.fetchone()
-            ref_count = row[0] if row else 0
-
-    bot_info = await bot.get_me()
-    ref_link = f"https://t.me/{bot_info.username}?start={user_id}"
-
-    text = (
-        "👥 **برنامج الإحالة ومكافآت التعدين:**\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"🤝 عدد أصدقائك النشطين: `{ref_count}`\n"
-        f"🎁 المكافأة: `+{REFERRAL_REWARD:.0f} OLK` عن كل صديق ينضم عبر رابطك!\n\n"
-        f"🔗 رابط الدعوة الخاص بك:\n`{ref_link}`"
-    )
-    buttons = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📤 مشاركة الرابط مع أصدقائك", url=f"https://t.me/share/url?url={ref_link}&text=انضم%20الآن%20إلى%20تعدين%20OLK%20VIP%20واربح%20TON%20مجاناً!")]
-    ])
-    await callback.message.answer(text, parse_mode="Markdown", reply_markup=buttons)
-    await callback.answer()
 
 async def web_handler(request):
     return web.Response(text=MINI_APP_HTML, content_type="text/html")
 
 async def main():
     await init_db()
-    print("OLK Engine with Top Bar Big Language Switcher is live...")
+    print("OLK Ultra Engine with Pure Web Experience & 2x Hash Power is live...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
