@@ -9,7 +9,7 @@ from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart, Command, CommandObject
 from aiogram.types import (
     Message, InlineKeyboardMarkup, InlineKeyboardButton,
-    CallbackQuery, ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
+    CallbackQuery, WebAppInfo
 )
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -112,38 +112,66 @@ MINI_APP_HTML = """<!DOCTYPE html>
       height: 100vh;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
-      padding: 12px 14px 140px 14px;
+      padding: 10px 14px 140px 14px;
       display: flex;
       flex-direction: column;
       align-items: center;
       width: 100%;
     }
+    
+    /* شريط علوي جديد وأنيق مع مبدل لغات كبير ومميز */
     .top-header {
       width: 100%;
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 12px;
+      gap: 8px;
     }
     .header-signal {
-      font-size: 11px;
+      font-size: 12px;
       color: var(--accent-green);
-      font-weight: 600;
+      font-weight: 700;
       display: flex;
       align-items: center;
       gap: 5px;
-    }
-    .lang-selector {
-      background: rgba(15, 23, 42, 0.9);
-      border: 1px solid var(--card-border);
+      background: rgba(34, 197, 94, 0.12);
+      padding: 6px 10px;
       border-radius: 12px;
-      color: #fff;
-      font-size: 11px;
-      font-weight: 700;
-      padding: 4px 8px;
-      outline: none;
-      cursor: pointer;
+      border: 1px solid rgba(34, 197, 94, 0.25);
     }
+    
+    /* أزرار اللغات المطورة والكبيرة */
+    .lang-switch-box {
+      display: flex;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1.5px solid var(--card-border);
+      border-radius: 16px;
+      padding: 3px;
+      gap: 4px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    }
+    .lang-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 13px;
+      font-weight: 800;
+      padding: 6px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s ease;
+    }
+    .lang-btn.active {
+      background: linear-gradient(135deg, #1e40af, #2563eb);
+      color: #ffffff;
+      box-shadow: 0 2px 10px rgba(37, 99, 235, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
     .assets-container {
       width: 100%;
       background: var(--card-bg);
@@ -541,19 +569,39 @@ MINI_APP_HTML = """<!DOCTYPE html>
       align-items: center;
       justify-content: center;
     }
+
+    #banned-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(8, 10, 18, 0.98);
+      z-index: 99999;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
 
+  <div id="banned-overlay">
+    <i class="fa-solid fa-triangle-exclamation" style="font-size:60px; color:#ef4444; margin-bottom:16px;"></i>
+    <h2 style="color:#ef4444; margin-bottom:8px;">⛔ تم حظر هذا الحساب!</h2>
+    <p style="font-size:13px; color:#cbd5e1; line-height:1.6;">تم اكتشاف وجود أكثر من حساب مسجل من نفس الجهاز أو نفس الشبكة. يمنع نظام OLKA VIP تكرار الحسابات بشكل قاطع لضمان نزاهة التعدين.</p>
+  </div>
+
   <div class="main-scroll-view">
+    <!-- الشريط العلوي المطور مع أزرار اللغات الجديدة -->
     <div class="top-header">
       <div class="header-signal"><i class="fa-solid fa-signal"></i> <span data-i18n="live">مباشر</span></div>
-      <div style="font-weight:800; font-size:16px;" data-i18n="header_title">تعدين OLK VIP</div>
-      <select class="lang-selector" id="lang-selector" onchange="changeLanguage(this.value)">
-        <option value="ar">🇸🇦 العربية</option>
-        <option value="en">🇺🇸 English</option>
-        <option value="ru">🇷🇺 Русский</option>
-      </select>
+      
+      <div class="lang-switch-box">
+        <button class="lang-btn" id="btn-lang-ar" onclick="selectLang('ar')">🇸🇦 AR</button>
+        <button class="lang-btn" id="btn-lang-en" onclick="selectLang('en')">🇺🇸 EN</button>
+        <button class="lang-btn" id="btn-lang-ru" onclick="selectLang('ru')">🇷🇺 RU</button>
+      </div>
     </div>
 
     <!-- كرت الأصول المحفوظة -->
@@ -631,7 +679,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- صفحة 2: المحفظة وإدارة التحويل والسحب اليدوي -->
+    <!-- صفحة 2: المحفظة -->
     <div class="page-tab" id="tab-wallet">
       <div class="card-panel">
         <div style="font-weight:bold; color:var(--gold-primary); font-size:15px; display:flex; justify-content:space-between; align-items:center;">
@@ -662,7 +710,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
 
         <hr style="border:0; border-top:1px solid var(--card-border); margin:6px 0;">
 
-        <!-- قسم تحديد مبلغ السحب يدوياً -->
         <div style="font-weight:bold; color:#38bdf8; font-size:14px; margin-top:2px;" data-i18n="withdraw_section_title">
           <i class="fa-solid fa-money-bill-transfer"></i> سحب TON إلى محفظتك
         </div>
@@ -793,11 +840,30 @@ MINI_APP_HTML = """<!DOCTYPE html>
     const urlParams = new URLSearchParams(window.location.search);
     const userId = tg?.initDataUnsafe?.user?.id || urlParams.get('user_id') || 1932161126;
 
-    // نظام الترجمة واللغات (العربية، الإنجليزية، الروسية)
+    function generateDeviceFingerprint() {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl');
+      const debugInfo = gl ? gl.getExtension('WEBGL_debug_renderer_info') : null;
+      const renderer = debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : 'no-gl';
+      const raw = [
+        navigator.userAgent,
+        screen.height + 'x' + screen.width,
+        navigator.hardwareConcurrency || 0,
+        renderer
+      ].join('###');
+      
+      let hash = 0;
+      for (let i = 0; i < raw.length; i++) {
+        hash = ((hash << 5) - hash) + raw.charCodeAt(i);
+        hash |= 0;
+      }
+      return 'dev_' + Math.abs(hash).toString(16);
+    }
+    const clientFingerprint = generateDeviceFingerprint();
+
     const translations = {
       ar: {
         live: "مباشر",
-        header_title: "تعدين OLK VIP",
         total_label: "الإجمالي:",
         safe_assets: "أصولي المحفوظة",
         olk_balance: "رصيد OLK:",
@@ -837,7 +903,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       },
       en: {
         live: "LIVE",
-        header_title: "OLK VIP MINING",
         total_label: "Total:",
         safe_assets: "My Protected Assets",
         olk_balance: "OLK Balance:",
@@ -877,7 +942,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       },
       ru: {
         live: "ОНЛАЙН",
-        header_title: "Майнинг OLK VIP",
         total_label: "Всего:",
         safe_assets: "Мои защищенные активы",
         olk_balance: "Баланс OLK:",
@@ -919,21 +983,19 @@ MINI_APP_HTML = """<!DOCTYPE html>
 
     let currentLang = localStorage.getItem("olk_lang") || "ar";
 
-    function applyLanguage(lang) {
+    function selectLang(lang) {
       currentLang = lang;
       localStorage.setItem("olk_lang", lang);
-      document.getElementById("lang-selector").value = lang;
-      document.documentElement.dir = (lang === "ar") ? "rtl" : "ltr";
+      document.querySelectorAll(".lang-btn").forEach(b => b.classList.remove("active"));
+      const btn = document.getElementById("btn-lang-" + lang);
+      if (btn) btn.classList.add("active");
 
+      document.documentElement.dir = (lang === "ar") ? "rtl" : "ltr";
       const dict = translations[lang] || translations.ar;
       document.querySelectorAll("[data-i18n]").forEach(el => {
         const key = el.getAttribute("data-i18n");
         if (dict[key]) el.innerText = dict[key];
       });
-    }
-
-    function changeLanguage(lang) {
-      applyLanguage(lang);
       refreshScreen();
     }
 
@@ -988,11 +1050,11 @@ MINI_APP_HTML = """<!DOCTYPE html>
       } else {
         connectedWalletAddress = null;
         walletBtnText.innerText = "CONNECT WALLET";
-        walletStatusLabel.innerText = (currentLang === "ar") ? "اتصال" : ((currentLang === "ru") ? "Подключить" : "Connect");
+        walletStatusLabel.innerText = (currentLang === "ar") ? "اتصال" : "Connect";
         walletStatusLabel.classList.remove("connected");
         walletStatusSub.innerText = translations[currentLang].wallet_sub_hint;
         walletBtn.classList.remove("connected");
-        walletDisplay.innerText = (currentLang === "ar") ? "⚠️ لم يتم ربط محفظة TON بعد" : "⚠️ No TON wallet connected yet";
+        walletDisplay.innerText = "⚠️ لم يتم ربط محفظة TON بعد";
       }
     });
 
@@ -1006,8 +1068,12 @@ MINI_APP_HTML = """<!DOCTYPE html>
 
     async function loadData() {
       try {
-        const res = await fetch(`/api/get_user?user_id=${userId}`);
+        const res = await fetch(`/api/get_user?user_id=${userId}&fp=${clientFingerprint}`);
         const data = await res.json();
+        if (data.banned) {
+          document.getElementById("banned-overlay").style.display = "flex";
+          return;
+        }
         if (data.ok) {
           appOlk = data.olk_balance;
           appTon = data.ton_balance;
@@ -1100,7 +1166,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
 
     async function buyRigWithTon(rigId, tonCost, speedGain) {
       if (appTon < tonCost) {
-        alert(currentLang === "ar" ? `⚠️ رصيد TON غير كافٍ! يلزمك ${tonCost} TON.` : `⚠️ Insufficient TON! You need ${tonCost} TON.`);
+        alert(currentLang === "ar" ? `⚠️ رصيد TON غير كافٍ! يلزمك ${tonCost} TON.` : `⚠️ Insufficient TON!`);
         switchNav('wallet');
         return;
       }
@@ -1114,7 +1180,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: userId, cost_ton: tonCost, new_speed: speed, new_level: minerLevel })
       });
-      alert(currentLang === "ar" ? `🎉 تم شراء الترقية بنجاح! السرعة الآن: ${speed.toFixed(2)} TH/s` : `🎉 Hardware upgraded! Current Speed: ${speed.toFixed(2)} TH/s`);
+      alert(currentLang === "ar" ? `🎉 تم شراء الترقية بنجاح! السرعة الآن: ${speed.toFixed(2)} TH/s` : `🎉 Hardware upgraded!`);
     }
 
     async function convertOlkDirect() {
@@ -1177,7 +1243,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       }
     }
 
-    // سحب مبلغ TON الذي حدده المستخدم يدوياً
     async function requestWithdrawalToConnectedWallet() {
       if (!connectedWalletAddress) {
         alert(currentLang === "ar" ? "❌ يرجى ربط محفظة TON أولاً عبر زر CONNECT WALLET!" : "❌ Connect TON wallet first!");
@@ -1204,7 +1269,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         appTon = data.remaining_ton;
         withdrawAmountInput.value = "";
         refreshScreen();
-        alert(currentLang === "ar" ? `✅ تم إرسال طلب سحب ${withdrawAmount.toFixed(4)} TON بنجاح للمراجعة!` : `✅ Withdrawal request of ${withdrawAmount.toFixed(4)} TON submitted!`);
+        alert(currentLang === "ar" ? `✅ تم إرسال طلب سحب ${withdrawAmount.toFixed(4)} TON بنجاح للمراجعة!` : `✅ Withdrawal request submitted!`);
       } else {
         alert(data.msg);
       }
@@ -1242,7 +1307,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       }
     }
 
-    applyLanguage(currentLang);
+    selectLang(currentLang);
     loadData();
   </script>
 </body>
@@ -1272,7 +1337,10 @@ async def init_db():
             miner_level INTEGER DEFAULT 1,
             last_mining_timestamp INTEGER DEFAULT 0,
             tasks_completed TEXT DEFAULT '[]',
-            saved_wallet TEXT DEFAULT NULL
+            saved_wallet TEXT DEFAULT NULL,
+            ip_address TEXT DEFAULT NULL,
+            device_fingerprint TEXT DEFAULT NULL,
+            is_banned INTEGER DEFAULT 0
         )
         """)
         for col_def in [
@@ -1283,7 +1351,10 @@ async def init_db():
             "miner_level INTEGER DEFAULT 1",
             "last_mining_timestamp INTEGER DEFAULT 0",
             "tasks_completed TEXT DEFAULT '[]'",
-            "saved_wallet TEXT DEFAULT NULL"
+            "saved_wallet TEXT DEFAULT NULL",
+            "ip_address TEXT DEFAULT NULL",
+            "device_fingerprint TEXT DEFAULT NULL",
+            "is_banned INTEGER DEFAULT 0"
         ]:
             try:
                 await db.execute(f"ALTER TABLE users ADD COLUMN {col_def}")
@@ -1322,32 +1393,67 @@ async def api_save_wallet(request):
 async def api_get_user(request):
     try:
         user_id = int(request.query.get("user_id", 0))
+        client_fp = str(request.query.get("fp", "")).strip()
+        client_ip = request.headers.get("X-Forwarded-For", request.remote).split(",")[0].strip()
         now = int(time.time())
+
         async with aiosqlite.connect("olka_vip.db") as db:
-            async with db.execute("SELECT olk_balance, ton_balance, mining_speed, miner_level, last_mining_timestamp, saved_wallet FROM users WHERE user_id = ?", (user_id,)) as cur:
+            async with db.execute("SELECT is_banned, olk_balance, ton_balance, mining_speed, miner_level, last_mining_timestamp, saved_wallet, ip_address, device_fingerprint FROM users WHERE user_id = ?", (user_id,)) as cur:
                 row = await cur.fetchone()
-                if row:
-                    olk, ton, speed, lvl, last_ts, saved_wallet = row
-                    offline_mined = 0.0
-                    if last_ts > 0:
-                        diff = min(now - last_ts, 86400)
-                        offline_mined = diff * (speed * 0.000015 * 10)
-                    
-                    await db.execute("UPDATE users SET last_mining_timestamp = ? WHERE user_id = ?", (now, user_id))
-                    await db.commit()
-                    return web.json_response({
-                        "ok": True,
-                        "olk_balance": olk,
-                        "ton_balance": ton,
-                        "mining_speed": speed,
-                        "miner_level": lvl,
-                        "saved_wallet": raw_to_user_friendly(saved_wallet),
-                        "offline_mined": offline_mined
-                    })
-                else:
-                    await db.execute("INSERT OR IGNORE INTO users (user_id, last_mining_timestamp, mining_speed) VALUES (?, ?, 0.25)", (user_id, now))
-                    await db.commit()
-                    return web.json_response({"ok": True, "olk_balance": 0.0, "ton_balance": 0.0, "mining_speed": 0.25, "miner_level": 1, "saved_wallet": None, "offline_mined": 0.0})
+
+            if row and row[0] == 1:
+                return web.json_response({"ok": False, "banned": True})
+
+            if client_fp:
+                async with db.execute("SELECT user_id FROM users WHERE (device_fingerprint = ? OR ip_address = ?) AND user_id != ?", (client_fp, client_ip, user_id)) as cur:
+                    duplicate = await cur.fetchone()
+                    if duplicate and user_id != ADMIN_ID:
+                        await db.execute("UPDATE users SET is_banned = 1 WHERE user_id = ?", (user_id,))
+                        await db.commit()
+                        try:
+                            await bot.send_message(
+                                chat_id=ADMIN_ID,
+                                text=f"🚨 **تنبيه أمني: حظر حساب متعدد تلقائياً**\n\n👤 الحساب المخالف: `{user_id}`\n🌐 مرتبط مع المستخدم: `{duplicate[0]}`\n📱 البصمة: `{client_fp}`\n🌍 IP: `{client_ip}`",
+                                parse_mode="Markdown"
+                            )
+                        except Exception:
+                            pass
+                        return web.json_response({"ok": False, "banned": True})
+
+            if row:
+                olk, ton, speed, lvl, last_ts, saved_wallet = row[1], row[2], row[3], row[4], row[5], row[6]
+                offline_mined = 0.0
+                if last_ts > 0:
+                    diff = min(now - last_ts, 86400)
+                    offline_mined = diff * (speed * 0.000015 * 10)
+                
+                await db.execute("UPDATE users SET last_mining_timestamp = ?, ip_address = ?, device_fingerprint = ? WHERE user_id = ?",
+                                 (now, client_ip, client_fp, user_id))
+                await db.commit()
+                return web.json_response({
+                    "ok": True,
+                    "banned": False,
+                    "olk_balance": olk,
+                    "ton_balance": ton,
+                    "mining_speed": speed,
+                    "miner_level": lvl,
+                    "saved_wallet": raw_to_user_friendly(saved_wallet),
+                    "offline_mined": offline_mined
+                })
+            else:
+                await db.execute("INSERT OR IGNORE INTO users (user_id, last_mining_timestamp, mining_speed, ip_address, device_fingerprint) VALUES (?, ?, 0.25, ?, ?)",
+                                 (user_id, now, client_ip, client_fp))
+                await db.commit()
+                return web.json_response({
+                    "ok": True,
+                    "banned": False,
+                    "olk_balance": 0.0,
+                    "ton_balance": 0.0,
+                    "mining_speed": 0.25,
+                    "miner_level": 1,
+                    "saved_wallet": None,
+                    "offline_mined": 0.0
+                })
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
@@ -1424,7 +1530,6 @@ async def api_convert(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
-# سحب المبلغ المحدد يدوياً
 async def api_withdraw(request):
     try:
         data = await request.json()
@@ -1509,29 +1614,19 @@ async def api_verify_channel_task(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
-def get_contact_keyboard():
-    return ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="⚡ توثيق الحساب واستلام هدية +5 OLK 🚀", request_contact=True)]],
-        resize_keyboard=True,
-        one_time_keyboard=True
-    )
-
-def main_dashboard_keyboard(user_id: int):
+def modern_welcome_keyboard(user_id: int):
     app_url = f"{WEBAPP_URL}?user_id={user_id}"
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="⛏️ فتح جهاز التعدين والمحفظة (OLK App) 🚀", web_app=WebAppInfo(url=app_url))
+            InlineKeyboardButton(text="🚀 فتح جهاز التعدين والمحفظة (Play Now)", web_app=WebAppInfo(url=app_url))
         ],
         [
-            InlineKeyboardButton(text="⚡ مكافأة يومية (+2 OLK)", callback_data="claim"),
-            InlineKeyboardButton(text="🔄 صرافة TON", callback_data="convert")
+            InlineKeyboardButton(text="📢 القناة الرسمية للمشروع", url="https://t.me/olka_ad"),
+            InlineKeyboardButton(text="👥 دعوة الأصدقاء", callback_data="referral")
         ],
         [
-            InlineKeyboardButton(text="💳 المحفظة والسحب", callback_data="balance"),
-            InlineKeyboardButton(text="👥 شبكة الإحالة", callback_data="referral")
-        ],
-        [
-            InlineKeyboardButton(text="📢 قناة المشروع الرسمية", url="https://t.me/olka_ad")
+            InlineKeyboardButton(text="💎 محفظتي وسحب الأرباح", callback_data="balance"),
+            InlineKeyboardButton(text="⚡ المكافأة اليومية", callback_data="claim")
         ]
     ])
 
@@ -1548,7 +1643,7 @@ async def admin_panel(message: Message):
         return
 
     async with aiosqlite.connect("olka_vip.db") as db:
-        async with db.execute("SELECT COUNT(*), SUM(olk_balance), SUM(ton_balance) FROM users") as cur:
+        async with db.execute("SELECT COUNT(*), SUM(olk_balance), SUM(ton_balance) FROM users WHERE is_banned = 0") as cur:
             users_count, total_olk, total_ton = await cur.fetchone()
         async with db.execute("SELECT COUNT(*) FROM withdrawals WHERE status = 'PENDING'") as cur:
             pending_withdraws = (await cur.fetchone())[0]
@@ -1577,7 +1672,7 @@ async def process_broadcast(message: Message, state: FSMContext):
     await state.clear()
     text = message.text
     async with aiosqlite.connect("olka_vip.db") as db:
-        async with db.execute("SELECT user_id FROM users") as cur:
+        async with db.execute("SELECT user_id FROM users WHERE is_banned = 0") as cur:
             rows = await cur.fetchall()
 
     success, fail = 0, 0
@@ -1637,8 +1732,12 @@ async def start_handler(message: Message, command: CommandObject):
     now = int(time.time())
 
     async with aiosqlite.connect("olka_vip.db") as db:
-        async with db.execute("SELECT phone_number, olk_balance, ton_balance FROM users WHERE user_id = ?", (user_id,)) as cursor:
+        async with db.execute("SELECT is_banned, olk_balance, ton_balance FROM users WHERE user_id = ?", (user_id,)) as cursor:
             user = await cursor.fetchone()
+
+        if user and user[0] == 1:
+            await message.answer("⛔ **عذراً، هذا الحساب محظور نهائياً بسبب مخالفة شروط منع تعدد الحسابات.**")
+            return
 
         if not user and ref_param:
             try:
@@ -1646,108 +1745,66 @@ async def start_handler(message: Message, command: CommandObject):
                 referrer_id = int(clean_ref)
                 if referrer_id != user_id:
                     await db.execute("""
-                        INSERT INTO users (user_id, referred_by, last_mining_timestamp, mining_speed) VALUES (?, ?, ?, 0.25)
+                        INSERT INTO users (user_id, referred_by, last_mining_timestamp, mining_speed, olk_balance) VALUES (?, ?, ?, 0.25, ?)
                         ON CONFLICT(user_id) DO UPDATE SET referred_by = excluded.referred_by
-                    """, (user_id, referrer_id, now))
+                    """, (user_id, referrer_id, now, SIGNUP_BONUS))
                     await db.commit()
+                    
+                    await db.execute("UPDATE users SET olk_balance = olk_balance + ? WHERE user_id = ?", (REFERRAL_REWARD, referrer_id))
+                    await db.commit()
+                    try:
+                        await bot.send_message(
+                            chat_id=referrer_id,
+                            text=f"🎉 **إحالة جديدة ناجحة!**\nانضم صديق جديد عبر رابطك وحصلت على **+{REFERRAL_REWARD:.0f} OLK** فوراً!"
+                        )
+                    except Exception:
+                        pass
             except ValueError:
                 pass
         elif not user:
-            await db.execute("INSERT OR IGNORE INTO users (user_id, last_mining_timestamp, mining_speed) VALUES (?, ?, 0.25)", (user_id, now))
+            await db.execute("INSERT OR IGNORE INTO users (user_id, last_mining_timestamp, mining_speed, olk_balance) VALUES (?, ?, 0.25, ?)",
+                             (user_id, now, SIGNUP_BONUS))
             await db.commit()
-
-    if not user or not user[0]:
-        welcome_banner = (
-            "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "🌟 **مرحباً بك في إمبراطورية OLKA VIP** 🌟\n"
-            "━━━━━━━━━━━━━━━━━━━━━━\n\n"
-            "⛏️ عدّن واكسب عملة **OLK**، واسحب أو رقّ أجهزتك عبر **TON (Gram)**.\n"
-            f"🎁 **هدية التوثيق:** `+{SIGNUP_BONUS:.0f} OLK`\n\n"
-            "👇 **اضغط على الزر بالأسفل لتوثيق حسابك والمطالبة بالهدية:**"
-        )
-        await message.answer(welcome_banner, parse_mode="Markdown", reply_markup=get_contact_keyboard())
-        return
 
     if not await check_subscription(user_id):
         sub_banner = (
-            "⚠️ **خطوة أخيرة لتفعيل جهاز التعدين!**\n\n"
-            f"يرجى الانضمام إلى قناتنا الرسمية:\n"
-            f"📢 **{SPONSOR_CHANNEL}**"
+            "💎 **مرحباً بك في منظومة OLKA VIP السحابية!**\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
+            "⚡ لتفعيل جهاز التعدين الخاص بك وحماية أرباحك، يرجى الانضمام إلى قناتنا الرسمية أولاً:\n\n"
+            f"📢 **القناة الرسمية:** {SPONSOR_CHANNEL}"
         )
         await message.answer(
             sub_banner,
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="📢 انضم إلى القناة الآن", url="https://t.me/olka_ad")],
-                [InlineKeyboardButton(text="✅ تحقق من انضمامي", callback_data="verify_sub")]
+                [InlineKeyboardButton(text="✅ تأكيد الانضمام وتفعيل الحساب", callback_data="verify_sub")]
             ])
         )
         return
 
-    dash_text = (
-        f"👑 **لوحة تحكم معدن OLKA VIP:**\n"
+    welcome_text = (
+        "👑 **مرحباً بك في إمبراطورية OLKA VIP التعدينية!**\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"🆔 المعرّف: `{user_id}`\n"
-        f"🪙 رصيد التعدين: `{user[1]:.2f} OLK`\n"
-        f"💎 رصيد TON (Gram): `{user[2]:.4f} TON`\n"
+        "⚡ **أسرع وأقوى منصة تعدين سحابي على شبكة TON:**\n\n"
+        "⛏️ **التعدين التلقائي:** جهازك يعدّن عملة `OLK` على مدار الساعة حتى عند إغلاق الهاتف.\n"
+        "🔄 **صرافة فورية:** حوّل أرباحك من `OLK` إلى عملة `TON` مباشرة.\n"
+        "💳 **السحب المباشر:** اسحب أرباحك بنقرة واحدة إلى محفظتك (Tonkeeper أو Telegram Wallet).\n"
+        "🎁 **هدية البداية:** تمت إضافة `+5.00 OLK` إلى حسابك مجاناً!\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "🚀 اضغط على زر جهاز التعدين بالأسفل لفتح اللعبة والمحفظة!"
+        "👇 **اضغط على الزر بالأسفل لبدء التعدين وفتح المحفظة فوراً:**"
     )
-    await message.answer(dash_text, parse_mode="Markdown", reply_markup=main_dashboard_keyboard(user_id))
-
-@dp.message(F.contact)
-async def contact_handler(message: Message):
-    contact = message.contact
-    user_id = message.from_user.id
-
-    if contact.user_id != user_id:
-        await message.answer("❌ يجب إرسال رقم هاتفك الخاص بك فقط!")
-        return
-
-    async with aiosqlite.connect("olka_vip.db") as db:
-        async with db.execute("SELECT user_id FROM users WHERE phone_number = ?", (contact.phone_number,)) as cursor:
-            existing = await cursor.fetchone()
-            if existing and existing[0] != user_id:
-                await message.answer("⛔ هذا الرقم مسجل مسبقاً في حساب آخر!")
-                return
-
-        await db.execute("""
-            INSERT INTO users (user_id, phone_number, olk_balance, mining_speed) VALUES (?, ?, ?, 0.25)
-            ON CONFLICT(user_id) DO UPDATE SET phone_number = excluded.phone_number, olk_balance = olk_balance + ?
-        """, (user_id, contact.phone_number, SIGNUP_BONUS, SIGNUP_BONUS))
-        await db.commit()
-
-        async with db.execute("SELECT referred_by, ref_reward_claimed FROM users WHERE user_id = ?", (user_id,)) as cursor:
-            ref_row = await cursor.fetchone()
-
-        if ref_row and ref_row[0] and ref_row[1] == 0:
-            referrer_id = ref_row[0]
-            await db.execute("UPDATE users SET olk_balance = olk_balance + ? WHERE user_id = ?", (REFERRAL_REWARD, referrer_id))
-            await db.execute("UPDATE users SET ref_reward_claimed = 1 WHERE user_id = ?", (user_id,))
-            await db.commit()
-
-            try:
-                invited_name = message.from_user.first_name or "مستخدم جديد"
-                await bot.send_message(
-                    chat_id=referrer_id,
-                    text=(
-                        f"🎉 **إحالة ناجحة جديدة!**\n\n"
-                        f"قام صديقك ({invited_name}) بتوثيق حسابه.\n"
-                        f"💰 تمت إضافة **+{REFERRAL_REWARD:.0f} OLK** إلى محفظتك فوراً!"
-                    ),
-                    parse_mode="Markdown"
-                )
-            except Exception:
-                pass
-
-    await message.answer(f"✅ **تم توثيق الحساب بنجاح وإضافة مكافأة +{SIGNUP_BONUS:.0f} OLK!**", parse_mode="Markdown", reply_markup=main_dashboard_keyboard(user_id))
+    await message.answer(welcome_text, parse_mode="Markdown", reply_markup=modern_welcome_keyboard(user_id))
 
 @dp.callback_query(F.data == "verify_sub")
 async def verify_sub_handler(callback: CallbackQuery):
     if await check_subscription(callback.from_user.id):
-        await callback.message.edit_text("✅ **تم التحقق بنجاح!**", reply_markup=main_dashboard_keyboard(callback.from_user.id))
+        await callback.message.edit_text(
+            "🎉 **تم التحقق بنجاح! تم تشغيل محرك التعدين السحابي الخاص بك.**",
+            reply_markup=modern_welcome_keyboard(callback.from_user.id)
+        )
     else:
-        await callback.answer("❌ لم تنضم للقناة بعد!", show_alert=True)
+        await callback.answer("❌ لم تنضم للقناة بعد! انضم أولاً ثم اضغط تأكيد.", show_alert=True)
 
 @dp.callback_query(F.data == "claim")
 async def claim_handler(callback: CallbackQuery):
@@ -1764,14 +1821,13 @@ async def claim_handler(callback: CallbackQuery):
             rem = cooldown - (current_time - last_claim)
             hours = rem // 3600
             mins = (rem % 3600) // 60
-            await callback.answer(f"⏳ يمكنك المطالبة مجدداً بعد: {hours} ساعة و {mins} دقيقة.", show_alert=True)
+            await callback.answer(f"⏳ يمكنك استلام المكافأة اليومية مجدداً بعد: {hours} ساعة و {mins} دقيقة.", show_alert=True)
             return
 
         await db.execute("UPDATE users SET olk_balance = olk_balance + 2.0, last_claim = ? WHERE user_id = ?", (current_time, user_id))
         await db.commit()
 
-    await callback.answer("✅ استلمت +2 OLK بنجاح!", show_alert=True)
-    await callback.message.edit_text("🎉 **تم استلام المكافأة اليومية بنجاح (+2 OLK)!**", parse_mode="Markdown", reply_markup=main_dashboard_keyboard(user_id))
+    await callback.answer("✅ استلمت +2 OLK هدية يومية!", show_alert=True)
 
 @dp.callback_query(F.data == "balance")
 async def balance_handler(callback: CallbackQuery):
@@ -1784,29 +1840,26 @@ async def balance_handler(callback: CallbackQuery):
     friendly_saved = raw_to_user_friendly(saved_w)
     wallet_info = f"`{friendly_saved}`" if friendly_saved else "⚠️ لم يتم ربط محفظة بعد"
     text = (
-        "💼 **محفظة التعدين السحابي (OLKA VIP):**\n"
+        "💼 **محفظتك في منصة OLKA VIP:**\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"🪙 **رصيد التعدين (OLK):** `{olk:.2f} OLK`\n"
-        f"💎 **رصيد TON (Gram):** `{ton:.4f} TON`\n"
+        f"🪙 **رصيد التعدين:** `{olk:.2f} OLK`\n"
+        f"💎 **رصيد السحب:** `{ton:.4f} TON`\n"
         f"📫 **المحفظة المتصلة:** {wallet_info}\n\n"
         f"💡 سعر الصرف: `1 TON = {CONVERSION_RATE} OLK`\n"
         f"💳 الحد الأدنى للسحب: `{MIN_WITHDRAW_TON} TON`\n"
         "━━━━━━━━━━━━━━━━━━━━━━"
     )
     buttons = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="🔄 صرافة TON", callback_data="convert"),
-            InlineKeyboardButton(text="💳 سحب TON", callback_data="withdraw")
-        ],
-        [InlineKeyboardButton(text="🔙 العودة للرئيسية", callback_data="back_home")]
+        [InlineKeyboardButton(text="🚀 فتح المحفظة وإدارة السحب", web_app=WebAppInfo(url=f"{WEBAPP_URL}?user_id={user_id}"))]
     ])
-    await callback.message.edit_text(text, parse_mode="Markdown", reply_markup=buttons)
+    await callback.message.answer(text, parse_mode="Markdown", reply_markup=buttons)
+    await callback.answer()
 
 @dp.callback_query(F.data == "referral")
 async def referral_handler(callback: CallbackQuery):
     user_id = callback.from_user.id
     async with aiosqlite.connect("olka_vip.db") as db:
-        async with db.execute("SELECT COUNT(*) FROM users WHERE referred_by = ? AND phone_number IS NOT NULL", (user_id,)) as cursor:
+        async with db.execute("SELECT COUNT(*) FROM users WHERE referred_by = ?", (user_id,)) as cursor:
             row = await cursor.fetchone()
             ref_count = row[0] if row else 0
 
@@ -1814,63 +1867,24 @@ async def referral_handler(callback: CallbackQuery):
     ref_link = f"https://t.me/{bot_info.username}?start={user_id}"
 
     text = (
-        "👥 **نظام دعوة الأصدقاء (الإحالات المباشرة):**\n"
+        "👥 **برنامج الإحالة ومكافآت التعدين:**\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"🤝 أصدقاؤك الموثقون: `{ref_count}`\n"
-        f"🎁 المكافأة: `+{REFERRAL_REWARD:.0f} OLK` لكل صديق يوثق حسابه\n\n"
-        f"🔗 الرابط الخاص بك:\n`{ref_link}`"
+        f"🤝 عدد أصدقائك النشطين: `{ref_count}`\n"
+        f"🎁 المكافأة: `+{REFERRAL_REWARD:.0f} OLK` عن كل صديق ينضم عبر رابطك!\n\n"
+        f"🔗 رابط الدعوة الخاص بك:\n`{ref_link}`"
     )
     buttons = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📤 مشاركة الرابط", url=f"https://t.me/share/url?url={ref_link}&text=انضم%20الآن%20إلى%20جهاز%20تعدين%20OLK%20VIP!")],
-        [InlineKeyboardButton(text="🔙 العودة للرئيسية", callback_data="back_home")]
+        [InlineKeyboardButton(text="📤 مشاركة الرابط مع أصدقائك", url=f"https://t.me/share/url?url={ref_link}&text=انضم%20الآن%20إلى%20تعدين%20OLK%20VIP%20واربح%20TON%20مجاناً!")]
     ])
-    await callback.message.edit_text(text, parse_mode="Markdown", reply_markup=buttons)
-
-@dp.callback_query(F.data == "convert")
-async def convert_handler(callback: CallbackQuery):
-    user_id = callback.from_user.id
-    async with aiosqlite.connect("olka_vip.db") as db:
-        async with db.execute("SELECT olk_balance, ton_balance FROM users WHERE user_id = ?", (user_id,)) as cursor:
-            row = await cursor.fetchone()
-            olk = row[0] if row else 0.0
-
-    await callback.message.answer(
-        f"🪙 **صرافة OLK إلى TON (Gram):**\n\nرصيدك المتاح: `{olk:.2f} OLK`\n\n💡 يمكنك التحويل بالكمية التي تختارها من خلال حاسبة التبديل في تبويب **المحفظة** داخل التطبيق!",
-        parse_mode="Markdown"
-    )
+    await callback.message.answer(text, parse_mode="Markdown", reply_markup=buttons)
     await callback.answer()
-
-@dp.callback_query(F.data == "withdraw")
-async def withdraw_start(callback: CallbackQuery):
-    await callback.message.answer(
-        "💳 **سحب رصيد TON:**\n\nيمكنك الآن إدخال المبلغ الذي تريد سحبه بالتحديد وسحبه فوراً إلى محفظتك المرتبطة من خلال تبويب **المحفظة** داخل الـ Mini App!",
-        parse_mode="Markdown"
-    )
-    await callback.answer()
-
-@dp.callback_query(F.data == "back_home")
-async def back_home_handler(callback: CallbackQuery):
-    user_id = callback.from_user.id
-    async with aiosqlite.connect("olka_vip.db") as db:
-        async with db.execute("SELECT phone_number, olk_balance, ton_balance FROM users WHERE user_id = ?", (user_id,)) as cursor:
-            user = await cursor.fetchone()
-
-    dash_text = (
-        f"👑 **لوحة تحكم معدن OLKA VIP:**\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"🆔 المعرّف: `{user_id}`\n"
-        f"🪙 رصيد التعدين: `{user[1]:.2f} OLK`\n"
-        f"💎 رصيد TON (Gram): `{user[2]:.4f} TON`\n"
-        "━━━━━━━━━━━━━━━━━━━━━━"
-    )
-    await callback.message.edit_text(dash_text, parse_mode="Markdown", reply_markup=main_dashboard_keyboard(user_id))
 
 async def web_handler(request):
     return web.Response(text=MINI_APP_HTML, content_type="text/html")
 
 async def main():
     await init_db()
-    print("OLK Engine with Custom TON Withdrawal & Multilingual UI (AR, EN, RU) is live...")
+    print("OLK Engine with Top Bar Big Language Switcher is live...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
