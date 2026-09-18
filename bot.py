@@ -1,5 +1,5 @@
 import asyncio
-import aiosqlite
+import asyncpg
 import time
 import os
 import json
@@ -16,6 +16,9 @@ from aiogram.fsm.state import State, StatesGroup
 
 BOT_TOKEN = "8707730826:AAExJ7ZSQe9YFy8Y0O2eG3uPCAwVa_vG6Qc"
 ADMIN_ID = 1932161126
+
+# رابط قاعدة البيانات السحابية الدائمة (Neon PostgreSQL)
+DATABASE_URL = "postgresql://neondb_owner:npg_jXBYdNn58Kqc@ep-summer-cloud-b4hfhejx-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require"
 
 # القناة الإجبارية الرسمية لتفعيل الويب
 SPONSOR_CHANNEL = "@OLKVIP"
@@ -41,6 +44,8 @@ CHANNELS_TASKS = [
 ]
 
 WEBAPP_URL = "https://olka-bot-service.onrender.com"
+
+db_pool = None
 
 def raw_to_user_friendly(raw_addr: str) -> str:
     if not raw_addr or not str(raw_addr).startswith("0:"):
@@ -807,7 +812,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- صفحة 5: المهام (قناة olka_ad اختيارية للحصول على مكافأة إضافية) -->
+    <!-- صفحة 5: المهام -->
     <div class="page-tab" id="tab-tasks">
       <div class="card-panel">
         <div style="font-weight:bold; color:var(--gold-primary); font-size:15px;"><i class="fa-solid fa-list-check"></i> <span data-i18n="tasks_title">مهام جمع عملة OLK المجانية</span></div>
@@ -960,7 +965,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       ru: {
         live: "ОНЛАЙН",
         total_label: "Всего:",
-        safe_assets: "Мои защищенные активы",
+        safe_assets: "Моي защищенные активы",
         olk_balance: "Баланс OLK:",
         ton_balance: "Баланс TON (Gram):",
         wallet_sub_hint: "Нажмите, чтобы привязать кошелек",
@@ -1362,19 +1367,22 @@ TON_MANIFEST = {
 }
 
 async def init_db():
-    async with aiosqlite.connect("olka_vip.db") as db:
-        await db.execute("""
+    global db_pool
+    # إنشاء مجمع اتصالات دائم مع PostgreSQL السحابي
+    db_pool = await asyncpg.create_pool(DATABASE_URL, min_size=1, max_size=10)
+    async with db_pool.acquire() as conn:
+        await conn.execute("""
         CREATE TABLE IF NOT EXISTS users (
-            user_id INTEGER PRIMARY KEY,
+            user_id BIGINT PRIMARY KEY,
             phone_number TEXT,
-            olk_balance REAL DEFAULT 0.0,
-            ton_balance REAL DEFAULT 0.0,
-            last_claim INTEGER DEFAULT 0,
-            referred_by INTEGER DEFAULT NULL,
+            olk_balance DOUBLE PRECISION DEFAULT 0.0,
+            ton_balance DOUBLE PRECISION DEFAULT 0.0,
+            last_claim BIGINT DEFAULT 0,
+            referred_by BIGINT DEFAULT NULL,
             ref_reward_claimed INTEGER DEFAULT 0,
-            mining_speed REAL DEFAULT 0.25,
+            mining_speed DOUBLE PRECISION DEFAULT 0.25,
             miner_level INTEGER DEFAULT 1,
-            last_mining_timestamp INTEGER DEFAULT 0,
+            last_mining_timestamp BIGINT DEFAULT 0,
             tasks_completed TEXT DEFAULT '[]',
             saved_wallet TEXT DEFAULT NULL,
             ip_address TEXT DEFAULT NULL,
@@ -1383,40 +1391,18 @@ async def init_db():
             ban_reason TEXT DEFAULT NULL,
             activated_miner INTEGER DEFAULT 0,
             is_whitelisted INTEGER DEFAULT 0
-        )
+        );
         """)
-        for col_def in [
-            "ton_balance REAL DEFAULT 0.0",
-            "referred_by INTEGER DEFAULT NULL",
-            "ref_reward_claimed INTEGER DEFAULT 0",
-            "mining_speed REAL DEFAULT 0.25",
-            "miner_level INTEGER DEFAULT 1",
-            "last_mining_timestamp INTEGER DEFAULT 0",
-            "tasks_completed TEXT DEFAULT '[]'",
-            "saved_wallet TEXT DEFAULT NULL",
-            "ip_address TEXT DEFAULT NULL",
-            "device_fingerprint TEXT DEFAULT NULL",
-            "is_banned INTEGER DEFAULT 0",
-            "ban_reason TEXT DEFAULT NULL",
-            "activated_miner INTEGER DEFAULT 0",
-            "is_whitelisted INTEGER DEFAULT 0"
-        ]:
-            try:
-                await db.execute(f"ALTER TABLE users ADD COLUMN {col_def}")
-            except Exception:
-                pass
-
-        await db.execute("""
+        await conn.execute("""
         CREATE TABLE IF NOT EXISTS withdrawals (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            amount_ton REAL,
+            id SERIAL PRIMARY KEY,
+            user_id BIGINT,
+            amount_ton DOUBLE PRECISION,
             wallet_address TEXT,
             status TEXT DEFAULT 'PENDING',
-            created_at INTEGER DEFAULT 0
-        )
+            created_at BIGINT DEFAULT 0
+        );
         """)
-        await db.commit()
 
 async def api_manifest(request):
     return web.json_response(TON_MANIFEST)
@@ -1428,14 +1414,12 @@ async def api_save_wallet(request):
         address = str(data.get("address", "")).strip()
         friendly_address = raw_to_user_friendly(address)
 
-        async with aiosqlite.connect("olka_vip.db") as db:
-            await db.execute("UPDATE users SET saved_wallet = ? WHERE user_id = ?", (friendly_address, user_id))
-            await db.commit()
+        async with db_pool.acquire() as conn:
+            await conn.execute("UPDATE users SET saved_wallet = $1 WHERE user_id = $2", friendly_address, user_id)
         return web.json_response({"ok": True, "address": friendly_address})
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
-# مسار الويب: فحص الاشتراك في @OLKVIP الحصرية، الحظر، وتفعيل الإحالات المؤكدة
 async def api_get_user(request):
     try:
         user_id = int(request.query.get("user_id", 0))
@@ -1443,7 +1427,6 @@ async def api_get_user(request):
         client_ip = request.headers.get("X-Forwarded-For", request.remote).split(",")[0].strip()
         now = int(time.time())
 
-        # التحقق الإجباري الحصري من اشتراك القناة الرسمية @OLKVIP
         is_sub = True
         try:
             member = await bot.get_chat_member(chat_id=SPONSOR_CHANNEL, user_id=user_id)
@@ -1452,48 +1435,49 @@ async def api_get_user(request):
         except Exception:
             is_sub = True
 
-        async with aiosqlite.connect("olka_vip.db") as db:
-            async with db.execute("SELECT is_banned, ban_reason, olk_balance, ton_balance, mining_speed, miner_level, last_mining_timestamp, saved_wallet, referred_by, ref_reward_claimed, activated_miner, is_whitelisted FROM users WHERE user_id = ?", (user_id,)) as cur:
-                row = await cur.fetchone()
+        async with db_pool.acquire() as conn:
+            row = await conn.fetchrow("SELECT is_banned, ban_reason, olk_balance, ton_balance, mining_speed, miner_level, last_mining_timestamp, saved_wallet, referred_by, ref_reward_claimed, activated_miner, is_whitelisted FROM users WHERE user_id = $1", user_id)
 
-            if row and row[0] == 1:
-                return web.json_response({"ok": False, "banned": True, "ban_reason": row[1] or "مخالفة شروط التعدين"})
+            if row and row["is_banned"] == 1:
+                return web.json_response({"ok": False, "banned": True, "ban_reason": row["ban_reason"] or "مخالفة شروط التعدين"})
 
-            is_whitelisted = (row and row[11] == 1) or (user_id == ADMIN_ID)
+            is_whitelisted = (row and row["is_whitelisted"] == 1) or (user_id == ADMIN_ID)
 
-            # الحظر على مستوى الجهاز فقط وليس كامل شبكة الواي فاي
             if client_fp and not is_whitelisted:
-                async with db.execute("SELECT user_id FROM users WHERE device_fingerprint = ? AND user_id != ? AND is_whitelisted = 0", (client_fp, user_id)) as cur:
-                    duplicate = await cur.fetchone()
-                    if duplicate:
-                        await db.execute("UPDATE users SET is_banned = 1, ban_reason = ? WHERE user_id = ?", ("استخدام نفس الجهاز لعدة حسابات", user_id))
-                        await db.commit()
-                        try:
-                            await bot.send_message(
-                                chat_id=ADMIN_ID,
-                                text=f"🚨 **تنبيه أمني: حظر جهاز مكرر تلقائياً**\n\n👤 الحساب المخالف: `{user_id}`\n🌐 مرتبط بنفس جهاز الحساب: `{duplicate[0]}`\n📱 البصمة: `{client_fp}`",
-                                parse_mode="Markdown"
-                            )
-                        except Exception:
-                            pass
-                        return web.json_response({"ok": False, "banned": True, "ban_reason": "استخدام نفس الجهاز لعدة حسابات"})
+                duplicate = await conn.fetchrow("SELECT user_id FROM users WHERE device_fingerprint = $1 AND user_id != $2 AND is_whitelisted = 0", client_fp, user_id)
+                if duplicate:
+                    await conn.execute("UPDATE users SET is_banned = 1, ban_reason = $1 WHERE user_id = $2", "استخدام نفس الجهاز لعدة حسابات", user_id)
+                    try:
+                        await bot.send_message(
+                            chat_id=ADMIN_ID,
+                            text=f"🚨 **تنبيه أمني: حظر جهاز مكرر تلقائياً**\n\n👤 الحساب المخالف: `{user_id}`\n🌐 مرتبط بنفس جهاز الحساب: `{duplicate['user_id']}`\n📱 البصمة: `{client_fp}`",
+                            parse_mode="Markdown"
+                        )
+                    except Exception:
+                        pass
+                    return web.json_response({"ok": False, "banned": True, "ban_reason": "استخدام نفس الجهاز لعدة حسابات"})
 
-            # إظهار شاشة القفل داخل الويب إذا لم ينضم لقناة @OLKVIP
             if not is_sub:
                 return web.json_response({"ok": True, "need_sub": True})
 
             if row:
-                olk, ton, speed, lvl, last_ts, saved_wallet, ref_by, ref_claimed, activated = row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9], row[10]
-                
-                # تفعيل التعدين للمستخدم الجديد وإعطاء مكافأة البداية 50 OLK
+                olk = row["olk_balance"]
+                ton = row["ton_balance"]
+                speed = row["mining_speed"]
+                lvl = row["miner_level"]
+                last_ts = row["last_mining_timestamp"]
+                saved_wallet = row["saved_wallet"]
+                ref_by = row["referred_by"]
+                ref_claimed = row["ref_reward_claimed"]
+                activated = row["activated_miner"]
+
                 if activated == 0:
                     olk += SIGNUP_BONUS
-                    await db.execute("UPDATE users SET activated_miner = 1, olk_balance = ? WHERE user_id = ?", (olk, user_id))
+                    await conn.execute("UPDATE users SET activated_miner = 1, olk_balance = $1 WHERE user_id = $2", olk, user_id)
                     
-                    # إرسال مكافأة الإحالة 80 OLK للشخص الذي دعاه بعد التحقق الحقيقي في الويب
                     if ref_by and ref_claimed == 0:
-                        await db.execute("UPDATE users SET olk_balance = olk_balance + ? WHERE user_id = ?", (REFERRAL_REWARD, ref_by))
-                        await db.execute("UPDATE users SET ref_reward_claimed = 1 WHERE user_id = ?", (user_id,))
+                        await conn.execute("UPDATE users SET olk_balance = olk_balance + $1 WHERE user_id = $2", REFERRAL_REWARD, ref_by)
+                        await conn.execute("UPDATE users SET ref_reward_claimed = 1 WHERE user_id = $1", user_id)
                         try:
                             await bot.send_message(
                                 chat_id=ref_by,
@@ -1507,9 +1491,8 @@ async def api_get_user(request):
                     diff = min(now - last_ts, 86400)
                     offline_mined = diff * (speed * 0.000030 * 10)
                 
-                await db.execute("UPDATE users SET last_mining_timestamp = ?, ip_address = ?, device_fingerprint = ? WHERE user_id = ?",
-                                 (now, client_ip, client_fp, user_id))
-                await db.commit()
+                await conn.execute("UPDATE users SET last_mining_timestamp = $1, ip_address = $2, device_fingerprint = $3 WHERE user_id = $4",
+                                   now, client_ip, client_fp, user_id)
                 return web.json_response({
                     "ok": True,
                     "need_sub": False,
@@ -1522,9 +1505,8 @@ async def api_get_user(request):
                     "offline_mined": offline_mined
                 })
             else:
-                await db.execute("INSERT OR IGNORE INTO users (user_id, last_mining_timestamp, mining_speed, ip_address, device_fingerprint, olk_balance, activated_miner) VALUES (?, ?, 0.25, ?, ?, ?, 1)",
-                                 (user_id, now, client_ip, client_fp, SIGNUP_BONUS))
-                await db.commit()
+                await conn.execute("INSERT INTO users (user_id, last_mining_timestamp, mining_speed, ip_address, device_fingerprint, olk_balance, activated_miner) VALUES ($1, $2, 0.25, $3, $4, $5, 1) ON CONFLICT (user_id) DO NOTHING",
+                                   user_id, now, client_ip, client_fp, SIGNUP_BONUS)
                 return web.json_response({
                     "ok": True,
                     "need_sub": False,
@@ -1545,9 +1527,8 @@ async def api_claim_passive(request):
         user_id = int(data.get("user_id"))
         amount = float(data.get("amount", 0))
         now = int(time.time())
-        async with aiosqlite.connect("olka_vip.db") as db:
-            await db.execute("UPDATE users SET olk_balance = olk_balance + ?, last_mining_timestamp = ? WHERE user_id = ?", (amount, now, user_id))
-            await db.commit()
+        async with db_pool.acquire() as conn:
+            await conn.execute("UPDATE users SET olk_balance = olk_balance + $1, last_mining_timestamp = $2 WHERE user_id = $3", amount, now, user_id)
         return web.json_response({"ok": True})
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
@@ -1560,15 +1541,13 @@ async def api_upgrade_rig_ton(request):
         new_speed = float(data.get("new_speed"))
         new_level = int(data.get("new_level"))
 
-        async with aiosqlite.connect("olka_vip.db") as db:
-            async with db.execute("SELECT ton_balance FROM users WHERE user_id = ?", (user_id,)) as cur:
-                row = await cur.fetchone()
-                if not row or row[0] < cost_ton:
-                    return web.json_response({"ok": False, "msg": "رصيد TON غير كافٍ"})
+        async with db_pool.acquire() as conn:
+            row = await conn.fetchrow("SELECT ton_balance FROM users WHERE user_id = $1", user_id)
+            if not row or row["ton_balance"] < cost_ton:
+                return web.json_response({"ok": False, "msg": "رصيد TON غير كافٍ"})
 
-            await db.execute("UPDATE users SET ton_balance = ton_balance - ?, mining_speed = ?, miner_level = ? WHERE user_id = ?",
-                             (cost_ton, new_speed, new_level, user_id))
-            await db.commit()
+            await conn.execute("UPDATE users SET ton_balance = ton_balance - $1, mining_speed = $2, miner_level = $3 WHERE user_id = $4",
+                               cost_ton, new_speed, new_level, user_id)
         return web.json_response({"ok": True})
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
@@ -1579,9 +1558,8 @@ async def api_deposit_ton_credit(request):
         user_id = int(data.get("user_id"))
         amount_ton = float(data.get("amount_ton", 0.1))
 
-        async with aiosqlite.connect("olka_vip.db") as db:
-            await db.execute("UPDATE users SET ton_balance = ton_balance + ? WHERE user_id = ?", (amount_ton, user_id))
-            await db.commit()
+        async with db_pool.acquire() as conn:
+            await conn.execute("UPDATE users SET ton_balance = ton_balance + $1 WHERE user_id = $2", amount_ton, user_id)
         return web.json_response({"ok": True})
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
@@ -1595,20 +1573,18 @@ async def api_convert(request):
         if amount <= 0:
             return web.json_response({"ok": False, "msg": "يرجى تحديد كمية صحيحة"})
 
-        async with aiosqlite.connect("olka_vip.db") as db:
-            async with db.execute("SELECT olk_balance, ton_balance FROM users WHERE user_id = ?", (user_id,)) as cur:
-                row = await cur.fetchone()
-                if not row or row[0] < amount:
-                    return web.json_response({"ok": False, "msg": "رصيد OLK غير كافٍ للتحويل"})
-                
-                olk_current, ton_current = row[0], row[1]
-                ton_add = amount / CONVERSION_RATE
-                new_olk = olk_current - amount
-                new_ton = ton_current + ton_add
+        async with db_pool.acquire() as conn:
+            row = await conn.fetchrow("SELECT olk_balance, ton_balance FROM users WHERE user_id = $1", user_id)
+            if not row or row["olk_balance"] < amount:
+                return web.json_response({"ok": False, "msg": "رصيد OLK غير كافٍ للتحويل"})
+            
+            olk_current, ton_current = row["olk_balance"], row["ton_balance"]
+            ton_add = amount / CONVERSION_RATE
+            new_olk = olk_current - amount
+            new_ton = ton_current + ton_add
 
-                await db.execute("UPDATE users SET olk_balance = ?, ton_balance = ? WHERE user_id = ?", (new_olk, new_ton, user_id))
-                await db.commit()
-                return web.json_response({"ok": True, "olk_balance": new_olk, "ton_balance": new_ton})
+            await conn.execute("UPDATE users SET olk_balance = $1, ton_balance = $2 WHERE user_id = $3", new_olk, new_ton, user_id)
+            return web.json_response({"ok": True, "olk_balance": new_olk, "ton_balance": new_ton})
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
@@ -1624,29 +1600,29 @@ async def api_withdraw(request):
         if withdraw_amount < MIN_WITHDRAW_TON:
             return web.json_response({"ok": False, "msg": f"الحد الأدنى للسحب هو {MIN_WITHDRAW_TON} TON"})
 
-        async with aiosqlite.connect("olka_vip.db") as db:
-            async with db.execute("SELECT ton_balance, phone_number FROM users WHERE user_id = ?", (user_id,)) as cur:
-                row = await cur.fetchone()
-                if not row or row[0] < withdraw_amount:
-                    return web.json_response({"ok": False, "msg": "رصيدك المتوفر أقل من المبلغ المطلوب"})
+        async with db_pool.acquire() as conn:
+            row = await conn.fetchrow("SELECT ton_balance, phone_number FROM users WHERE user_id = $1", user_id)
+            if not row or row["ton_balance"] < withdraw_amount:
+                return web.json_response({"ok": False, "msg": "رصيدك المتوفر أقل من المبلغ المطلوب"})
 
-                current_ton, phone = row[0], row[1] or "غير موثق"
-                remaining = current_ton - withdraw_amount
+            current_ton = row["ton_balance"]
+            phone = row["phone_number"] or "غير موثق"
+            remaining = current_ton - withdraw_amount
 
-                cur_ins = await db.execute("INSERT INTO withdrawals (user_id, amount_ton, wallet_address, created_at) VALUES (?, ?, ?, ?)",
-                                 (user_id, withdraw_amount, friendly_address, now))
-                withdrawal_id = cur_ins.lastrowid
-                await db.execute("UPDATE users SET ton_balance = ? WHERE user_id = ?", (remaining, user_id))
-                await db.commit()
+            w_id = await conn.fetchval(
+                "INSERT INTO withdrawals (user_id, amount_ton, wallet_address, created_at) VALUES ($1, $2, $3, $4) RETURNING id",
+                user_id, withdraw_amount, friendly_address, now
+            )
+            await conn.execute("UPDATE users SET ton_balance = $1 WHERE user_id = $2", remaining, user_id)
 
         admin_kb = InlineKeyboardMarkup(inline_keyboard=[
             [
-                InlineKeyboardButton(text="✅ موافقة وإرسال", callback_data=f"adm_app_{withdrawal_id}"),
-                InlineKeyboardButton(text="❌ رفض", callback_data=f"adm_rej_{withdrawal_id}")
+                InlineKeyboardButton(text="✅ موافقة وإرسال", callback_data=f"adm_app_{w_id}"),
+                InlineKeyboardButton(text="❌ رفض", callback_data=f"adm_rej_{w_id}")
             ]
         ])
         admin_notification = (
-            f"🚨 **طلب سحب TON جديد #{withdrawal_id}**\n\n"
+            f"🚨 **طلب سحب TON جديد #{w_id}**\n\n"
             f"👤 المستخدم: `{user_id}`\n"
             f"📱 الهاتف: `{phone}`\n"
             f"💎 المبلغ المطلوب: `{withdraw_amount:.4f} TON`\n"
@@ -1661,7 +1637,6 @@ async def api_withdraw(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
-# مهمة القناة الاختيارية
 async def api_verify_channel_task(request):
     try:
         data = await request.json()
@@ -1672,28 +1647,26 @@ async def api_verify_channel_task(request):
         if not task_data:
             return web.json_response({"ok": False, "msg": "المهمة غير موجودة"})
 
-        async with aiosqlite.connect("olka_vip.db") as db:
-            async with db.execute("SELECT tasks_completed FROM users WHERE user_id = ?", (user_id,)) as cur:
-                row = await cur.fetchone()
-                tasks = json.loads(row[0]) if row and row[0] else []
-                
-                if task_id in tasks:
-                    return web.json_response({"ok": False, "msg": "لقد استلمت مكافأة هذه القناة مسبقاً!"})
+        async with db_pool.acquire() as conn:
+            row = await conn.fetchrow("SELECT tasks_completed FROM users WHERE user_id = $1", user_id)
+            tasks = json.loads(row["tasks_completed"]) if row and row["tasks_completed"] else []
+            
+            if task_id in tasks:
+                return web.json_response({"ok": False, "msg": "لقد استلمت مكافأة هذه القناة مسبقاً!"})
 
-                try:
-                    chat_member = await bot.get_chat_member(chat_id=task_data["channel_id"], user_id=user_id)
-                    if chat_member.status in ["left", "kicked"]:
-                        return web.json_response({"ok": False, "msg": "❌ لم تنضم للقناة بعد! انضم أولاً ثم تحقق."})
-                except Exception:
-                    return web.json_response({"ok": False, "msg": "⚠️ تعذر التحقق، تأكد من إضافة البوت كمشرف في القناة."})
+            try:
+                chat_member = await bot.get_chat_member(chat_id=task_data["channel_id"], user_id=user_id)
+                if chat_member.status in ["left", "kicked"]:
+                    return web.json_response({"ok": False, "msg": "❌ لم تنضم للقناة بعد! انضم أولاً ثم تحقق."})
+            except Exception:
+                return web.json_response({"ok": False, "msg": "⚠️ تعذر التحقق، تأكد من إضافة البوت كمشرف في القناة."})
 
-                tasks.append(task_id)
-                reward = task_data["reward"]
-                await db.execute("UPDATE users SET olk_balance = olk_balance + ?, tasks_completed = ? WHERE user_id = ?",
-                                 (reward, json.dumps(tasks), user_id))
-                await db.commit()
+            tasks.append(task_id)
+            reward = task_data["reward"]
+            await conn.execute("UPDATE users SET olk_balance = olk_balance + $1, tasks_completed = $2 WHERE user_id = $3",
+                               reward, json.dumps(tasks), user_id)
 
-                return web.json_response({"ok": True, "reward": reward, "msg": f"✅ مبروك! تمت إضافة +{reward:.0f} OLK"})
+            return web.json_response({"ok": True, "reward": reward, "msg": f"✅ مبروك! تمت إضافة +{reward:.0f} OLK"})
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
@@ -1710,18 +1683,20 @@ async def admin_panel(message: Message):
     if message.from_user.id != ADMIN_ID:
         return
 
-    async with aiosqlite.connect("olka_vip.db") as db:
-        async with db.execute("SELECT COUNT(*), SUM(olk_balance), SUM(ton_balance) FROM users WHERE is_banned = 0") as cur:
-            users_count, total_olk, total_ton = await cur.fetchone()
-        async with db.execute("SELECT COUNT(*) FROM withdrawals WHERE status = 'PENDING'") as cur:
-            pending_withdraws = (await cur.fetchone())[0]
+    async with db_pool.acquire() as conn:
+        row_users = await conn.fetchrow("SELECT COUNT(*), SUM(olk_balance), SUM(ton_balance) FROM users WHERE is_banned = 0")
+        users_count = row_users[0] or 0
+        total_olk = row_users[1] or 0.0
+        total_ton = row_users[2] or 0.0
+
+        pending_withdraws = await conn.fetchval("SELECT COUNT(*) FROM withdrawals WHERE status = 'PENDING'") or 0
 
     admin_msg = (
-        "👑 **لوحة تحكم إدارة المشروع (VIP Admin):**\n"
+        "👑 **لوحة تحكم إدارة المشروع (VIP Admin - Cloud Postgres):**\n"
         "──────────────────────\n"
         f"👥 إجمالي المستخدمين النشطين: `{users_count}`\n"
-        f"🪙 إجمالي عملات OLK: `{(total_olk or 0):.2f}`\n"
-        f"💎 إجمالي عملات TON: `{(total_ton or 0):.4f}`\n"
+        f"🪙 إجمالي عملات OLK: `{total_olk:.2f}`\n"
+        f"💎 إجمالي عملات TON: `{total_ton:.4f}`\n"
         f"⏳ طلبات السحب المعلقة: `{pending_withdraws}`\n"
         "──────────────────────\n"
         "📢 لإرسال إذاعة: `/broadcast`\n"
@@ -1748,9 +1723,8 @@ async def ban_user_cmd(message: Message, command: CommandObject):
         await message.answer("❌ المعرّف يجب أن يكون رقماً صحيحاً!")
         return
 
-    async with aiosqlite.connect("olka_vip.db") as db:
-        await db.execute("UPDATE users SET is_banned = 1, ban_reason = ?, is_whitelisted = 0 WHERE user_id = ?", (reason, target_id))
-        await db.commit()
+    async with db_pool.acquire() as conn:
+        await conn.execute("UPDATE users SET is_banned = 1, ban_reason = $1, is_whitelisted = 0 WHERE user_id = $2", reason, target_id)
 
     await message.answer(f"✅ **تم حظر المستخدم بنجاح!**\n🆔 المعرف: `{target_id}`\n📝 السبب: `{reason}`", parse_mode="Markdown")
 
@@ -1768,9 +1742,8 @@ async def unban_user_cmd(message: Message, command: CommandObject):
         await message.answer("❌ المعرّف يجب أن يكون رقماً صحيحاً!")
         return
 
-    async with aiosqlite.connect("olka_vip.db") as db:
-        await db.execute("UPDATE users SET is_banned = 0, ban_reason = NULL, is_whitelisted = 1 WHERE user_id = ?", (target_id,))
-        await db.commit()
+    async with db_pool.acquire() as conn:
+        await conn.execute("UPDATE users SET is_banned = 0, ban_reason = NULL, is_whitelisted = 1 WHERE user_id = $1", target_id)
 
     await message.answer(f"✅ **تم فك الحظر عن المستخدم `{target_id}` بنجاح وإضافته للقائمة الموثوقة لمنع حظره مجدداً!**", parse_mode="Markdown")
 
@@ -1785,14 +1758,13 @@ async def start_broadcast(message: Message, state: FSMContext):
 async def process_broadcast(message: Message, state: FSMContext):
     await state.clear()
     text = message.text
-    async with aiosqlite.connect("olka_vip.db") as db:
-        async with db.execute("SELECT user_id FROM users WHERE is_banned = 0") as cur:
-            rows = await cur.fetchall()
+    async with db_pool.acquire() as conn:
+        rows = await conn.fetch("SELECT user_id FROM users WHERE is_banned = 0")
 
     success, fail = 0, 0
     await message.answer(f"🚀 بدأت عملية الإذاعة لـ {len(rows)} مستخدم...")
     for row in rows:
-        uid = row[0]
+        uid = row["user_id"]
         try:
             await bot.send_message(chat_id=uid, text=text)
             success += 1
@@ -1807,17 +1779,15 @@ async def approve_withdraw(callback: CallbackQuery):
     if callback.from_user.id != ADMIN_ID:
         return
     w_id = int(callback.data.split("_")[2])
-    async with aiosqlite.connect("olka_vip.db") as db:
-        async with db.execute("SELECT user_id, amount_ton FROM withdrawals WHERE id = ?", (w_id,)) as cur:
-            row = await cur.fetchone()
-            if row:
-                uid, amount = row
-                await db.execute("UPDATE withdrawals SET status = 'APPROVED' WHERE id = ?", (w_id,))
-                await db.commit()
-                try:
-                    await bot.send_message(chat_id=uid, text=f"🎉 **تمت معالجة وإرسال طلب سحب TON بنجاح!**\n💎 المبلغ: `{amount:.4f} TON`", parse_mode="Markdown")
-                except Exception:
-                    pass
+    async with db_pool.acquire() as conn:
+        row = await conn.fetchrow("SELECT user_id, amount_ton FROM withdrawals WHERE id = $1", w_id)
+        if row:
+            uid, amount = row["user_id"], row["amount_ton"]
+            await conn.execute("UPDATE withdrawals SET status = 'APPROVED' WHERE id = $1", w_id)
+            try:
+                await bot.send_message(chat_id=uid, text=f"🎉 **تمت معالجة وإرسال طلب سحب TON بنجاح!**\n💎 المبلغ: `{amount:.4f} TON`", parse_mode="Markdown")
+            except Exception:
+                pass
     await callback.message.edit_text(callback.message.text + "\n\n✅ **تمت الموافقة والإرسال بنجاح.**")
 
 @dp.callback_query(F.data.startswith("adm_rej_"))
@@ -1825,18 +1795,16 @@ async def reject_withdraw(callback: CallbackQuery):
     if callback.from_user.id != ADMIN_ID:
         return
     w_id = int(callback.data.split("_")[2])
-    async with aiosqlite.connect("olka_vip.db") as db:
-        async with db.execute("SELECT user_id, amount_ton FROM withdrawals WHERE id = ?", (w_id,)) as cur:
-            row = await cur.fetchone()
-            if row:
-                uid, amount = row
-                await db.execute("UPDATE users SET ton_balance = ton_balance + ? WHERE user_id = ?", (amount, uid))
-                await db.execute("UPDATE withdrawals SET status = 'REJECTED' WHERE id = ?", (w_id,))
-                await db.commit()
-                try:
-                    await bot.send_message(chat_id=uid, text=f"❌ **تم رفض طلب السحب وإعادة المبلغ لحسابك.**\n💎 المبلغ: `{amount:.4f} TON`", parse_mode="Markdown")
-                except Exception:
-                    pass
+    async with db_pool.acquire() as conn:
+        row = await conn.fetchrow("SELECT user_id, amount_ton FROM withdrawals WHERE id = $1", w_id)
+        if row:
+            uid, amount = row["user_id"], row["amount_ton"]
+            await conn.execute("UPDATE users SET ton_balance = ton_balance + $1 WHERE user_id = $2", amount, uid)
+            await conn.execute("UPDATE withdrawals SET status = 'REJECTED' WHERE id = $1", w_id)
+            try:
+                await bot.send_message(chat_id=uid, text=f"❌ **تم رفض طلب السحب وإعادة المبلغ لحسابك.**\n💎 المبلغ: `{amount:.4f} TON`", parse_mode="Markdown")
+            except Exception:
+                pass
     await callback.message.edit_text(callback.message.text + "\n\n❌ **تم رفض الطلب وإعادة الرصيد للمستخدم.**")
 
 @dp.message(CommandStart())
@@ -1845,12 +1813,11 @@ async def start_handler(message: Message, command: CommandObject):
     ref_param = command.args
     now = int(time.time())
 
-    async with aiosqlite.connect("olka_vip.db") as db:
-        async with db.execute("SELECT is_banned, ban_reason FROM users WHERE user_id = ?", (user_id,)) as cursor:
-            user = await cursor.fetchone()
+    async with db_pool.acquire() as conn:
+        user = await conn.fetchrow("SELECT is_banned, ban_reason FROM users WHERE user_id = $1", user_id)
 
-        if user and user[0] == 1:
-            reason = user[1] or "مخالفة قوانين التعدين"
+        if user and user["is_banned"] == 1:
+            reason = user["ban_reason"] or "مخالفة قوانين التعدين"
             await message.answer(f"⛔ **عذراً، هذا الحساب محظور نهائياً.**\nسبب الحظر: `{reason}`", parse_mode="Markdown")
             return
 
@@ -1859,17 +1826,19 @@ async def start_handler(message: Message, command: CommandObject):
                 clean_ref = ref_param.replace("ref_", "")
                 referrer_id = int(clean_ref)
                 if referrer_id != user_id:
-                    await db.execute("""
-                        INSERT INTO users (user_id, referred_by, last_mining_timestamp, mining_speed, olk_balance, activated_miner) VALUES (?, ?, ?, 0.25, 0, 0)
-                        ON CONFLICT(user_id) DO UPDATE SET referred_by = excluded.referred_by
-                    """, (user_id, referrer_id, now))
-                    await db.commit()
+                    await conn.execute("""
+                        INSERT INTO users (user_id, referred_by, last_mining_timestamp, mining_speed, olk_balance, activated_miner)
+                        VALUES ($1, $2, $3, 0.25, 0, 0)
+                        ON CONFLICT (user_id) DO UPDATE SET referred_by = EXCLUDED.referred_by
+                    """, user_id, referrer_id, now)
             except ValueError:
                 pass
         elif not user:
-            await db.execute("INSERT OR IGNORE INTO users (user_id, last_mining_timestamp, mining_speed, olk_balance, activated_miner) VALUES (?, ?, 0.25, 0, 0)",
-                             (user_id, now))
-            await db.commit()
+            await conn.execute("""
+                INSERT INTO users (user_id, last_mining_timestamp, mining_speed, olk_balance, activated_miner)
+                VALUES ($1, $2, 0.25, 0, 0)
+                ON CONFLICT (user_id) DO NOTHING
+            """, user_id, now)
 
     welcome_text = (
         "⚡ **مرحباً بك في منصة OLKA VIP**\n"
@@ -1888,7 +1857,7 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("OLK Engine with @OLKVIP Gateway is running...")
+    print("OLK Ultra Engine connected to Neon Serverless Postgres is running smoothly...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
