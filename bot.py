@@ -14,7 +14,8 @@ from aiogram.types import (
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
-BOT_TOKEN = "8707730826:AAExJ7ZSQe9YFy8Y0O2eG3uPCAwVa_vG6Qc"
+# التوكن الجديد
+BOT_TOKEN = "8707730826:AAGWTFjqVx7x47JLTp8oQdghzxCqI87UgdE"
 ADMIN_ID = 1932161126
 
 # رابط قاعدة البيانات السحابية الدائمة (Neon PostgreSQL)
@@ -965,7 +966,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       ru: {
         live: "ОНЛАЙН",
         total_label: "Всего:",
-        safe_assets: "Моي защищенные активы",
+        safe_assets: "Мои защищенные активы",
         olk_balance: "Баланс OLK:",
         ton_balance: "Баланс TON (Gram):",
         wallet_sub_hint: "Нажмите, чтобы привязать кошелек",
