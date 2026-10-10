@@ -25,10 +25,15 @@ SPONSOR_CHANNEL_LINK = "https://t.me/OLKVIP"
 PROJECT_TON_WALLET = "UQB3Xs8jkbebkVumWJlnEmDkjN4YXsZuHPrXSpZT1RtmZrCB"
 
 CONVERSION_RATE = 10000
-MIN_WITHDRAW_TON = 0.1
 
-REFERRAL_REWARD = 80.0
+# الحد الأدنى للسحب تم تعديله إلى 0.05 TON (Gram)
+MIN_WITHDRAW_TON = 0.05
+
+REFERRAL_REWARD = 70.0
 SIGNUP_BONUS = 50.0
+
+# سرعة التعدين الأساسية تم تعديلها إلى 0.27 TH/s
+DEFAULT_SPEED = 0.27
 
 WEBAPP_URL = "https://olka-bot-service.onrender.com"
 
@@ -425,7 +430,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
 
         <div class="central-rig-emblem">
           <i class="fa-solid fa-microchip"></i>
-          <div class="speed-badge" id="speed-display">0.25 TH/s</div>
+          <div class="speed-badge" id="speed-display">0.27 TH/s</div>
         </div>
 
         <button class="btn-main-action" id="btn-session-control" onclick="handleMiningAction()">
@@ -434,7 +439,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب الباقات -->
+    <!-- تبويب الباقات (دفع مباشر بالمحفظة) -->
     <div class="page-tab" id="tab-miners">
       <div class="card-panel">
         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -489,8 +494,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
           <i class="fa-solid fa-money-bill-transfer"></i> <span id="t-withdraw-title">سحب TON إلى محفظتك</span>
         </div>
         <div class="convert-input-box">
-          <input type="number" step="0.01" id="withdraw-amt-input" class="convert-input" placeholder="0.1">
-          <span style="font-size:11px; color:#f87171;" id="t-min-withdraw">الحد الأدنى: 0.1 TON</span>
+          <input type="number" step="0.01" id="withdraw-amt-input" class="convert-input" placeholder="0.05">
+          <span style="font-size:11px; color:#f87171;" id="t-min-withdraw">الحد الأدنى: 0.05 TON</span>
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
           <button class="btn-main-action" style="background:#059669;" onclick="depositDirect()"><i class="fa-solid fa-arrow-down"></i> <span id="t-btn-deposit">إيداع TON</span></button>
@@ -504,13 +509,13 @@ MINI_APP_HTML = """<!DOCTYPE html>
       <div class="card-panel">
         <div style="font-weight:bold; color:var(--cyan-neon); font-size:14px;"><i class="fa-solid fa-users"></i> <span id="t-frens-title">شبكة التعدين التشاركية</span></div>
         <div style="font-size:12px; color:#cbd5e1; line-height:1.6;" id="t-frens-desc">
-          شارك رابط جهازك واحصل على <strong>80 OLK</strong> مجاناً فور قيام صديقك بتشغيل جلسة التعدين الأولى!
+          شارك رابط جهازك واحصل على <strong>70 OLK</strong> فور قيام صديقك بالاشتراك في القناة وتشغيل أول جلسة تعدين!
         </div>
         <button class="btn-main-action" onclick="copyInvite()"><i class="fa-solid fa-copy"></i> <span id="t-btn-copy-invite">نسخ رابط الدعوة الخاص بي</span></button>
       </div>
     </div>
 
-    <!-- تبويب المهام (3 خيارات أفقية) -->
+    <!-- تبويب المهام -->
     <div class="page-tab" id="tab-tasks">
       <div class="tasks-horizontal-nav">
         <button class="tasks-subtab-btn active" onclick="switchTasksSubtab('channels', this)"><i class="fa-solid fa-bullhorn"></i> <span id="t-subtab-channels">القنوات</span></button>
@@ -552,7 +557,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
     const urlParams = new URLSearchParams(window.location.search);
     let userId = tg?.initDataUnsafe?.user?.id || urlParams.get('user_id') || 1932161126;
 
-    // بصمة الجهاز لمنع التعدد
     function getDeviceFingerprint() {
       const nav = window.navigator;
       const screen = window.screen;
@@ -572,7 +576,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
     }
     const currentFingerprint = getDeviceFingerprint();
 
-    // نصوص اللغتين العربية والإنجليزية
     let currentLang = localStorage.getItem("olk_lang") || "ar";
     const i18n = {
       ar: {
@@ -592,11 +595,11 @@ MINI_APP_HTML = """<!DOCTYPE html>
         swapReceive: "ستحصل على:",
         btnSwap: "تحويل الآن إلى رصيد TON",
         withdrawTitle: "سحب TON إلى محفظتك",
-        minWithdraw: "الحد الأدنى: 0.1 TON",
+        minWithdraw: "الحد الأدنى: 0.05 TON",
         btnDeposit: "إيداع TON",
         btnWithdraw: "سحب TON",
         frensTitle: "شبكة التعدين التشاركية",
-        frensDesc: "شارك رابط جهازك واحصل على 80 OLK مجاناً فور قيام صديقك بتشغيل جلسة التعدين الأولى!",
+        frensDesc: "شارك رابط جهازك واحصل على 70 OLK فور قيام صديقك بالاشتراك في القناة وتشغيل أول جلسة تعدين!",
         btnCopyInvite: "نسخ رابط الدعوة الخاص بي",
         subtabChannels: "القنوات",
         subtabGroups: "المجموعات",
@@ -639,11 +642,11 @@ MINI_APP_HTML = """<!DOCTYPE html>
         swapReceive: "You will receive:",
         btnSwap: "Convert to TON Balance",
         withdrawTitle: "Withdraw TON to Wallet",
-        minWithdraw: "Minimum: 0.1 TON",
+        minWithdraw: "Minimum: 0.05 TON",
         btnDeposit: "Deposit TON",
         btnWithdraw: "Withdraw TON",
         frensTitle: "Collaborative Mining Network",
-        frensDesc: "Share your referral link and get 80 OLK free once your invited friend runs their first session!",
+        frensDesc: "Share your referral link and get 70 OLK once your invited friend joins the official channel and runs their first session!",
         btnCopyInvite: "Copy My Invite Link",
         subtabChannels: "Channels",
         subtabGroups: "Groups",
@@ -718,7 +721,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
 
     let appOlk = 0.0;
     let appTon = 0.0;
-    let speed = 0.25;
+    let speed = 0.27;
     let minerLevel = 1;
     let connectedWallet = null;
 
@@ -787,7 +790,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         if (data.ok) {
           appOlk = data.olk_balance;
           appTon = data.ton_balance;
-          speed = data.mining_speed || 0.25;
+          speed = data.mining_speed || 0.27;
           minerLevel = data.miner_level || 1;
           sessionStartTs = data.session_start_timestamp || 0;
           sessionActive = data.session_active || false;
@@ -1031,25 +1034,47 @@ MINI_APP_HTML = """<!DOCTYPE html>
     }
 
     async function purchasePlan(costTon, speedGain) {
-      if (appTon < costTon) {
-        alert(currentLang === "ar" ? `⚠️ رصيد TON غير كافٍ!` : `⚠️ Insufficient TON balance!`);
-        switchTab('wallet');
+      if (!connectedWallet) {
+        alert(currentLang === "ar" ? "❌ يرجى ربط محفظتك أولاً للدفع المباشر!" : "❌ Please connect your wallet first to proceed!");
+        handleWalletClick();
         return;
       }
-      const res = await fetch("/api/upgrade_rig_ton", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId, cost_ton: costTon, speed_gain: speedGain, fingerprint: currentFingerprint })
-      });
-      const data = await res.json();
-      if (data.ok) {
-        appTon = data.ton_balance;
-        speed = data.mining_speed;
-        document.getElementById("ton-bal-val").innerText = appTon.toFixed(4) + " TON";
-        document.getElementById("speed-display").innerText = speed.toFixed(2) + " TH/s";
-        alert(currentLang === "ar" ? `🎉 تمت ترقية العتاد بنجاح!` : `🎉 Rig upgraded successfully!`);
-      } else {
-        alert(data.msg);
+
+      const nanoTons = Math.round(costTon * 1e9).toString();
+      const transaction = {
+        validUntil: Math.floor(Date.now() / 1000) + 360,
+        messages: [{
+          address: "PROJECT_TON_WALLET_PLACEHOLDER",
+          amount: nanoTons
+        }]
+      };
+
+      try {
+        const result = await tonConnectUI.sendTransaction(transaction);
+        if (result) {
+          const res = await fetch("/api/upgrade_rig_ton_direct", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              user_id: userId,
+              cost_ton: costTon,
+              speed_gain: speedGain,
+              fingerprint: currentFingerprint
+            })
+          });
+          const data = await res.json();
+          if (data.ok) {
+            speed = data.mining_speed;
+            document.getElementById("speed-display").innerText = speed.toFixed(2) + " TH/s";
+            alert(currentLang === "ar" 
+              ? `🎉 تم الدفع بنجاح وترقية جهاز التعدين! السرعة الجديدة: ${speed.toFixed(2)} TH/s` 
+              : `🎉 Payment successful! New speed: ${speed.toFixed(2)} TH/s`);
+          } else {
+            alert(data.msg || "حدث خطأ أثناء حفظ الترقية");
+          }
+        }
+      } catch (e) {
+        alert(currentLang === "ar" ? "❌ تم إلغاء عملية الدفع من المحفظة." : "❌ Payment canceled in wallet.");
       }
     }
 
@@ -1122,8 +1147,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
         return;
       }
       const amt = parseFloat(document.getElementById("withdraw-amt-input").value) || 0;
-      if (amt < 0.1 || amt > appTon) {
-        alert(currentLang === "ar" ? "⚠️ المبلغ غير صالح!" : "⚠️ Invalid amount!");
+      if (amt < 0.05 || amt > appTon) {
+        alert(currentLang === "ar" ? "⚠️ المبلغ غير صالح! الحد الأدنى هو 0.05 TON" : "⚠️ Invalid amount! Minimum is 0.05 TON");
         return;
       }
       const res = await fetch("/api/withdraw", {
@@ -1229,7 +1254,7 @@ async def init_db():
             last_claim BIGINT DEFAULT 0,
             referred_by BIGINT DEFAULT NULL,
             ref_reward_claimed INTEGER DEFAULT 0,
-            mining_speed DOUBLE PRECISION DEFAULT 0.25,
+            mining_speed DOUBLE PRECISION DEFAULT 0.27,
             miner_level INTEGER DEFAULT 1,
             last_mining_timestamp BIGINT DEFAULT 0,
             session_start_timestamp BIGINT DEFAULT 0,
@@ -1247,7 +1272,6 @@ async def init_db():
         );
         """)
 
-        # إضافة جميع الأعمدة الناقصة ديناميكياً لتفادي أي خطأ
         await conn.execute("""
         DO $$
         BEGIN
@@ -1273,6 +1297,11 @@ async def init_db():
                 ALTER TABLE users ADD COLUMN is_whitelisted INTEGER DEFAULT 0;
             END IF;
         END $$;
+        """)
+
+        # تحديث سرعة الحسابات المجانية القائمة إلى 0.27
+        await conn.execute("""
+            UPDATE users SET mining_speed = 0.27 WHERE (mining_speed = 0.25 OR mining_speed = 0.30) AND miner_level = 1;
         """)
 
         await conn.execute("""
@@ -1357,7 +1386,6 @@ async def get_admin_permissions(user_id: int):
             }
     return None
 
-# منع الحسابات المتعددة
 async def check_multi_account_fraud(conn, user_id: int, fp: str, ip: str, wallet: str = None) -> tuple[bool, str]:
     u_row = await conn.fetchrow("SELECT is_whitelisted FROM users WHERE user_id = $1", user_id)
     if u_row and u_row["is_whitelisted"] == 1:
@@ -1380,6 +1408,13 @@ async def check_multi_account_fraud(conn, user_id: int, fp: str, ip: str, wallet
             return True, "كشف محفظة مستخدمة في أكثر من حساب (Anti-Multi Wallet)"
 
     return False, ""
+
+async def check_user_channel_subscribed(user_id: int) -> bool:
+    try:
+        member = await bot.get_chat_member(chat_id=SPONSOR_CHANNEL, user_id=user_id)
+        return member.status not in ["left", "kicked"]
+    except Exception:
+        return True
 
 async def api_manifest(request):
     return web.json_response(TON_MANIFEST)
@@ -1443,17 +1478,9 @@ async def api_get_user(request):
         client_ip = request.headers.get("X-Forwarded-For", request.remote)
         now = int(time.time())
 
-        # التحقق من الاشتراك الإجباري في القناة الرسمية
-        is_sub = True
-        try:
-            member = await bot.get_chat_member(chat_id=SPONSOR_CHANNEL, user_id=user_id)
-            if member.status in ["left", "kicked"]:
-                is_sub = False
-        except Exception:
-            is_sub = True
+        is_sub = await check_user_channel_subscribed(user_id)
 
         async with db_pool.acquire() as conn:
-            # فحص منع التعدد
             is_fraud, reason = await check_multi_account_fraud(conn, user_id, fp, client_ip)
             if is_fraud:
                 await conn.execute("UPDATE users SET is_banned = 1, ban_reason = $1 WHERE user_id = $2", reason, user_id)
@@ -1484,7 +1511,7 @@ async def api_get_user(request):
                     "banned": False,
                     "olk_balance": olk,
                     "ton_balance": row["ton_balance"],
-                    "mining_speed": row["mining_speed"],
+                    "mining_speed": row["mining_speed"] or DEFAULT_SPEED,
                     "miner_level": row["miner_level"],
                     "saved_wallet": raw_to_user_friendly(row["saved_wallet"]),
                     "session_start_timestamp": row["session_start_timestamp"] or 0,
@@ -1493,15 +1520,15 @@ async def api_get_user(request):
             else:
                 await conn.execute("""
                     INSERT INTO users (user_id, last_mining_timestamp, mining_speed, olk_balance, activated_miner, device_fingerprint, ip_address)
-                    VALUES ($1, $2, 0.25, $3, 1, $4, $5) ON CONFLICT (user_id) DO NOTHING
-                """, user_id, now, SIGNUP_BONUS, fp, client_ip)
+                    VALUES ($1, $2, $3, $4, 1, $5, $6) ON CONFLICT (user_id) DO NOTHING
+                """, user_id, now, DEFAULT_SPEED, SIGNUP_BONUS, fp, client_ip)
                 return web.json_response({
                     "ok": True,
                     "need_sub": False,
                     "banned": False,
                     "olk_balance": SIGNUP_BONUS,
                     "ton_balance": 0.0,
-                    "mining_speed": 0.25,
+                    "mining_speed": DEFAULT_SPEED,
                     "miner_level": 1,
                     "saved_wallet": None,
                     "session_start_timestamp": 0,
@@ -1517,6 +1544,10 @@ async def api_start_mining_session(request):
         fp = str(data.get("fingerprint", ""))
         client_ip = request.headers.get("X-Forwarded-For", request.remote)
         now = int(time.time())
+
+        is_sub = await check_user_channel_subscribed(user_id)
+        if not is_sub:
+            return web.json_response({"ok": False, "msg": "يجب الاشتراك بالقناة الرسمية أولاً لتفعيل التعدين"})
 
         async with db_pool.acquire() as conn:
             is_fraud, reason = await check_multi_account_fraud(conn, user_id, fp, client_ip)
@@ -1536,7 +1567,7 @@ async def api_start_mining_session(request):
                 try:
                     await bot.send_message(
                         chat_id=ref_by,
-                        text=f"🎉 **إحالة مؤكدة!** قام صديقك بتشغيل جلسة التعدين الأولى.\n💰 أضيفت **+{REFERRAL_REWARD:.0f} OLK** إلى محفظتك بنجاح!"
+                        text=f"🎉 **إحالة مؤكدة!** قام صديقك بالاشتراك بالقناة وتشغيل جلسة التعدين.\n💰 تمت إضافة **+{REFERRAL_REWARD:.0f} OLK** إلى محفظتك بنجاح!"
                     )
                 except Exception:
                     pass
@@ -1563,27 +1594,25 @@ async def api_claim_session_rewards(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
-async def api_upgrade_rig_ton(request):
+async def api_upgrade_rig_ton_direct(request):
     try:
         data = await request.json()
         user_id = int(data.get("user_id"))
-        cost_ton = float(data.get("cost_ton"))
         speed_gain = float(data.get("speed_gain"))
 
         async with db_pool.acquire() as conn:
-            row = await conn.fetchrow("SELECT ton_balance, mining_speed, miner_level FROM users WHERE user_id = $1", user_id)
-            if not row or row["ton_balance"] < cost_ton:
-                return web.json_response({"ok": False, "msg": "رصيد TON غير كافٍ"})
+            row = await conn.fetchrow("SELECT mining_speed, miner_level FROM users WHERE user_id = $1", user_id)
+            if not row:
+                return web.json_response({"ok": False, "msg": "المستخدم غير موجود"})
 
-            new_ton = row["ton_balance"] - cost_ton
             new_speed = row["mining_speed"] + speed_gain
             new_lvl = row["miner_level"] + 1
 
             await conn.execute("""
-                UPDATE users SET ton_balance = $1, mining_speed = $2, miner_level = $3 WHERE user_id = $4
-            """, new_ton, new_speed, new_lvl, user_id)
+                UPDATE users SET mining_speed = $1, miner_level = $2 WHERE user_id = $3
+            """, new_speed, new_lvl, user_id)
 
-        return web.json_response({"ok": True, "ton_balance": new_ton, "mining_speed": new_speed})
+        return web.json_response({"ok": True, "mining_speed": new_speed})
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
@@ -1826,17 +1855,17 @@ async def start_handler(message: Message, command: CommandObject, state: FSMCont
                 if referrer_id != user_id:
                     await conn.execute("""
                         INSERT INTO users (user_id, referred_by, last_mining_timestamp, mining_speed, olk_balance, activated_miner)
-                        VALUES ($1, $2, $3, 0.25, 0, 0)
+                        VALUES ($1, $2, $3, $4, 0, 0)
                         ON CONFLICT (user_id) DO UPDATE SET referred_by = EXCLUDED.referred_by
-                    """, user_id, referrer_id, now)
+                    """, user_id, referrer_id, now, DEFAULT_SPEED)
             except ValueError:
                 pass
         elif not user:
             await conn.execute("""
                 INSERT INTO users (user_id, last_mining_timestamp, mining_speed, olk_balance, activated_miner)
-                VALUES ($1, $2, 0.25, 0, 0)
+                VALUES ($1, $2, $3, 0, 0)
                 ON CONFLICT (user_id) DO NOTHING
-            """, user_id, now)
+            """, user_id, now, DEFAULT_SPEED)
 
     perms = await get_admin_permissions(user_id)
     welcome_text = (
@@ -1845,6 +1874,7 @@ async def start_handler(message: Message, command: CommandObject, state: FSMCont
         "⛏️ **جلسات تعدين يدوية:** اضغط على زر التشغيل لبدء الإنتاج السحابي.\n"
         "💰 **أرباح فورية ومضمونة:** أرباحك تذهب مباشرة لمحفظتك داخل التطبيق.\n"
         "🎁 **مكافأة البدء:** احصل على **+50 OLK** فور تشغيل الجلسة الأولى!\n"
+        "👥 **نظام الإحالة:** احصل على **+70 OLK** لكل صديق ينضم وينفذ الشروط!\n"
         "🌐 **اللغات:** يدعم التطبيق العربية والإنجليزية بزر واحد داخل الواجهة.\n"
         "──────────────────────\n"
         "اختر أحد الخيارات للبدء:"
@@ -2366,7 +2396,7 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("OLK Cyber Session, Anti-Multi & Admin Engine is LIVE...")
+    print("OLK Cyber Session, Anti-Multi, Direct-Pay & Admin Engine is LIVE...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
@@ -2376,7 +2406,7 @@ async def main():
     app.router.add_post("/api/save_wallet", api_save_wallet)
     app.router.add_post("/api/start_mining_session", api_start_mining_session)
     app.router.add_post("/api/claim_session_rewards", api_claim_session_rewards)
-    app.router.add_post("/api/upgrade_rig_ton", api_upgrade_rig_ton)
+    app.router.add_post("/api/upgrade_rig_ton_direct", api_upgrade_rig_ton_direct)
     app.router.add_post("/api/deposit_ton_credit", api_deposit_ton_credit)
     app.router.add_post("/api/convert", api_convert)
     app.router.add_post("/api/withdraw", api_withdraw)
