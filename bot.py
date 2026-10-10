@@ -61,7 +61,6 @@ def raw_to_user_friendly(raw_addr: str) -> str:
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
-# الحالات الخاصة بإدارة لوحة التحكم
 class AdminBroadcast(StatesGroup):
     waiting_for_message = State()
 
@@ -85,15 +84,16 @@ MINI_APP_HTML = """<!DOCTYPE html>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     :root {
-      --bg-dark: #070b14;
-      --card-bg: rgba(13, 21, 38, 0.85);
-      --card-border: rgba(30, 58, 110, 0.45);
-      --cyan-neon: #00f0ff;
-      --cyan-glow: rgba(0, 240, 255, 0.35);
+      --bg-dark: #070e18;
+      --card-blue: #0d1e36;
+      --card-blue-light: #132a4d;
+      --card-border: #1e3d6b;
+      --cyan-neon: #00e5ff;
+      --cyan-glow: rgba(0, 229, 255, 0.4);
       --gold-neon: #f59e0b;
       --gold-glow: rgba(245, 158, 11, 0.4);
       --green-neon: #10b981;
-      --text-muted: #8493a8;
+      --text-muted: #94a9c9;
     }
     * {
       box-sizing: border-box;
@@ -106,11 +106,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
     }
     html, body {
       background-color: var(--bg-dark);
-      background-image: 
-        radial-gradient(circle at 50% 0%, rgba(14, 165, 233, 0.15) 0%, transparent 65%),
-        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-      background-size: 100% 100%, 28px 28px, 28px 28px;
       color: #ffffff;
       min-height: 100vh;
       overflow-x: hidden;
@@ -138,15 +133,14 @@ MINI_APP_HTML = """<!DOCTYPE html>
       font-size: 12px;
       font-weight: 800;
       color: var(--cyan-neon);
-      background: rgba(0, 240, 255, 0.08);
-      border: 1px solid rgba(0, 240, 255, 0.25);
-      padding: 5px 10px;
+      background: #0f2744;
+      border: 1px solid var(--card-border);
+      padding: 5px 12px;
       border-radius: 12px;
-      letter-spacing: 0.5px;
     }
     .pulse-dot {
-      width: 7px;
-      height: 7px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
       background: var(--green-neon);
       box-shadow: 0 0 8px var(--green-neon);
@@ -159,20 +153,17 @@ MINI_APP_HTML = """<!DOCTYPE html>
     }
     .wallet-hero-glass {
       width: 100%;
-      background: linear-gradient(135deg, rgba(14, 30, 58, 0.75) 0%, rgba(8, 15, 30, 0.95) 100%);
-      border: 1px solid rgba(0, 240, 255, 0.3);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 0 16px rgba(0, 240, 255, 0.08);
-      backdrop-filter: blur(16px);
+      background: linear-gradient(145deg, #102648, #0a182e);
+      border: 1.5px solid #255393;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
       border-radius: 20px;
-      padding: 14px;
+      padding: 14px 16px;
       margin-bottom: 14px;
       cursor: pointer;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      transition: all 0.2s ease;
     }
-    .wallet-hero-glass:active { transform: scale(0.98); }
     .wallet-hero-left {
       display: flex;
       align-items: center;
@@ -182,30 +173,28 @@ MINI_APP_HTML = """<!DOCTYPE html>
       width: 44px;
       height: 44px;
       background: linear-gradient(135deg, #0284c7, #0369a1);
-      border: 1px solid rgba(56, 189, 248, 0.5);
+      border: 1px solid #38bdf8;
       border-radius: 14px;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 20px;
       color: #fff;
-      box-shadow: 0 0 15px rgba(2, 132, 199, 0.4);
     }
     .wallet-text-group { display: flex; flex-direction: column; }
     .wallet-title { font-size: 13px; font-weight: 800; color: #f8fafc; }
-    .wallet-subtitle { font-size: 11px; color: #94a3b8; direction: ltr; text-align: right; }
+    .wallet-subtitle { font-size: 11px; color: var(--text-muted); direction: ltr; text-align: right; }
     .wallet-badge-btn {
-      background: linear-gradient(135deg, rgba(2, 132, 199, 0.3), rgba(6, 182, 212, 0.2));
+      background: #0f2d57;
       border: 1px solid var(--cyan-neon);
       color: var(--cyan-neon);
       font-size: 11px;
       font-weight: 800;
       padding: 6px 14px;
       border-radius: 20px;
-      letter-spacing: 0.5px;
     }
     .wallet-badge-btn.connected {
-      background: rgba(16, 185, 129, 0.2);
+      background: #064e3b;
       border-color: var(--green-neon);
       color: #34d399;
     }
@@ -217,10 +206,10 @@ MINI_APP_HTML = """<!DOCTYPE html>
       margin-bottom: 14px;
     }
     .overview-card {
-      background: var(--card-bg);
+      background: var(--card-blue);
       border: 1px solid var(--card-border);
       border-radius: 16px;
-      padding: 12px 14px;
+      padding: 14px;
       display: flex;
       flex-direction: column;
       gap: 4px;
@@ -233,31 +222,30 @@ MINI_APP_HTML = """<!DOCTYPE html>
       gap: 6px;
     }
     .overview-value {
-      font-size: 17px;
+      font-size: 18px;
       font-weight: 900;
       direction: ltr;
       text-align: left;
     }
     .mining-stage-card {
       width: 100%;
-      background: linear-gradient(180deg, rgba(16, 26, 46, 0.85) 0%, rgba(9, 14, 26, 0.95) 100%);
-      border: 1px solid var(--card-border);
+      background: linear-gradient(180deg, #0f2444 0%, #09172c 100%);
+      border: 1.5px solid var(--card-border);
       border-radius: 24px;
-      padding: 18px 14px;
+      padding: 20px 14px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      position: relative;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
     }
     .status-pill {
       display: flex;
       align-items: center;
       gap: 8px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: #081426;
+      border: 1px solid var(--card-border);
       border-radius: 20px;
-      padding: 4px 12px;
+      padding: 5px 14px;
       font-size: 11px;
       font-weight: 700;
       color: #94a3b8;
@@ -276,7 +264,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       font-size: 12px;
       color: var(--text-muted);
       margin-top: 14px;
-      font-weight: 600;
+      font-weight: 700;
     }
     .unclaimed-display {
       font-size: 34px;
@@ -286,7 +274,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       display: flex;
       align-items: center;
       gap: 6px;
-      letter-spacing: 0.5px;
     }
     .unclaimed-display span {
       font-size: 18px;
@@ -297,50 +284,47 @@ MINI_APP_HTML = """<!DOCTYPE html>
       display: flex;
       align-items: center;
       gap: 8px;
-      background: rgba(0, 240, 255, 0.08);
-      border: 1px solid rgba(0, 240, 255, 0.2);
+      background: #07172e;
+      border: 1px solid var(--cyan-neon);
       border-radius: 12px;
-      padding: 6px 14px;
-      font-size: 12px;
+      padding: 6px 16px;
+      font-size: 13px;
       color: var(--cyan-neon);
       font-weight: 800;
       direction: ltr;
     }
     .progress-bar-track {
       width: 100%;
-      height: 8px;
-      background: rgba(255, 255, 255, 0.06);
+      height: 9px;
+      background: #061122;
       border-radius: 10px;
       margin-top: 16px;
       overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
     }
     .progress-bar-fill {
       height: 100%;
       width: 0%;
       background: linear-gradient(90deg, #0284c7, var(--cyan-neon));
       border-radius: 10px;
-      box-shadow: 0 0 10px var(--cyan-glow);
       transition: width 0.3s ease;
     }
     .central-rig-emblem {
-      margin: 18px 0 12px 0;
+      margin: 18px 0 14px 0;
       width: 130px;
       height: 130px;
       border-radius: 50%;
-      background: radial-gradient(circle, rgba(14, 165, 233, 0.2) 0%, rgba(7, 11, 20, 0.8) 70%);
-      border: 2px solid rgba(0, 240, 255, 0.3);
-      box-shadow: 0 0 30px rgba(0, 240, 255, 0.15);
+      background: radial-gradient(circle, #122d54 0%, #081526 80%);
+      border: 2px solid var(--cyan-neon);
+      box-shadow: 0 0 25px rgba(0, 229, 255, 0.25);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      position: relative;
     }
     .central-rig-emblem i {
       font-size: 44px;
       color: var(--cyan-neon);
-      filter: drop-shadow(0 0 10px var(--cyan-glow));
     }
     .speed-badge {
       font-size: 12px;
@@ -352,7 +336,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
     .btn-main-action {
       width: 100%;
       background: linear-gradient(135deg, #0284c7, #0ea5e9);
-      border: 1px solid rgba(56, 189, 248, 0.4);
+      border: none;
       color: #fff;
       font-weight: 900;
       padding: 14px;
@@ -363,22 +347,15 @@ MINI_APP_HTML = """<!DOCTYPE html>
       align-items: center;
       justify-content: center;
       gap: 8px;
-      box-shadow: 0 4px 20px rgba(2, 132, 199, 0.35);
       margin-top: 10px;
-      transition: transform 0.1s ease;
     }
-    .btn-main-action:active { transform: scale(0.98); }
     .btn-main-action.claim-state {
       background: linear-gradient(135deg, #f59e0b, #d97706);
-      border-color: rgba(245, 158, 11, 0.5);
-      box-shadow: 0 4px 20px var(--gold-glow);
       color: #000;
     }
     .btn-main-action:disabled {
-      background: rgba(255, 255, 255, 0.08);
-      border-color: rgba(255, 255, 255, 0.05);
+      background: #1e293b;
       color: #64748b;
-      box-shadow: none;
       cursor: not-allowed;
     }
     .page-tab {
@@ -390,8 +367,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
     .page-tab.active { display: flex; }
     .card-panel {
       width: 100%;
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
+      background: var(--card-blue);
+      border: 1.5px solid var(--card-border);
       border-radius: 20px;
       padding: 16px;
       margin-bottom: 12px;
@@ -400,18 +377,17 @@ MINI_APP_HTML = """<!DOCTYPE html>
       gap: 12px;
     }
     .plan-card {
-      background: rgba(7, 12, 22, 0.7);
-      border: 1px solid rgba(255, 255, 255, 0.07);
+      background: var(--card-blue-light);
+      border: 1px solid var(--card-border);
       border-radius: 16px;
       padding: 14px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      transition: all 0.2s ease;
     }
     .plan-info-title { font-size: 13px; font-weight: 800; color: #fff; }
     .plan-info-sub { font-size: 11px; color: var(--green-neon); margin-top: 2px; direction: ltr; text-align: right; }
-    .plan-roi-sub { font-size: 10px; color: #94a3b8; }
+    .plan-roi-sub { font-size: 10px; color: var(--text-muted); }
     .btn-buy-plan {
       background: linear-gradient(135deg, #0284c7, #0ea5e9);
       border: none;
@@ -421,16 +397,12 @@ MINI_APP_HTML = """<!DOCTYPE html>
       padding: 9px 14px;
       border-radius: 12px;
       cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 2px;
     }
     .convert-input-box {
-      background: rgba(0, 0, 0, 0.4);
+      background: #081324;
       border: 1px solid var(--card-border);
       border-radius: 12px;
-      padding: 8px 12px;
+      padding: 10px 12px;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -452,9 +424,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
       left: 0;
       right: 0;
       height: 68px;
-      background: rgba(6, 11, 20, 0.95);
-      border-top: 1px solid rgba(30, 58, 110, 0.3);
-      backdrop-filter: blur(20px);
+      background: #081426;
+      border-top: 2px solid var(--card-border);
       display: flex;
       justify-content: space-around;
       align-items: center;
@@ -479,7 +450,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       display: none;
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(6, 11, 20, 0.98);
+      background: #060e1a;
       z-index: 99999;
       flex-direction: column;
       align-items: center;
@@ -515,7 +486,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
   <div class="main-scroll-view">
     <div class="top-header">
       <div class="brand-tag"><div class="pulse-dot"></div> OLK VIP PROTOCOL</div>
-      <div style="font-size:11px; color:#94a3b8; font-weight:700;"><i class="fa-solid fa-server"></i> Cloud Node #1</div>
+      <div style="font-size:11px; color:var(--text-muted); font-weight:700;"><i class="fa-solid fa-server"></i> Cloud Node #1</div>
     </div>
 
     <div class="wallet-hero-glass" onclick="handleWalletClick()">
@@ -542,7 +513,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب 1: صفحة التعدين الاساسية -->
+    <!-- تبويب التعدين -->
     <div class="page-tab active" id="tab-mining">
       <div class="mining-stage-card">
         <div class="status-pill">
@@ -576,19 +547,19 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب 2: خطط الترقية -->
+    <!-- تبويب الباقات -->
     <div class="page-tab" id="tab-miners">
       <div class="card-panel">
         <div style="display:flex; justify-content:space-between; align-items:center;">
-          <span style="font-weight:900; color:var(--cyan-neon); font-size:14px;"><i class="fa-solid fa-bolt"></i> باقات أجهزة التعدين السحابية</span>
-          <span style="font-size:10px; color:#94a3b8;">استرجاع رأس المال: 15 يوماً</span>
+          <span style="font-weight:900; color:var(--cyan-neon); font-size:14px;"><i class="fa-solid fa-bolt"></i> باقات أجهزة التعدين</span>
+          <span style="font-size:10px; color:var(--text-muted);">استرجاع رأس المال: 15 يوماً</span>
         </div>
 
         <div class="plan-card">
           <div>
             <div class="plan-info-title">CPU Micro Rig</div>
             <div class="plan-info-sub">+0.15 TH/s (~66.7 OLK/يوم)</div>
-            <div class="plan-roi-sub">عائد استثماري كامل في 15 يوم</div>
+            <div class="plan-roi-sub">استرجاع رأس المال خلال 15 يوماً</div>
           </div>
           <button class="btn-buy-plan" onclick="purchasePlan(0.1, 0.15)">0.1 TON</button>
         </div>
@@ -597,7 +568,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
           <div>
             <div class="plan-info-title">GPU Pro Miner</div>
             <div class="plan-info-sub">+0.77 TH/s (~333.3 OLK/يوم)</div>
-            <div class="plan-roi-sub">عائد استثماري كامل في 15 يوم</div>
+            <div class="plan-roi-sub">استرجاع رأس المال خلال 15 يوماً</div>
           </div>
           <button class="btn-buy-plan" onclick="purchasePlan(0.5, 0.77)">0.5 TON</button>
         </div>
@@ -606,7 +577,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
           <div>
             <div class="plan-info-title">ASIC Mini Rig</div>
             <div class="plan-info-sub">+1.55 TH/s (~666.7 OLK/يوم)</div>
-            <div class="plan-roi-sub">عائد استثماري كامل في 15 يوم</div>
+            <div class="plan-roi-sub">استرجاع رأس المال خلال 15 يوماً</div>
           </div>
           <button class="btn-buy-plan" onclick="purchasePlan(1.0, 1.55)">1.0 TON</button>
         </div>
@@ -615,7 +586,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
           <div>
             <div class="plan-info-title">Titan Quantum Rig</div>
             <div class="plan-info-sub">+3.86 TH/s (~1,666.7 OLK/يوم)</div>
-            <div class="plan-roi-sub">عائد استثماري كامل في 15 يوم</div>
+            <div class="plan-roi-sub">استرجاع رأس المال خلال 15 يوماً</div>
           </div>
           <button class="btn-buy-plan" onclick="purchasePlan(2.5, 3.86)">2.5 TON</button>
         </div>
@@ -624,36 +595,36 @@ MINI_APP_HTML = """<!DOCTYPE html>
           <div>
             <div class="plan-info-title">Enterprise Mining Node</div>
             <div class="plan-info-sub">+7.72 TH/s (~3,333.3 OLK/يوم)</div>
-            <div class="plan-roi-sub">عائد استثماري كامل في 15 يوم</div>
+            <div class="plan-roi-sub">استرجاع رأس المال خلال 15 يوماً</div>
           </div>
           <button class="btn-buy-plan" onclick="purchasePlan(5.0, 7.72)">5.0 TON</button>
         </div>
 
-        <div class="plan-card" style="border: 1px solid rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.05);">
+        <div class="plan-card" style="border: 1.5px solid var(--gold-neon);">
           <div>
             <div class="plan-info-title" style="color:var(--gold-neon);">Apex VIP Supercluster</div>
             <div class="plan-info-sub" style="color:var(--gold-neon);">+15.43 TH/s (~6,666.7 OLK/يوم)</div>
-            <div class="plan-roi-sub">عائد استثماري كامل في 15 يوم</div>
+            <div class="plan-roi-sub">استرجاع رأس المال خلال 15 يوماً</div>
           </div>
           <button class="btn-buy-plan" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#000;" onclick="purchasePlan(10.0, 15.43)">10.0 TON</button>
         </div>
       </div>
     </div>
 
-    <!-- تبويب 3: المحفظة -->
+    <!-- تبويب المحفظة -->
     <div class="page-tab" id="tab-wallet">
       <div class="card-panel">
         <div style="font-weight:bold; color:var(--gold-neon); font-size:14px; display:flex; justify-content:space-between;">
           <span>💳 صرافة OLK إلى TON</span>
-          <span style="font-size:11px; color:#38bdf8; direction:ltr;">1 TON = 10,000 OLK</span>
+          <span style="font-size:11px; color:var(--cyan-neon); direction:ltr;">1 TON = 10,000 OLK</span>
         </div>
 
         <div class="convert-input-box">
           <input type="number" id="swap-olk-input" class="convert-input" placeholder="1000" oninput="calcSwap()">
-          <button style="background:rgba(245, 158, 11, 0.2); border:1px solid var(--gold-neon); color:var(--gold-neon); padding:4px 10px; border-radius:8px; font-size:11px; font-weight:800; cursor:pointer;" onclick="setMaxSwap()">MAX</button>
+          <button style="background:#1e3d6b; border:1px solid var(--gold-neon); color:var(--gold-neon); padding:5px 12px; border-radius:8px; font-size:11px; font-weight:800; cursor:pointer;" onclick="setMaxSwap()">MAX</button>
         </div>
 
-        <div style="display:flex; justify-content:space-between; font-size:11px; color:#94a3b8;">
+        <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted);">
           <span>ستحصل على:</span>
           <strong style="color:var(--green-neon); font-size:13px;" id="swap-preview">0.0000 TON</strong>
         </div>
@@ -684,10 +655,10 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب 4: الإحالات -->
+    <!-- تبويب الإحالات -->
     <div class="page-tab" id="tab-frens">
       <div class="card-panel">
-        <div style="font-weight:bold; color:#bef264; font-size:14px;"><i class="fa-solid fa-users"></i> شبكة التعدين التشاركية</div>
+        <div style="font-weight:bold; color:var(--cyan-neon); font-size:14px;"><i class="fa-solid fa-users"></i> شبكة التعدين التشاركية</div>
         <div style="font-size:12px; color:#cbd5e1; line-height:1.6;">
           شارك رابط جهازك واحصل على <strong>80 OLK</strong> مجاناً فور قيام صديقك بتشغيل جلسة التعدين الأولى!
         </div>
@@ -697,12 +668,12 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب 5: المهام المباشرة من قاعدة البيانات -->
+    <!-- تبويب المهام -->
     <div class="page-tab" id="tab-tasks">
       <div class="card-panel">
         <div style="font-weight:bold; color:var(--gold-neon); font-size:14px;"><i class="fa-solid fa-list-check"></i> المهام الإضافية المتاحة</div>
         <div id="dynamic-tasks-list" style="display:flex; flex-direction:column; gap:8px;">
-          <div style="font-size:12px; color:#94a3b8; text-align:center;">جاري تحميل المهام...</div>
+          <div style="font-size:12px; color:var(--text-muted); text-align:center;">جاري تحميل المهام...</div>
         </div>
       </div>
     </div>
@@ -825,7 +796,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         container.innerHTML = "";
 
         if (!data.tasks || data.tasks.length === 0) {
-          container.innerHTML = `<div style="font-size:12px; color:#94a3b8; text-align:center;">لا توجد مهام إضافية حالياً.</div>`;
+          container.innerHTML = `<div style="font-size:12px; color:var(--text-muted); text-align:center;">لا توجد مهام إضافية حالياً.</div>`;
           return;
         }
 
@@ -976,7 +947,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
     }
 
     function calcSwap() {
-      const v = parseFloat(document.getElementById("swap-olk-input").value) || 0;
+      const v = parseFloat(document.getElementById("swap-folk-input")?.value || document.getElementById("swap-olk-input").value) || 0;
       document.getElementById("swap-preview").innerText = (v / 10000).toFixed(4) + " TON";
     }
 
@@ -1136,7 +1107,6 @@ async def init_db():
         );
         """)
 
-        # جدول المشرفين والصلاحيات
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS bot_admins (
             user_id BIGINT PRIMARY KEY,
@@ -1148,7 +1118,6 @@ async def init_db():
         );
         """)
 
-        # جدول المهام المضافة ديناميكياً
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS dynamic_tasks (
             id SERIAL PRIMARY KEY,
@@ -1160,7 +1129,6 @@ async def init_db():
         );
         """)
 
-        # إضافة مهمة افتراضية للقناة الرسمية إذا كان الجدول فارغاً
         task_exists = await conn.fetchval("SELECT COUNT(*) FROM dynamic_tasks")
         if task_exists == 0:
             await conn.execute("""
@@ -1476,13 +1444,16 @@ async def api_verify_channel_task(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
-def web_only_keyboard(user_id: int):
-    app_url = f"{WEBAPP_URL}?user_id={user_id}"
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="⚡ فتح محطة التعدين السحابية (Play Now) 🚀", web_app=WebAppInfo(url=app_url))]
-    ])
+# ==================== لوحة التحكم والتبديل المباشر ====================
 
-# ==================== لوحة تحكم الإدارة المطورة ====================
+def build_combined_start_keyboard(user_id: int, perms: dict | None):
+    app_url = f"{WEBAPP_URL}?user_id={user_id}"
+    buttons = [
+        [InlineKeyboardButton(text="⚡ فتح محطة التعدين السحابية (Play Now) 🚀", web_app=WebAppInfo(url=app_url))]
+    ]
+    if perms:
+        buttons.append([InlineKeyboardButton(text="👑 فتح لوحة التحكم الإدارية (Admin Panel)", callback_data="adm_home")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def build_main_admin_keyboard(perms):
     buttons = [
@@ -1496,36 +1467,116 @@ def build_main_admin_keyboard(perms):
         buttons.append([InlineKeyboardButton(text="📨 إرسال إذاعة عامة (Broadcast)", callback_data="adm_start_bc")])
     if perms.get("is_super"):
         buttons.append([InlineKeyboardButton(text="👑 إدارة المشرفين والصلاحيات (خاص بالرئيس)", callback_data="adm_manage_admins")])
+    buttons.append([InlineKeyboardButton(text="🔙 العودة لقائمة البوت", callback_data="adm_back_to_start")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
+async def render_admin_perms_keyboard(target_id: int):
+    async with db_pool.acquire() as conn:
+        row = await conn.fetchrow("SELECT * FROM bot_admins WHERE user_id = $1", target_id)
+
+    if not row:
+        return None
+
+    def mark(val): return "✅ مفعّل" if val == 1 else "❌ معطل"
+
+    buttons = [
+        [InlineKeyboardButton(text=f"إدارة السحب: {mark(row['can_manage_withdrawals'])}", callback_data=f"adm_tog_{target_id}_w")],
+        [InlineKeyboardButton(text=f"إدارة المهام: {mark(row['can_manage_tasks'])}", callback_data=f"adm_tog_{target_id}_t")],
+        [InlineKeyboardButton(text=f"إرسال إذاعة: {mark(row['can_broadcast'])}", callback_data=f"adm_tog_{target_id}_b")],
+        [InlineKeyboardButton(text=f"حظر المستخدمين: {mark(row['can_ban_users'])}", callback_data=f"adm_tog_{target_id}_u")],
+        [InlineKeyboardButton(text="🗑️ إزالة هذا المشرف بالكامل", callback_data=f"adm_rm_admin_{target_id}")],
+        [InlineKeyboardButton(text="🔙 رجوع لقائمة المشرفين", callback_data="adm_manage_admins")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+@dp.message(CommandStart())
+async def start_handler(message: Message, command: CommandObject, state: FSMContext):
+    await state.clear()
+    user_id = message.from_user.id
+    ref_param = command.args
+    now = int(time.time())
+
+    async with db_pool.acquire() as conn:
+        user = await conn.fetchrow("SELECT is_banned, ban_reason FROM users WHERE user_id = $1", user_id)
+
+        if user and user["is_banned"] == 1:
+            await message.answer(f"⛔ هذا الحساب محظور: {user['ban_reason']}")
+            return
+
+        if not user and ref_param:
+            try:
+                referrer_id = int(ref_param.replace("ref_", ""))
+                if referrer_id != user_id:
+                    await conn.execute("""
+                        INSERT INTO users (user_id, referred_by, last_mining_timestamp, mining_speed, olk_balance, activated_miner)
+                        VALUES ($1, $2, $3, 0.25, 0, 0)
+                        ON CONFLICT (user_id) DO UPDATE SET referred_by = EXCLUDED.referred_by
+                    """, user_id, referrer_id, now)
+            except ValueError:
+                pass
+        elif not user:
+            await conn.execute("""
+                INSERT INTO users (user_id, last_mining_timestamp, mining_speed, olk_balance, activated_miner)
+                VALUES ($1, $2, 0.25, 0, 0)
+                ON CONFLICT (user_id) DO NOTHING
+            """, user_id, now)
+
+    perms = await get_admin_permissions(user_id)
+    welcome_text = (
+        "⚡ **مرحباً بك في منظومة OLKA VIP Cyber Mining**\n"
+        "──────────────────────\n"
+        "⛏️ **جلسات تعدين يدوية كل 8 ساعات:** اضغط على زر التشغيل لبدء الإنتاج السحابي.\n"
+        "💰 **أرباح فورية ومضمونة:** أرباحك تذهب مباشرة لمحفظتك داخل التطبيق.\n"
+        "🎁 **مكافأة البدء:** احصل على **+50 OLK** فور تشغيل الجلسة الأولى!\n"
+        "──────────────────────\n"
+        "اختر أحد الخيارات للبدء:"
+    )
+    await message.answer(welcome_text, parse_mode="Markdown", reply_markup=build_combined_start_keyboard(user_id, perms))
+
 @dp.message(Command("admin"))
-async def admin_panel(message: Message):
+async def admin_panel(message: Message, state: FSMContext):
+    await state.clear()
     user_id = message.from_user.id
     perms = await get_admin_permissions(user_id)
     if not perms:
         return
-
     rank = "👑 الرئيس الأعلى (Super Admin)" if perms.get("is_super") else "🛡️ مشرف فرعي (Sub-Admin)"
-    text = (
-        f"⚡ **مرحباً بك في لوحة الإدارة والتحكم**\n"
-        f"رتبتك: **{rank}**\n\n"
-        "اختر أحد الخيارات للتحكم بالمنظومة:"
+    await message.answer(
+        f"⚡ **لوحة التحكم والإدارة**\nرتبتك: **{rank}**\n\nاختر من الأزرار أدناه:",
+        reply_markup=build_main_admin_keyboard(perms),
+        parse_mode="Markdown"
     )
-    await message.answer(text, parse_mode="Markdown", reply_markup=build_main_admin_keyboard(perms))
+
+@dp.callback_query(F.data == "adm_back_to_start")
+async def cb_back_to_start(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await state.clear()
+    user_id = callback.from_user.id
+    perms = await get_admin_permissions(user_id)
+    welcome_text = (
+        "⚡ **منظومة OLKA VIP Cyber Mining**\n"
+        "──────────────────────\n"
+        "اختر أحد الخيارات للبدء:"
+    )
+    await callback.message.edit_text(welcome_text, parse_mode="Markdown", reply_markup=build_combined_start_keyboard(user_id, perms))
 
 @dp.callback_query(F.data == "adm_home")
-async def cb_admin_home(callback: CallbackQuery):
+async def cb_admin_home(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await state.clear()
     perms = await get_admin_permissions(callback.from_user.id)
     if not perms:
         return
+    rank = "👑 الرئيس الأعلى (Super Admin)" if perms.get("is_super") else "🛡️ مشرف فرعي (Sub-Admin)"
     await callback.message.edit_text(
-        "⚡ **لوحة التحكم الرئيسية**\nاختر من الأزرار أدناه:",
+        f"⚡ **لوحة التحكم والإدارة**\nرتبتك: **{rank}**\n\nاختر من الأزرار أدناه:",
         reply_markup=build_main_admin_keyboard(perms),
         parse_mode="Markdown"
     )
 
 @dp.callback_query(F.data == "adm_stats")
 async def cb_admin_stats(callback: CallbackQuery):
+    await callback.answer()
     perms = await get_admin_permissions(callback.from_user.id)
     if not perms:
         return
@@ -1551,13 +1602,13 @@ async def cb_admin_stats(callback: CallbackQuery):
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 العودة للرئيسية", callback_data="adm_home")]])
     await callback.message.edit_text(stats_msg, parse_mode="Markdown", reply_markup=kb)
 
-# --- إدارة طلبات السحب ---
 @dp.callback_query(F.data == "adm_view_withdraws")
 async def cb_view_withdraws(callback: CallbackQuery):
     perms = await get_admin_permissions(callback.from_user.id)
     if not perms or not perms.get("can_manage_withdrawals"):
         await callback.answer("⛔ ليس لديك صلاحية إدارة السحب", show_alert=True)
         return
+    await callback.answer()
 
     async with db_pool.acquire() as conn:
         rows = await conn.fetch("SELECT id, user_id, amount_ton, wallet_address FROM withdrawals WHERE status = 'PENDING' ORDER BY id ASC LIMIT 5")
@@ -1585,13 +1636,13 @@ async def cb_view_withdraws(callback: CallbackQuery):
             reply_markup=kb
         )
 
-# --- إدارة مهام القنوات ---
 @dp.callback_query(F.data == "adm_tasks_menu")
 async def cb_tasks_menu(callback: CallbackQuery):
     perms = await get_admin_permissions(callback.from_user.id)
     if not perms or not perms.get("can_manage_tasks"):
         await callback.answer("⛔ ليس لديك صلاحية إدارة المهام", show_alert=True)
         return
+    await callback.answer()
 
     async with db_pool.acquire() as conn:
         rows = await conn.fetch("SELECT id, title, reward FROM dynamic_tasks WHERE is_active = 1 ORDER BY id DESC")
@@ -1603,13 +1654,14 @@ async def cb_tasks_menu(callback: CallbackQuery):
         ])
     buttons.append([InlineKeyboardButton(text="🔙 العودة للرئيسية", callback_data="adm_home")])
 
-    await callback.message.edit_text("📢 **إدارة مهام القنوات الحالية:**\nيمكنك إضافة مهام جديدة أو حذف المهام الحالية:", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+    await callback.message.edit_text("📢 **إدارة مهام القنوات:**\nيمكنك إضافة قنوات جديدة تظهر فوراً بالتطبيق أو حذف القنوات القديمة:", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
 
 @dp.callback_query(F.data == "adm_add_task_start")
 async def cb_add_task_start(callback: CallbackQuery, state: FSMContext):
     perms = await get_admin_permissions(callback.from_user.id)
     if not perms or not perms.get("can_manage_tasks"):
         return
+    await callback.answer()
     await callback.message.answer("📝 أرسل الآن **عنوان المهمة** (مثال: اشترك في قناة الأخبار):")
     await state.set_state(AddTaskStates.waiting_for_title)
 
@@ -1662,12 +1714,12 @@ async def cb_del_task(callback: CallbackQuery):
     await callback.answer("🗑️ تم حذف المهمة بنجاح!", show_alert=True)
     await cb_tasks_menu(callback)
 
-# --- إدارة المشرفين والصلاحيات (خاصة بالرئيس) ---
 @dp.callback_query(F.data == "adm_manage_admins")
 async def cb_manage_admins(callback: CallbackQuery):
     if callback.from_user.id != SUPER_ADMIN_ID:
         await callback.answer("⛔ هذا القسم محصور بالرئيس الأعلى فقط!", show_alert=True)
         return
+    await callback.answer()
 
     async with db_pool.acquire() as conn:
         rows = await conn.fetch("SELECT user_id FROM bot_admins")
@@ -1683,6 +1735,7 @@ async def cb_manage_admins(callback: CallbackQuery):
 async def cb_add_admin_start(callback: CallbackQuery, state: FSMContext):
     if callback.from_user.id != SUPER_ADMIN_ID:
         return
+    await callback.answer()
     await callback.message.answer("🆔 أرسل الآن **معرّف المشرف (Telegram ID)** الذي تريد إضافته:")
     await state.set_state(AddAdminStates.waiting_for_id)
 
@@ -1707,35 +1760,24 @@ async def state_save_new_admin(message: Message, state: FSMContext):
 
 @dp.callback_query(F.data.startswith("adm_edit_admin_"))
 async def cb_edit_admin(callback: CallbackQuery):
+    await callback.answer()
     if callback.from_user.id != SUPER_ADMIN_ID:
         return
     target_id = int(callback.data.split("_")[3])
-
-    async with db_pool.acquire() as conn:
-        row = await conn.fetchrow("SELECT * FROM bot_admins WHERE user_id = $1", target_id)
-
-    if not row:
-        await callback.answer("المشرف غير موجود", show_alert=True)
+    kb = await render_admin_perms_keyboard(target_id)
+    if not kb:
+        await callback.message.answer("المشرف غير موجود")
         return
 
-    def mark(val): return "✅ مفعّل" if val == 1 else "❌ معطل"
-
-    buttons = [
-        [InlineKeyboardButton(text=f"إدارة السحب: {mark(row['can_manage_withdrawals'])}", callback_data=f"adm_tog_{target_id}_w")],
-        [InlineKeyboardButton(text=f"إدارة المهام: {mark(row['can_manage_tasks'])}", callback_data=f"adm_tog_{target_id}_t")],
-        [InlineKeyboardButton(text=f"إرسال إذاعة: {mark(row['can_broadcast'])}", callback_data=f"adm_tog_{target_id}_b")],
-        [InlineKeyboardButton(text=f"حظر المستخدمين: {mark(row['can_ban_users'])}", callback_data=f"adm_tog_{target_id}_u")],
-        [InlineKeyboardButton(text="🗑️ إزالة هذا المشرف بالكامل", callback_data=f"adm_rm_admin_{target_id}")],
-        [InlineKeyboardButton(text="🔙 رجوع لقائمة المشرفين", callback_data="adm_manage_admins")]
-    ]
     await callback.message.edit_text(
-        f"⚙️ **ضبط صلاحيات المشرف:** `{target_id}`\nانقر على أي خيار لتفعيله أو تعطيله:",
+        f"⚙️ **ضبط صلاحيات المشرف:** `{target_id}`\nانقر على أي خيار لتفعيله أو تعطيله فورياً:",
         parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
+        reply_markup=kb
     )
 
 @dp.callback_query(F.data.startswith("adm_tog_"))
 async def cb_toggle_permission(callback: CallbackQuery):
+    await callback.answer()
     if callback.from_user.id != SUPER_ADMIN_ID:
         return
     parts = callback.data.split("_")
@@ -1753,9 +1795,17 @@ async def cb_toggle_permission(callback: CallbackQuery):
         return
 
     async with db_pool.acquire() as conn:
-        await conn.execute(f"UPDATE bot_admins SET {col} = CASE WHEN {col} = 1 THEN 0 ELSE 1 END WHERE user_id = $1", target_id)
+        await conn.execute(
+            f"UPDATE bot_admins SET {col} = (CASE WHEN {col} = 1 THEN 0 ELSE 1 END) WHERE user_id = $1",
+            target_id
+        )
 
-    await cb_edit_admin(callback)
+    kb = await render_admin_perms_keyboard(target_id)
+    if kb:
+        try:
+            await callback.message.edit_reply_markup(reply_markup=kb)
+        except Exception:
+            pass
 
 @dp.callback_query(F.data.startswith("adm_rm_admin_"))
 async def cb_remove_admin(callback: CallbackQuery):
@@ -1767,13 +1817,13 @@ async def cb_remove_admin(callback: CallbackQuery):
     await callback.answer("🗑️ تم حذف المشرف بنجاح!", show_alert=True)
     await cb_manage_admins(callback)
 
-# --- الإذاعة والحظر ---
 @dp.callback_query(F.data == "adm_start_bc")
 async def cb_start_broadcast(callback: CallbackQuery, state: FSMContext):
     perms = await get_admin_permissions(callback.from_user.id)
     if not perms or not perms.get("can_broadcast"):
         await callback.answer("⛔ ليس لديك صلاحية الإذاعة", show_alert=True)
         return
+    await callback.answer()
     await callback.message.answer("📝 أرسل الآن الرسالة المراد إذاعتها لجميع المشتركين:")
     await state.set_state(AdminBroadcast.waiting_for_message)
 
@@ -1801,6 +1851,7 @@ async def approve_withdraw(callback: CallbackQuery):
     perms = await get_admin_permissions(callback.from_user.id)
     if not perms or not perms.get("can_manage_withdrawals"):
         return
+    await callback.answer()
     w_id = int(callback.data.split("_")[2])
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow("SELECT user_id, amount_ton FROM withdrawals WHERE id = $1", w_id)
@@ -1818,6 +1869,7 @@ async def reject_withdraw(callback: CallbackQuery):
     perms = await get_admin_permissions(callback.from_user.id)
     if not perms or not perms.get("can_manage_withdrawals"):
         return
+    await callback.answer()
     w_id = int(callback.data.split("_")[2])
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow("SELECT user_id, amount_ton FROM withdrawals WHERE id = $1", w_id)
@@ -1830,76 +1882,6 @@ async def reject_withdraw(callback: CallbackQuery):
             except Exception:
                 pass
     await callback.message.edit_text(callback.message.text + "\n\n❌ **تم رفض الطلب وإعادة الرصيد.**")
-
-@dp.message(Command("ban"))
-async def ban_user_cmd(message: Message, command: CommandObject):
-    perms = await get_admin_permissions(message.from_user.id)
-    if not perms or not perms.get("can_ban_users"):
-        return
-    if not command.args:
-        await message.answer("⚠️ الصيغة:\n`/ban USER_ID سبب الحظر`", parse_mode="Markdown")
-        return
-    parts = command.args.split(maxsplit=1)
-    target_id = int(parts[0])
-    reason = parts[1] if len(parts) > 1 else "مخالفة سياسات التعدين"
-    async with db_pool.acquire() as conn:
-        await conn.execute("UPDATE users SET is_banned = 1, ban_reason = $1 WHERE user_id = $2", reason, target_id)
-    await message.answer(f"✅ تم حظر المستخدم `{target_id}` بنجاح.", parse_mode="Markdown")
-
-@dp.message(Command("unban"))
-async def unban_user_cmd(message: Message, command: CommandObject):
-    perms = await get_admin_permissions(message.from_user.id)
-    if not perms or not perms.get("can_ban_users"):
-        return
-    if not command.args:
-        await message.answer("⚠️ الصيغة:\n`/unban USER_ID`", parse_mode="Markdown")
-        return
-    target_id = int(command.args.strip())
-    async with db_pool.acquire() as conn:
-        await conn.execute("UPDATE users SET is_banned = 0, ban_reason = NULL, is_whitelisted = 1 WHERE user_id = $1", target_id)
-    await message.answer(f"✅ تم فك الحظر عن `{target_id}`.", parse_mode="Markdown")
-
-@dp.message(CommandStart())
-async def start_handler(message: Message, command: CommandObject):
-    user_id = message.from_user.id
-    ref_param = command.args
-    now = int(time.time())
-
-    async with db_pool.acquire() as conn:
-        user = await conn.fetchrow("SELECT is_banned, ban_reason FROM users WHERE user_id = $1", user_id)
-
-        if user and user["is_banned"] == 1:
-            await message.answer(f"⛔ هذا الحساب محظور: {user['ban_reason']}")
-            return
-
-        if not user and ref_param:
-            try:
-                referrer_id = int(ref_param.replace("ref_", ""))
-                if referrer_id != user_id:
-                    await conn.execute("""
-                        INSERT INTO users (user_id, referred_by, last_mining_timestamp, mining_speed, olk_balance, activated_miner)
-                        VALUES ($1, $2, $3, 0.25, 0, 0)
-                        ON CONFLICT (user_id) DO UPDATE SET referred_by = EXCLUDED.referred_by
-                    """, user_id, referrer_id, now)
-            except ValueError:
-                pass
-        elif not user:
-            await conn.execute("""
-                INSERT INTO users (user_id, last_mining_timestamp, mining_speed, olk_balance, activated_miner)
-                VALUES ($1, $2, 0.25, 0, 0)
-                ON CONFLICT (user_id) DO NOTHING
-            """, user_id, now)
-
-    welcome_text = (
-        "⚡ **مرحباً بك في منظومة OLKA VIP Cyber Mining**\n"
-        "──────────────────────\n"
-        "⛏️ **جلسات تعدين يدوية كل 8 ساعات:** اضغط على زر التشغيل لبدء الإنتاج السحابي.\n"
-        "💰 **أرباح فورية ومضمونة:** أرباحك تذهب مباشرة لمحفظتك داخل التطبيق.\n"
-        "🎁 **مكافأة البدء:** احصل على **+50 OLK** فور تشغيل الجلسة الأولى!\n"
-        "──────────────────────\n"
-        "اضغط على الزر أدناه لفتح لوحة التحكم وبدء التعدين:"
-    )
-    await message.answer(welcome_text, parse_mode="Markdown", reply_markup=web_only_keyboard(user_id))
 
 async def web_handler(request):
     return web.Response(text=MINI_APP_HTML, content_type="text/html")
