@@ -70,6 +70,12 @@ class AddTaskStates(StatesGroup):
     waiting_for_link = State()
     waiting_for_reward = State()
 
+class AddGroupTaskStates(StatesGroup):
+    waiting_for_title = State()
+    waiting_for_group_id = State()
+    waiting_for_link = State()
+    waiting_for_reward = State()
+
 class AddBotTaskStates(StatesGroup):
     waiting_for_title = State()
     waiting_for_link = State()
@@ -78,8 +84,11 @@ class AddBotTaskStates(StatesGroup):
 class AddAdminStates(StatesGroup):
     waiting_for_id = State()
 
+class UnbanStates(StatesGroup):
+    waiting_for_id = State()
+
 MINI_APP_HTML = """<!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" id="html-root">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -96,7 +105,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       --cyan-neon: #00e5ff;
       --cyan-glow: rgba(0, 229, 255, 0.4);
       --gold-neon: #f59e0b;
-      --gold-glow: rgba(245, 158, 11, 0.4);
       --green-neon: #10b981;
       --text-muted: #94a9c9;
     }
@@ -143,6 +151,16 @@ MINI_APP_HTML = """<!DOCTYPE html>
       padding: 5px 12px;
       border-radius: 12px;
     }
+    .lang-toggle-btn {
+      background: #0f2744;
+      border: 1px solid var(--card-border);
+      color: var(--gold-neon);
+      font-weight: 800;
+      font-size: 11px;
+      padding: 5px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+    }
     .pulse-dot {
       width: 8px;
       height: 8px;
@@ -151,11 +169,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       box-shadow: 0 0 8px var(--green-neon);
       animation: pulse 1.8s infinite;
     }
-    @keyframes pulse {
-      0% { opacity: 0.4; }
-      50% { opacity: 1; }
-      100% { opacity: 0.4; }
-    }
+    @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
     .wallet-hero-glass {
       width: 100%;
       background: linear-gradient(145deg, #102648, #0a182e);
@@ -169,22 +183,14 @@ MINI_APP_HTML = """<!DOCTYPE html>
       justify-content: space-between;
       align-items: center;
     }
-    .wallet-hero-left {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
+    .wallet-hero-left { display: flex; align-items: center; gap: 12px; }
     .wallet-icon-hexagon {
-      width: 44px;
-      height: 44px;
+      width: 44px; height: 44px;
       background: linear-gradient(135deg, #0284c7, #0369a1);
       border: 1px solid #38bdf8;
       border-radius: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 20px;
-      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; color: #fff;
     }
     .wallet-text-group { display: flex; flex-direction: column; }
     .wallet-title { font-size: 13px; font-weight: 800; color: #f8fafc; }
@@ -193,10 +199,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
       background: #0f2d57;
       border: 1px solid var(--cyan-neon);
       color: var(--cyan-neon);
-      font-size: 11px;
-      font-weight: 800;
-      padding: 6px 14px;
-      border-radius: 20px;
+      font-size: 11px; font-weight: 800;
+      padding: 6px 14px; border-radius: 20px;
     }
     .wallet-badge-btn.connected {
       background: #064e3b;
@@ -215,289 +219,168 @@ MINI_APP_HTML = """<!DOCTYPE html>
       border: 1px solid var(--card-border);
       border-radius: 16px;
       padding: 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
+      display: flex; flex-direction: column; gap: 4px;
     }
     .overview-label {
-      font-size: 11px;
-      color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      gap: 6px;
+      font-size: 11px; color: var(--text-muted);
+      display: flex; align-items: center; gap: 6px;
     }
-    .overview-value {
-      font-size: 18px;
-      font-weight: 900;
-      direction: ltr;
-      text-align: left;
-    }
+    .overview-value { font-size: 18px; font-weight: 900; direction: ltr; text-align: left; }
     .mining-stage-card {
       width: 100%;
       background: linear-gradient(180deg, #0f2444 0%, #09172c 100%);
       border: 1.5px solid var(--card-border);
       border-radius: 24px;
       padding: 20px 14px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+      display: flex; flex-direction: column; align-items: center;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
     }
     .status-pill {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: #081426;
-      border: 1px solid var(--card-border);
-      border-radius: 20px;
-      padding: 5px 14px;
-      font-size: 11px;
-      font-weight: 700;
-      color: #94a3b8;
+      display: flex; align-items: center; gap: 8px;
+      background: #081426; border: 1px solid var(--card-border);
+      border-radius: 20px; padding: 5px 14px;
+      font-size: 11px; font-weight: 700; color: #94a3b8;
     }
-    .status-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: #64748b;
-    }
-    .status-dot.active {
-      background: var(--green-neon);
-      box-shadow: 0 0 8px var(--green-neon);
-    }
-    .unclaimed-label {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-top: 14px;
-      font-weight: 700;
-    }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #64748b; }
+    .status-dot.active { background: var(--green-neon); box-shadow: 0 0 8px var(--green-neon); }
+    .unclaimed-label { font-size: 12px; color: var(--text-muted); margin-top: 14px; font-weight: 700; }
     .unclaimed-display {
-      font-size: 34px;
-      font-weight: 900;
-      color: #fff;
-      margin-top: 2px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
+      font-size: 34px; font-weight: 900; color: #fff; margin-top: 2px;
+      display: flex; align-items: center; gap: 6px;
     }
-    .unclaimed-display span {
-      font-size: 18px;
-      color: var(--gold-neon);
-    }
+    .unclaimed-display span { font-size: 18px; color: var(--gold-neon); }
     .cyber-timer-box {
-      margin-top: 8px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: #07172e;
-      border: 1px solid var(--cyan-neon);
-      border-radius: 12px;
-      padding: 6px 16px;
-      font-size: 13px;
-      color: var(--cyan-neon);
-      font-weight: 800;
-      direction: ltr;
+      margin-top: 8px; display: flex; align-items: center; gap: 8px;
+      background: #07172e; border: 1px solid var(--cyan-neon);
+      border-radius: 12px; padding: 6px 16px;
+      font-size: 13px; color: var(--cyan-neon); font-weight: 800; direction: ltr;
     }
     .progress-bar-track {
-      width: 100%;
-      height: 9px;
-      background: #061122;
-      border-radius: 10px;
-      margin-top: 16px;
-      overflow: hidden;
+      width: 100%; height: 9px; background: #061122;
+      border-radius: 10px; margin-top: 16px; overflow: hidden;
       border: 1px solid var(--card-border);
     }
     .progress-bar-fill {
-      height: 100%;
-      width: 0%;
+      height: 100%; width: 0%;
       background: linear-gradient(90deg, #0284c7, var(--cyan-neon));
-      border-radius: 10px;
-      transition: width 0.3s ease;
+      border-radius: 10px; transition: width 0.3s ease;
     }
     .central-rig-emblem {
-      margin: 18px 0 14px 0;
-      width: 130px;
-      height: 130px;
-      border-radius: 50%;
+      margin: 18px 0 14px 0; width: 130px; height: 130px; border-radius: 50%;
       background: radial-gradient(circle, #122d54 0%, #081526 80%);
       border: 2px solid var(--cyan-neon);
       box-shadow: 0 0 25px rgba(0, 229, 255, 0.25);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
     }
-    .central-rig-emblem i {
-      font-size: 44px;
-      color: var(--cyan-neon);
-    }
-    .speed-badge {
-      font-size: 12px;
-      font-weight: 800;
-      color: #cbd5e1;
-      margin-top: 4px;
-      direction: ltr;
-    }
+    .central-rig-emblem i { font-size: 44px; color: var(--cyan-neon); }
+    .speed-badge { font-size: 12px; font-weight: 800; color: #cbd5e1; margin-top: 4px; direction: ltr; }
     .btn-main-action {
-      width: 100%;
-      background: linear-gradient(135deg, #0284c7, #0ea5e9);
-      border: none;
-      color: #fff;
-      font-weight: 900;
-      padding: 14px;
-      border-radius: 16px;
-      font-size: 14px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      margin-top: 10px;
+      width: 100%; background: linear-gradient(135deg, #0284c7, #0ea5e9);
+      border: none; color: #fff; font-weight: 900;
+      padding: 14px; border-radius: 16px; font-size: 14px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      gap: 8px; margin-top: 10px;
     }
-    .btn-main-action.claim-state {
-      background: linear-gradient(135deg, #f59e0b, #d97706);
-      color: #000;
-    }
-    .btn-main-action:disabled {
-      background: #1e293b;
-      color: #64748b;
-      cursor: not-allowed;
-    }
-    .page-tab {
-      display: none;
-      width: 100%;
-      flex-direction: column;
-      align-items: center;
-    }
+    .btn-main-action.claim-state { background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; }
+    .btn-main-action:disabled { background: #1e293b; color: #64748b; cursor: not-allowed; }
+    .page-tab { display: none; width: 100%; flex-direction: column; align-items: center; }
     .page-tab.active { display: flex; }
     .card-panel {
-      width: 100%;
-      background: var(--card-blue);
+      width: 100%; background: var(--card-blue);
       border: 1.5px solid var(--card-border);
-      border-radius: 20px;
-      padding: 16px;
-      margin-bottom: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
+      border-radius: 20px; padding: 16px; margin-bottom: 12px;
+      display: flex; flex-direction: column; gap: 12px;
     }
     .plan-card {
-      background: var(--card-blue-light);
-      border: 1px solid var(--card-border);
-      border-radius: 16px;
-      padding: 14px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      background: var(--card-blue-light); border: 1px solid var(--card-border);
+      border-radius: 16px; padding: 14px;
+      display: flex; justify-content: space-between; align-items: center;
     }
     .plan-info-title { font-size: 13px; font-weight: 800; color: #fff; }
     .plan-info-sub { font-size: 11px; color: var(--green-neon); margin-top: 2px; direction: ltr; text-align: right; }
     .btn-buy-plan {
       background: linear-gradient(135deg, #0284c7, #0ea5e9);
-      border: none;
-      color: #fff;
-      font-weight: 800;
-      font-size: 12px;
-      padding: 9px 14px;
-      border-radius: 12px;
-      cursor: pointer;
+      border: none; color: #fff; font-weight: 800; font-size: 12px;
+      padding: 9px 14px; border-radius: 12px; cursor: pointer;
     }
     .convert-input-box {
-      background: #081324;
-      border: 1px solid var(--card-border);
-      border-radius: 12px;
-      padding: 10px 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+      background: #081324; border: 1px solid var(--card-border);
+      border-radius: 12px; padding: 10px 12px;
+      display: flex; align-items: center; gap: 8px;
     }
     .convert-input {
-      flex: 1;
-      background: transparent;
-      border: none;
-      outline: none;
-      color: #fff;
-      font-size: 16px;
-      font-weight: 800;
-      direction: ltr;
-      text-align: left;
+      flex: 1; background: transparent; border: none; outline: none;
+      color: #fff; font-size: 16px; font-weight: 800; direction: ltr; text-align: left;
     }
+    .tasks-horizontal-nav {
+      display: flex; width: 100%; gap: 6px; margin-bottom: 12px;
+      background: #091527; padding: 5px; border-radius: 14px;
+      border: 1px solid var(--card-border);
+    }
+    .tasks-subtab-btn {
+      flex: 1; padding: 9px 0; border: none; border-radius: 10px;
+      background: transparent; color: #94a3b8; font-size: 12px;
+      font-weight: 800; cursor: pointer; display: flex; align-items: center;
+      justify-content: center; gap: 6px; transition: all 0.2s ease;
+    }
+    .tasks-subtab-btn.active {
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      color: #ffffff; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);
+    }
+    .tasks-view-content { display: none; width: 100%; flex-direction: column; gap: 8px; }
+    .tasks-view-content.active { display: flex; }
+
     .bottom-bar {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 68px;
-      background: #081426;
-      border-top: 2px solid var(--card-border);
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
-      z-index: 1000;
-      padding: 0 8px;
+      position: fixed; bottom: 0; left: 0; right: 0; height: 68px;
+      background: #081426; border-top: 2px solid var(--card-border);
+      display: flex; justify-content: space-around; align-items: center;
+      z-index: 1000; padding: 0 8px;
     }
     .nav-btn {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      color: #64748b;
-      cursor: pointer;
-      font-size: 11px;
-      font-weight: 700;
-      flex: 1;
+      display: flex; flex-direction: column; align-items: center;
+      gap: 4px; color: #64748b; cursor: pointer; font-size: 11px;
+      font-weight: 700; flex: 1;
     }
     .nav-btn i { font-size: 18px; }
     .nav-btn.active { color: var(--cyan-neon); }
     .nav-btn.active i { color: var(--cyan-neon); }
     #banned-overlay, #channel-lock-overlay {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: #060e1a;
-      z-index: 99999;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      text-align: center;
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: #060e1a; z-index: 99999; flex-direction: column;
+      align-items: center; justify-content: center; padding: 24px; text-align: center;
     }
   </style>
 </head>
 <body>
 
+  <!-- شاشة الحظر ومنع التعدد -->
   <div id="banned-overlay">
     <i class="fa-solid fa-ban" style="font-size:60px; color:#ef4444; margin-bottom:16px;"></i>
-    <h2 style="color:#ef4444; margin-bottom:8px;">⛔ تم حظر هذا الحساب!</h2>
+    <h2 style="color:#ef4444; margin-bottom:8px;" id="t-banned-title">⛔ تم حظر هذا الحساب!</h2>
     <p id="ban-reason-text" style="font-size:13px; color:#cbd5e1; line-height:1.6;">تم اكتشاف مخالفة لقوانين المنظومة.</p>
   </div>
 
+  <!-- شاشة الاشتراك الإجباري -->
   <div id="channel-lock-overlay">
     <i class="fa-brands fa-telegram" style="font-size:65px; color:var(--cyan-neon); margin-bottom:16px;"></i>
-    <h2 style="color:#ffffff; margin-bottom:8px;">📢 خطوة أخيرة للتفعيل!</h2>
-    <p style="font-size:13px; color:#cbd5e1; line-height:1.6; margin-bottom:20px;">
+    <h2 style="color:#ffffff; margin-bottom:8px;" id="t-lock-title">📢 خطوة أخيرة للتفعيل!</h2>
+    <p style="font-size:13px; color:#cbd5e1; line-height:1.6; margin-bottom:20px;" id="t-lock-desc">
       لتفعيل محطة التعدين السحابية، يجب الانضمام إلى القناة الرسمية:
       <br><strong style="color:var(--gold-neon);">@OLKVIP</strong>
     </p>
-    <button class="btn-main-action" style="width:260px;" onclick="window.open('https://t.me/OLKVIP', '_blank')">
-      انضم إلى القناة الآن
-    </button>
-    <button class="btn-main-action claim-state" style="width:260px; margin-top:8px;" onclick="loadData()">
-      تحقق وتفعيل الآن
-    </button>
+    <button class="btn-main-action" style="width:260px;" onclick="window.open('https://t.me/OLKVIP', '_blank')" id="t-lock-join">انضم إلى القناة الآن</button>
+    <button class="btn-main-action claim-state" style="width:260px; margin-top:8px;" onclick="loadData()" id="t-lock-verify">تحقق وتفعيل الآن</button>
   </div>
 
   <div class="main-scroll-view">
     <div class="top-header">
       <div class="brand-tag"><div class="pulse-dot"></div> OLK VIP PROTOCOL</div>
-      <div style="font-size:11px; color:var(--text-muted); font-weight:700;"><i class="fa-solid fa-server"></i> Cloud Node #1</div>
+      <button class="lang-toggle-btn" onclick="toggleLanguage()"><i class="fa-solid fa-globe"></i> <span id="lang-btn-text">EN</span></button>
     </div>
 
     <div class="wallet-hero-glass" onclick="handleWalletClick()">
       <div class="wallet-hero-left">
-        <div class="wallet-icon-hexagon">
-          <i class="fa-solid fa-wallet"></i>
-        </div>
+        <div class="wallet-icon-hexagon"><i class="fa-solid fa-wallet"></i></div>
         <div class="wallet-text-group">
           <span class="wallet-title">TON Web3 Wallet</span>
           <span class="wallet-subtitle" id="wallet-addr-text">اضغط لربط المحفظة مباشرة</span>
@@ -508,11 +391,11 @@ MINI_APP_HTML = """<!DOCTYPE html>
 
     <div class="overview-grid">
       <div class="overview-card">
-        <div class="overview-label"><i class="fa-solid fa-coins" style="color:var(--gold-neon);"></i> رصيد OLK الأساسي:</div>
+        <div class="overview-label"><i class="fa-solid fa-coins" style="color:var(--gold-neon);"></i> <span id="t-olk-bal-lbl">رصيد OLK الأساسي:</span></div>
         <div class="overview-value" style="color:var(--gold-neon);" id="olk-bal-val">0.00 OLK</div>
       </div>
       <div class="overview-card">
-        <div class="overview-label"><i class="fa-solid fa-gem" style="color:var(--cyan-neon);"></i> رصيد TON (Gram):</div>
+        <div class="overview-label"><i class="fa-solid fa-gem" style="color:var(--cyan-neon);"></i> <span id="t-ton-bal-lbl">رصيد TON (Gram):</span></div>
         <div class="overview-value" style="color:var(--cyan-neon);" id="ton-bal-val">0.0000 TON</div>
       </div>
     </div>
@@ -525,7 +408,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
           <span id="mining-status-text">جاهز لبدء الجلسة</span>
         </div>
 
-        <div class="unclaimed-label">أرباح جلسة التعدين الحالية:</div>
+        <div class="unclaimed-label" id="t-mining-earnings-lbl">أرباح جلسة التعدين الحالية:</div>
         <div class="unclaimed-display">
           <span>OLK</span>
           <div id="unclaimed-counter">0.000000</div>
@@ -546,7 +429,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         </div>
 
         <button class="btn-main-action" id="btn-session-control" onclick="handleMiningAction()">
-          <i class="fa-solid fa-power-off"></i> <span>تشغيل جلسة التعدين</span>
+          <i class="fa-solid fa-power-off"></i> <span id="t-btn-mine-text">تشغيل جلسة التعدين</span>
         </button>
       </div>
     </div>
@@ -555,54 +438,31 @@ MINI_APP_HTML = """<!DOCTYPE html>
     <div class="page-tab" id="tab-miners">
       <div class="card-panel">
         <div style="display:flex; justify-content:space-between; align-items:center;">
-          <span style="font-weight:900; color:var(--cyan-neon); font-size:14px;"><i class="fa-solid fa-bolt"></i> باقات أجهزة التعدين</span>
+          <span style="font-weight:900; color:var(--cyan-neon); font-size:14px;"><i class="fa-solid fa-bolt"></i> <span id="t-plans-title">باقات أجهزة التعدين</span></span>
         </div>
 
         <div class="plan-card">
-          <div>
-            <div class="plan-info-title">CPU Micro Rig</div>
-            <div class="plan-info-sub">+0.15 TH/s (~66.7 OLK/يوم)</div>
-          </div>
+          <div><div class="plan-info-title">CPU Micro Rig</div><div class="plan-info-sub">+0.15 TH/s (~66.7 OLK/day)</div></div>
           <button class="btn-buy-plan" onclick="purchasePlan(0.1, 0.15)">0.1 TON</button>
         </div>
-
         <div class="plan-card">
-          <div>
-            <div class="plan-info-title">GPU Pro Miner</div>
-            <div class="plan-info-sub">+0.77 TH/s (~333.3 OLK/يوم)</div>
-          </div>
+          <div><div class="plan-info-title">GPU Pro Miner</div><div class="plan-info-sub">+0.77 TH/s (~333.3 OLK/day)</div></div>
           <button class="btn-buy-plan" onclick="purchasePlan(0.5, 0.77)">0.5 TON</button>
         </div>
-
         <div class="plan-card">
-          <div>
-            <div class="plan-info-title">ASIC Mini Rig</div>
-            <div class="plan-info-sub">+1.55 TH/s (~666.7 OLK/يوم)</div>
-          </div>
+          <div><div class="plan-info-title">ASIC Mini Rig</div><div class="plan-info-sub">+1.55 TH/s (~666.7 OLK/day)</div></div>
           <button class="btn-buy-plan" onclick="purchasePlan(1.0, 1.55)">1.0 TON</button>
         </div>
-
         <div class="plan-card">
-          <div>
-            <div class="plan-info-title">Titan Quantum Rig</div>
-            <div class="plan-info-sub">+3.86 TH/s (~1,666.7 OLK/يوم)</div>
-          </div>
+          <div><div class="plan-info-title">Titan Quantum Rig</div><div class="plan-info-sub">+3.86 TH/s (~1,666.7 OLK/day)</div></div>
           <button class="btn-buy-plan" onclick="purchasePlan(2.5, 3.86)">2.5 TON</button>
         </div>
-
         <div class="plan-card">
-          <div>
-            <div class="plan-info-title">Enterprise Mining Node</div>
-            <div class="plan-info-sub">+7.72 TH/s (~3,333.3 OLK/يوم)</div>
-          </div>
+          <div><div class="plan-info-title">Enterprise Mining Node</div><div class="plan-info-sub">+7.72 TH/s (~3,333.3 OLK/day)</div></div>
           <button class="btn-buy-plan" onclick="purchasePlan(5.0, 7.72)">5.0 TON</button>
         </div>
-
         <div class="plan-card" style="border: 1.5px solid var(--gold-neon);">
-          <div>
-            <div class="plan-info-title" style="color:var(--gold-neon);">Apex VIP Supercluster</div>
-            <div class="plan-info-sub" style="color:var(--gold-neon);">+15.43 TH/s (~6,666.7 OLK/يوم)</div>
-          </div>
+          <div><div class="plan-info-title" style="color:var(--gold-neon);">Apex VIP Supercluster</div><div class="plan-info-sub" style="color:var(--gold-neon);">+15.43 TH/s (~6,666.7 OLK/day)</div></div>
           <button class="btn-buy-plan" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#000;" onclick="purchasePlan(10.0, 15.43)">10.0 TON</button>
         </div>
       </div>
@@ -612,42 +472,29 @@ MINI_APP_HTML = """<!DOCTYPE html>
     <div class="page-tab" id="tab-wallet">
       <div class="card-panel">
         <div style="font-weight:bold; color:var(--gold-neon); font-size:14px; display:flex; justify-content:space-between;">
-          <span>💳 صرافة OLK إلى TON</span>
+          <span id="t-swap-title">💳 صرافة OLK إلى TON</span>
           <span style="font-size:11px; color:var(--cyan-neon); direction:ltr;">1 TON = 10,000 OLK</span>
         </div>
-
         <div class="convert-input-box">
           <input type="number" id="swap-olk-input" class="convert-input" placeholder="1000" oninput="calcSwap()">
           <button style="background:#1e3d6b; border:1px solid var(--gold-neon); color:var(--gold-neon); padding:5px 12px; border-radius:8px; font-size:11px; font-weight:800; cursor:pointer;" onclick="setMaxSwap()">MAX</button>
         </div>
-
         <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted);">
-          <span>ستحصل على:</span>
+          <span id="t-swap-receive">ستحصل على:</span>
           <strong style="color:var(--green-neon); font-size:13px;" id="swap-preview">0.0000 TON</strong>
         </div>
-
-        <button class="btn-main-action claim-state" style="margin-top:2px;" onclick="executeSwap()">
-          تحويل الآن إلى رصيد TON
-        </button>
-
+        <button class="btn-main-action claim-state" style="margin-top:2px;" onclick="executeSwap()" id="t-btn-swap">تحويل الآن إلى رصيد TON</button>
         <hr style="border:0; border-top:1px solid var(--card-border); margin:4px 0;">
-
         <div style="font-weight:bold; color:var(--cyan-neon); font-size:14px;">
-          <i class="fa-solid fa-money-bill-transfer"></i> سحب TON إلى محفظتك
+          <i class="fa-solid fa-money-bill-transfer"></i> <span id="t-withdraw-title">سحب TON إلى محفظتك</span>
         </div>
-
         <div class="convert-input-box">
           <input type="number" step="0.01" id="withdraw-amt-input" class="convert-input" placeholder="0.1">
-          <span style="font-size:11px; color:#f87171;">الحد الأدنى: 0.1 TON</span>
+          <span style="font-size:11px; color:#f87171;" id="t-min-withdraw">الحد الأدنى: 0.1 TON</span>
         </div>
-
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-          <button class="btn-main-action" style="background:#059669;" onclick="depositDirect()">
-            <i class="fa-solid fa-arrow-down"></i> إيداع TON
-          </button>
-          <button class="btn-main-action" onclick="submitWithdraw()">
-            <i class="fa-solid fa-arrow-up"></i> سحب TON
-          </button>
+          <button class="btn-main-action" style="background:#059669;" onclick="depositDirect()"><i class="fa-solid fa-arrow-down"></i> <span id="t-btn-deposit">إيداع TON</span></button>
+          <button class="btn-main-action" onclick="submitWithdraw()"><i class="fa-solid fa-arrow-up"></i> <span id="t-btn-withdraw">سحب TON</span></button>
         </div>
       </div>
     </div>
@@ -655,40 +502,47 @@ MINI_APP_HTML = """<!DOCTYPE html>
     <!-- تبويب الإحالات -->
     <div class="page-tab" id="tab-frens">
       <div class="card-panel">
-        <div style="font-weight:bold; color:var(--cyan-neon); font-size:14px;"><i class="fa-solid fa-users"></i> شبكة التعدين التشاركية</div>
-        <div style="font-size:12px; color:#cbd5e1; line-height:1.6;">
+        <div style="font-weight:bold; color:var(--cyan-neon); font-size:14px;"><i class="fa-solid fa-users"></i> <span id="t-frens-title">شبكة التعدين التشاركية</span></div>
+        <div style="font-size:12px; color:#cbd5e1; line-height:1.6;" id="t-frens-desc">
           شارك رابط جهازك واحصل على <strong>80 OLK</strong> مجاناً فور قيام صديقك بتشغيل جلسة التعدين الأولى!
         </div>
-        <button class="btn-main-action" onclick="copyInvite()">
-          <i class="fa-solid fa-copy"></i> نسخ رابط الدعوة الخاص بي
-        </button>
+        <button class="btn-main-action" onclick="copyInvite()"><i class="fa-solid fa-copy"></i> <span id="t-btn-copy-invite">نسخ رابط الدعوة الخاص بي</span></button>
       </div>
     </div>
 
-    <!-- تبويب المهام (قنوات + بوتات) -->
+    <!-- تبويب المهام (3 خيارات أفقية) -->
     <div class="page-tab" id="tab-tasks">
-      <div class="card-panel">
-        <div style="font-weight:bold; color:var(--gold-neon); font-size:14px;"><i class="fa-solid fa-bullhorn"></i> مهام قنوات تيليجرام</div>
-        <div id="dynamic-tasks-list" style="display:flex; flex-direction:column; gap:8px;">
-          <div style="font-size:12px; color:var(--text-muted); text-align:center;">جاري تحميل المهام...</div>
-        </div>
+      <div class="tasks-horizontal-nav">
+        <button class="tasks-subtab-btn active" onclick="switchTasksSubtab('channels', this)"><i class="fa-solid fa-bullhorn"></i> <span id="t-subtab-channels">القنوات</span></button>
+        <button class="tasks-subtab-btn" onclick="switchTasksSubtab('groups', this)"><i class="fa-solid fa-user-group"></i> <span id="t-subtab-groups">المجموعات</span></button>
+        <button class="tasks-subtab-btn" onclick="switchTasksSubtab('bots', this)"><i class="fa-solid fa-robot"></i> <span id="t-subtab-bots">البوتات</span></button>
       </div>
 
-      <div class="card-panel" style="margin-top:10px;">
-        <div style="font-weight:bold; color:var(--cyan-neon); font-size:14px;"><i class="fa-solid fa-robot"></i> مهام بوتات تيليجرام</div>
-        <div id="dynamic-bot-tasks-list" style="display:flex; flex-direction:column; gap:8px;">
-          <div style="font-size:12px; color:var(--text-muted); text-align:center;">جاري تحميل مهام البوتات...</div>
+      <div class="card-panel">
+        <div class="tasks-view-content active" id="subtab-channels">
+          <div style="font-weight:bold; color:var(--gold-neon); font-size:13px; margin-bottom:4px;"><i class="fa-solid fa-bullhorn"></i> <span id="t-channels-title">قنوات تيليجرام</span></div>
+          <div id="dynamic-tasks-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+        </div>
+
+        <div class="tasks-view-content" id="subtab-groups">
+          <div style="font-weight:bold; color:var(--green-neon); font-size:13px; margin-bottom:4px;"><i class="fa-solid fa-user-group"></i> <span id="t-groups-title">مجموعات تيليجرام</span></div>
+          <div id="dynamic-groups-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+        </div>
+
+        <div class="tasks-view-content" id="subtab-bots">
+          <div style="font-weight:bold; color:var(--cyan-neon); font-size:13px; margin-bottom:4px;"><i class="fa-solid fa-robot"></i> <span id="t-bots-title">بوتات تيليجرام</span></div>
+          <div id="dynamic-bot-tasks-list" style="display:flex; flex-direction:column; gap:8px;"></div>
         </div>
       </div>
     </div>
   </div>
 
   <div class="bottom-bar">
-    <div class="nav-btn active" onclick="switchTab('mining', this)"><i class="fa-solid fa-pickaxe"></i><span>التعدين</span></div>
-    <div class="nav-btn" onclick="switchTab('miners', this)"><i class="fa-solid fa-bolt"></i><span>الأجهزة</span></div>
-    <div class="nav-btn" onclick="switchTab('wallet', this)"><i class="fa-solid fa-wallet"></i><span>المحفظة</span></div>
-    <div class="nav-btn" onclick="switchTab('frens', this)"><i class="fa-solid fa-users"></i><span>الأصدقاء</span></div>
-    <div class="nav-btn" onclick="switchTab('tasks', this)"><i class="fa-solid fa-clipboard-list"></i><span>المهام</span></div>
+    <div class="nav-btn active" onclick="switchTab('mining', this)"><i class="fa-solid fa-pickaxe"></i><span id="t-nav-mining">التعدين</span></div>
+    <div class="nav-btn" onclick="switchTab('miners', this)"><i class="fa-solid fa-bolt"></i><span id="t-nav-rigs">الأجهزة</span></div>
+    <div class="nav-btn" onclick="switchTab('wallet', this)"><i class="fa-solid fa-wallet"></i><span id="t-nav-wallet">المحفظة</span></div>
+    <div class="nav-btn" onclick="switchTab('frens', this)"><i class="fa-solid fa-users"></i><span id="t-nav-frens">الأصدقاء</span></div>
+    <div class="nav-btn" onclick="switchTab('tasks', this)"><i class="fa-solid fa-clipboard-list"></i><span id="t-nav-tasks">المهام</span></div>
   </div>
 
   <script>
@@ -697,6 +551,170 @@ MINI_APP_HTML = """<!DOCTYPE html>
 
     const urlParams = new URLSearchParams(window.location.search);
     let userId = tg?.initDataUnsafe?.user?.id || urlParams.get('user_id') || 1932161126;
+
+    // بصمة الجهاز لمنع التعدد
+    function getDeviceFingerprint() {
+      const nav = window.navigator;
+      const screen = window.screen;
+      let str = [
+        nav.userAgent,
+        nav.language,
+        screen.colorDepth,
+        screen.width + 'x' + screen.height,
+        new Date().getTimezoneOffset()
+      ].join('###');
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) - hash) + str.charCodeAt(i);
+        hash |= 0;
+      }
+      return 'FP_' + Math.abs(hash);
+    }
+    const currentFingerprint = getDeviceFingerprint();
+
+    // نصوص اللغتين العربية والإنجليزية
+    let currentLang = localStorage.getItem("olk_lang") || "ar";
+    const i18n = {
+      ar: {
+        dir: "rtl",
+        btnLang: "EN",
+        olkBal: "رصيد OLK الأساسي:",
+        tonBal: "رصيد TON (Gram):",
+        miningEarnings: "أرباح جلسة التعدين الحالية:",
+        btnMine: "تشغيل جلسة التعدين",
+        btnMineActive: "التعدين يعمل الآن تلقائياً...",
+        btnClaim: "المطالبة بأرباح الجلسة وتحديث المحفظة",
+        statusReady: "متوقف (جاهز لبدء جلسة جديدة)",
+        statusActive: "جلسة التعدين نشطة الآن",
+        statusClaim: "اكتملت الجلسة! طالب بأرباحك الآن",
+        plansTitle: "باقات أجهزة التعدين",
+        swapTitle: "💳 صرافة OLK إلى TON",
+        swapReceive: "ستحصل على:",
+        btnSwap: "تحويل الآن إلى رصيد TON",
+        withdrawTitle: "سحب TON إلى محفظتك",
+        minWithdraw: "الحد الأدنى: 0.1 TON",
+        btnDeposit: "إيداع TON",
+        btnWithdraw: "سحب TON",
+        frensTitle: "شبكة التعدين التشاركية",
+        frensDesc: "شارك رابط جهازك واحصل على 80 OLK مجاناً فور قيام صديقك بتشغيل جلسة التعدين الأولى!",
+        btnCopyInvite: "نسخ رابط الدعوة الخاص بي",
+        subtabChannels: "القنوات",
+        subtabGroups: "المجموعات",
+        subtabBots: "البوتات",
+        channelsTitle: "قنوات تيليجرام",
+        groupsTitle: "مجموعات تيليجرام",
+        botsTitle: "بوتات تيليجرام",
+        navMining: "التعدين",
+        navRigs: "الأجهزة",
+        navWallet: "المحفظة",
+        navFrens: "الأصدقاء",
+        navTasks: "المهام",
+        btnConnect: "اتصال",
+        btnConnected: "متصل ✅",
+        btnJoin: "انضمام",
+        btnVerify: "تحقق",
+        btnClaimReward: "استلام",
+        btnStartBot: "دخول البوت",
+        btnDone: "مكتملة ✅",
+        lockTitle: "📢 خطوة أخيرة للتفعيل!",
+        lockDesc: "لتفعيل محطة التعدين السحابية، يجب الانضمام إلى القناة الرسمية: @OLKVIP",
+        lockJoin: "انضم إلى القناة الآن",
+        lockVerify: "تحقق وتفعيل الآن",
+        bannedTitle: "⛔ تم حظر هذا الحساب!"
+      },
+      en: {
+        dir: "ltr",
+        btnLang: "عربي",
+        olkBal: "Main OLK Balance:",
+        tonBal: "TON (Gram) Balance:",
+        miningEarnings: "Current Session Rewards:",
+        btnMine: "Start Mining Session",
+        btnMineActive: "Mining in progress...",
+        btnClaim: "Claim Mining Rewards",
+        statusReady: "Idle (Ready to Start)",
+        statusActive: "Mining Session Active",
+        statusClaim: "Completed! Claim your rewards",
+        plansTitle: "Mining Rig Bundles",
+        swapTitle: "💳 Swap OLK to TON",
+        swapReceive: "You will receive:",
+        btnSwap: "Convert to TON Balance",
+        withdrawTitle: "Withdraw TON to Wallet",
+        minWithdraw: "Minimum: 0.1 TON",
+        btnDeposit: "Deposit TON",
+        btnWithdraw: "Withdraw TON",
+        frensTitle: "Collaborative Mining Network",
+        frensDesc: "Share your referral link and get 80 OLK free once your invited friend runs their first session!",
+        btnCopyInvite: "Copy My Invite Link",
+        subtabChannels: "Channels",
+        subtabGroups: "Groups",
+        subtabBots: "Bots",
+        channelsTitle: "Telegram Channels",
+        groupsTitle: "Telegram Groups",
+        botsTitle: "Telegram Bots",
+        navMining: "Mining",
+        navRigs: "Rigs",
+        navWallet: "Wallet",
+        navFrens: "Frens",
+        navTasks: "Tasks",
+        btnConnect: "Connect",
+        btnConnected: "Connected ✅",
+        btnJoin: "Join",
+        btnVerify: "Verify",
+        btnClaimReward: "Claim",
+        btnStartBot: "Open Bot",
+        btnDone: "Completed ✅",
+        lockTitle: "📢 One Last Step!",
+        lockDesc: "To activate the mining node, you must join the official channel: @OLKVIP",
+        lockJoin: "Join Channel Now",
+        lockVerify: "Verify & Activate",
+        bannedTitle: "⛔ Account Suspended!"
+      }
+    };
+
+    function applyLanguage(lang) {
+      currentLang = lang;
+      localStorage.setItem("olk_lang", lang);
+      const t = i18n[lang];
+      document.getElementById("html-root").dir = t.dir;
+      document.getElementById("lang-btn-text").innerText = t.btnLang;
+
+      document.getElementById("t-olk-bal-lbl").innerText = t.olkBal;
+      document.getElementById("t-ton-bal-lbl").innerText = t.tonBal;
+      document.getElementById("t-mining-earnings-lbl").innerText = t.miningEarnings;
+      document.getElementById("t-plans-title").innerText = t.plansTitle;
+      document.getElementById("t-swap-title").innerText = t.swapTitle;
+      document.getElementById("t-swap-receive").innerText = t.swapReceive;
+      document.getElementById("t-btn-swap").innerText = t.btnSwap;
+      document.getElementById("t-withdraw-title").innerText = t.withdrawTitle;
+      document.getElementById("t-min-withdraw").innerText = t.minWithdraw;
+      document.getElementById("t-btn-deposit").innerText = t.btnDeposit;
+      document.getElementById("t-btn-withdraw").innerText = t.btnWithdraw;
+      document.getElementById("t-frens-title").innerText = t.frensTitle;
+      document.getElementById("t-frens-desc").innerText = t.frensDesc;
+      document.getElementById("t-btn-copy-invite").innerText = t.btnCopyInvite;
+      document.getElementById("t-subtab-channels").innerText = t.subtabChannels;
+      document.getElementById("t-subtab-groups").innerText = t.subtabGroups;
+      document.getElementById("t-subtab-bots").innerText = t.subtabBots;
+      document.getElementById("t-channels-title").innerText = t.channelsTitle;
+      document.getElementById("t-groups-title").innerText = t.groupsTitle;
+      document.getElementById("t-bots-title").innerText = t.botsTitle;
+      document.getElementById("t-nav-mining").innerText = t.navMining;
+      document.getElementById("t-nav-rigs").innerText = t.navRigs;
+      document.getElementById("t-nav-wallet").innerText = t.navWallet;
+      document.getElementById("t-nav-frens").innerText = t.navFrens;
+      document.getElementById("t-nav-tasks").innerText = t.navTasks;
+      document.getElementById("t-lock-title").innerText = t.lockTitle;
+      document.getElementById("t-lock-desc").innerHTML = t.lockDesc;
+      document.getElementById("t-lock-join").innerText = t.lockJoin;
+      document.getElementById("t-lock-verify").innerText = t.lockVerify;
+      document.getElementById("t-banned-title").innerText = t.bannedTitle;
+
+      evaluateSessionState();
+    }
+
+    function toggleLanguage() {
+      applyLanguage(currentLang === "ar" ? "en" : "ar");
+    }
 
     let appOlk = 0.0;
     let appTon = 0.0;
@@ -716,6 +734,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
     });
 
     tonConnectUI.onStatusChange(async (wallet) => {
+      const t = i18n[currentLang];
       if (wallet) {
         try {
           connectedWallet = TON_CONNECT_UI.toUserFriendlyAddress(wallet.account.address);
@@ -724,19 +743,19 @@ MINI_APP_HTML = """<!DOCTYPE html>
         }
         document.getElementById("wallet-addr-text").innerText = connectedWallet.slice(0, 4) + '...' + connectedWallet.slice(-4);
         const b = document.getElementById("wallet-badge-btn");
-        b.innerText = "متصل ✅";
+        b.innerText = t.btnConnected;
         b.classList.add("connected");
 
         await fetch("/api/save_wallet", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId, address: connectedWallet })
+          body: JSON.stringify({ user_id: userId, address: connectedWallet, fingerprint: currentFingerprint })
         });
       } else {
         connectedWallet = null;
-        document.getElementById("wallet-addr-text").innerText = "اضغط لربط المحفظة مباشرة";
+        document.getElementById("wallet-addr-text").innerText = currentLang === "ar" ? "اضغط لربط المحفظة مباشرة" : "Click to connect wallet";
         const b = document.getElementById("wallet-badge-btn");
-        b.innerText = "اتصال";
+        b.innerText = t.btnConnect;
         b.classList.remove("connected");
       }
     });
@@ -751,10 +770,10 @@ MINI_APP_HTML = """<!DOCTYPE html>
 
     async function loadData() {
       try {
-        const res = await fetch(`/api/get_user?user_id=${userId}`);
+        const res = await fetch(`/api/get_user?user_id=${userId}&fp=${currentFingerprint}`);
         const data = await res.json();
         if (data.banned) {
-          document.getElementById("ban-reason-text").innerText = "سبب الحظر: " + (data.ban_reason || "");
+          document.getElementById("ban-reason-text").innerText = (currentLang === "ar" ? "سبب الحظر: " : "Reason: ") + (data.ban_reason || "");
           document.getElementById("banned-overlay").style.display = "flex";
           return;
         }
@@ -781,7 +800,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
             connectedWallet = data.saved_wallet;
             document.getElementById("wallet-addr-text").innerText = connectedWallet.slice(0, 4) + '...' + connectedWallet.slice(-4);
             const b = document.getElementById("wallet-badge-btn");
-            b.innerText = "متصل ✅";
+            b.innerText = i18n[currentLang].btnConnected;
             b.classList.add("connected");
           }
           evaluateSessionState();
@@ -792,16 +811,24 @@ MINI_APP_HTML = """<!DOCTYPE html>
       }
     }
 
+    function switchTasksSubtab(target, btn) {
+      document.querySelectorAll(".tasks-subtab-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".tasks-view-content").forEach(c => c.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById("subtab-" + target).classList.add("active");
+    }
+
     async function loadTasks() {
       try {
+        const t = i18n[currentLang];
         const res = await fetch(`/api/get_tasks?user_id=${userId}`);
         const data = await res.json();
         
-        // قنوات
+        // 1. قنوات
         const container = document.getElementById("dynamic-tasks-list");
         container.innerHTML = "";
         if (!data.tasks || data.tasks.length === 0) {
-          container.innerHTML = `<div style="font-size:12px; color:var(--text-muted); text-align:center;">لا توجد مهام قنوات حالياً.</div>`;
+          container.innerHTML = `<div style="font-size:12px; color:var(--text-muted); text-align:center;">${currentLang === "ar" ? "لا توجد قنوات حالياً." : "No channels available."}</div>`;
         } else {
           data.tasks.forEach(task => {
             const isDone = data.completed_ids.includes(task.id);
@@ -813,10 +840,10 @@ MINI_APP_HTML = """<!DOCTYPE html>
                 <div class="plan-info-sub" style="color:var(--gold-neon);">+${task.reward} OLK</div>
               </div>
               <div style="display:flex; gap:6px;">
-                <button class="btn-buy-plan" onclick="window.open('${task.link}', '_blank')">انضمام</button>
+                <button class="btn-buy-plan" onclick="window.open('${task.link}', '_blank')">${t.btnJoin}</button>
                 ${isDone 
-                  ? `<button class="btn-buy-plan" style="background:#475569; cursor:default;" disabled>مكتملة ✅</button>`
-                  : `<button class="btn-buy-plan" style="background:#10b981;" onclick="verifyTask(${task.id})">تحقق</button>`
+                  ? `<button class="btn-buy-plan" style="background:#475569; cursor:default;" disabled>${t.btnDone}</button>`
+                  : `<button class="btn-buy-plan" style="background:#10b981;" onclick="verifyTask(${task.id})">${t.btnVerify}</button>`
                 }
               </div>
             `;
@@ -824,11 +851,38 @@ MINI_APP_HTML = """<!DOCTYPE html>
           });
         }
 
-        // بوتات
+        // 2. مجموعات
+        const groupContainer = document.getElementById("dynamic-groups-list");
+        groupContainer.innerHTML = "";
+        if (!data.group_tasks || data.group_tasks.length === 0) {
+          groupContainer.innerHTML = `<div style="font-size:12px; color:var(--text-muted); text-align:center;">${currentLang === "ar" ? "لا توجد مجموعات حالياً." : "No groups available."}</div>`;
+        } else {
+          data.group_tasks.forEach(task => {
+            const isDone = (data.completed_group_ids || []).includes(task.id);
+            const div = document.createElement("div");
+            div.className = "plan-card";
+            div.innerHTML = `
+              <div>
+                <div class="plan-info-title">${task.title}</div>
+                <div class="plan-info-sub" style="color:var(--green-neon);">+${task.reward} OLK</div>
+              </div>
+              <div style="display:flex; gap:6px;">
+                <button class="btn-buy-plan" onclick="window.open('${task.link}', '_blank')">${t.btnJoin}</button>
+                ${isDone 
+                  ? `<button class="btn-buy-plan" style="background:#475569; cursor:default;" disabled>${t.btnDone}</button>`
+                  : `<button class="btn-buy-plan" style="background:#10b981;" onclick="verifyGroupTask(${task.id})">${t.btnVerify}</button>`
+                }
+              </div>
+            `;
+            groupContainer.appendChild(div);
+          });
+        }
+
+        // 3. بوتات
         const botContainer = document.getElementById("dynamic-bot-tasks-list");
         botContainer.innerHTML = "";
         if (!data.bot_tasks || data.bot_tasks.length === 0) {
-          botContainer.innerHTML = `<div style="font-size:12px; color:var(--text-muted); text-align:center;">لا توجد مهام بوتات حالياً.</div>`;
+          botContainer.innerHTML = `<div style="font-size:12px; color:var(--text-muted); text-align:center;">${currentLang === "ar" ? "لا توجد بوتات حالياً." : "No bots available."}</div>`;
         } else {
           data.bot_tasks.forEach(task => {
             const isDone = (data.completed_bot_ids || []).includes(task.id);
@@ -840,10 +894,10 @@ MINI_APP_HTML = """<!DOCTYPE html>
                 <div class="plan-info-sub" style="color:var(--cyan-neon);">+${task.reward} OLK</div>
               </div>
               <div style="display:flex; gap:6px;">
-                <button class="btn-buy-plan" onclick="window.open('${task.link}', '_blank')">دخول البوت</button>
+                <button class="btn-buy-plan" onclick="window.open('${task.link}', '_blank')">${t.btnStartBot}</button>
                 ${isDone 
-                  ? `<button class="btn-buy-plan" style="background:#475569; cursor:default;" disabled>مكتملة ✅</button>`
-                  : `<button class="btn-buy-plan" style="background:#0284c7;" onclick="verifyBotTask(${task.id})">استلام</button>`
+                  ? `<button class="btn-buy-plan" style="background:#475569; cursor:default;" disabled>${t.btnDone}</button>`
+                  : `<button class="btn-buy-plan" style="background:#0284c7;" onclick="verifyBotTask(${task.id})">${t.btnClaimReward}</button>`
                 }
               </div>
             `;
@@ -857,6 +911,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
     }
 
     function evaluateSessionState() {
+      const t = i18n[currentLang];
       const now = Math.floor(Date.now() / 1000);
       const elapsed = Math.max(0, now - sessionStartTs);
 
@@ -867,27 +922,27 @@ MINI_APP_HTML = """<!DOCTYPE html>
       if (sessionActive && elapsed < EIGHT_HOURS_SEC) {
         sessionClaimReady = false;
         dot.classList.add("active");
-        statusText.innerText = "جلسة التعدين نشطة الآن";
+        statusText.innerText = t.statusActive;
 
         btn.classList.remove("claim-state");
         btn.disabled = true;
-        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> التعدين يعمل الآن تلقائياً...`;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${t.btnMineActive}`;
       } else if (sessionActive && elapsed >= EIGHT_HOURS_SEC) {
         sessionClaimReady = true;
         dot.classList.remove("active");
-        statusText.innerText = "اكتملت الجلسة! طالب بأرباحك الآن";
+        statusText.innerText = t.statusClaim;
 
         btn.classList.add("claim-state");
         btn.disabled = false;
-        btn.innerHTML = `<i class="fa-solid fa-hand-holding-dollar"></i> المطالبة بأرباح الجلسة وتحديث المحفظة`;
+        btn.innerHTML = `<i class="fa-solid fa-hand-holding-dollar"></i> ${t.btnClaim}`;
       } else {
         sessionClaimReady = false;
         dot.classList.remove("active");
-        statusText.innerText = "متوقف (جاهز لبدء جلسة جديدة)";
+        statusText.innerText = t.statusReady;
 
         btn.classList.remove("claim-state");
         btn.disabled = false;
-        btn.innerHTML = `<i class="fa-solid fa-power-off"></i> <span>تشغيل جلسة التعدين</span>`;
+        btn.innerHTML = `<i class="fa-solid fa-power-off"></i> <span>${t.btnMine}</span>`;
       }
     }
 
@@ -931,7 +986,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
           const res = await fetch("/api/claim_session_rewards", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: userId, amount: currentUnclaimed })
+            body: JSON.stringify({ user_id: userId, amount: currentUnclaimed, fingerprint: currentFingerprint })
           });
           const data = await res.json();
           if (data.ok) {
@@ -942,13 +997,13 @@ MINI_APP_HTML = """<!DOCTYPE html>
             sessionClaimReady = false;
             currentUnclaimed = 0;
             evaluateSessionState();
-            alert(`🎉 تم تحويل +${data.claimed.toFixed(2)} OLK بنجاح إلى رصيدك الأساسي!`);
+            alert(`🎉 +${data.claimed.toFixed(2)} OLK!`);
           } else {
-            alert(data.msg || "حدث خطأ أثناء المطالبة");
+            alert(data.msg || "Error");
             btn.disabled = false;
           }
         } catch (err) {
-          alert("خطأ في الاتصال بالسيرفر");
+          alert("Server error");
           btn.disabled = false;
         }
       } else {
@@ -956,20 +1011,20 @@ MINI_APP_HTML = """<!DOCTYPE html>
           const res = await fetch("/api/start_mining_session", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: userId })
+            body: JSON.stringify({ user_id: userId, fingerprint: currentFingerprint })
           });
           const data = await res.json();
           if (data.ok) {
             sessionActive = true;
             sessionStartTs = data.session_start_timestamp;
             evaluateSessionState();
-            alert("🚀 تم تشغيل جهاز التعدين بنجاح!");
+            alert(currentLang === "ar" ? "🚀 تم تشغيل جهاز التعدين بنجاح!" : "🚀 Mining started successfully!");
           } else {
-            alert(data.msg || "تعذر بدء الجلسة");
+            alert(data.msg || "Error starting session");
             btn.disabled = false;
           }
         } catch (err) {
-          alert("خطأ في الاتصال بالخادم");
+          alert("Server connection error");
           btn.disabled = false;
         }
       }
@@ -977,14 +1032,14 @@ MINI_APP_HTML = """<!DOCTYPE html>
 
     async function purchasePlan(costTon, speedGain) {
       if (appTon < costTon) {
-        alert(`⚠️ رصيد TON غير كافٍ! يلزمك ${costTon} TON للمتابعة.`);
+        alert(currentLang === "ar" ? `⚠️ رصيد TON غير كافٍ!` : `⚠️ Insufficient TON balance!`);
         switchTab('wallet');
         return;
       }
       const res = await fetch("/api/upgrade_rig_ton", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId, cost_ton: costTon, speed_gain: speedGain })
+        body: JSON.stringify({ user_id: userId, cost_ton: costTon, speed_gain: speedGain, fingerprint: currentFingerprint })
       });
       const data = await res.json();
       if (data.ok) {
@@ -992,7 +1047,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         speed = data.mining_speed;
         document.getElementById("ton-bal-val").innerText = appTon.toFixed(4) + " TON";
         document.getElementById("speed-display").innerText = speed.toFixed(2) + " TH/s";
-        alert(`🎉 تمت ترقية العتاد بنجاح! السرعة الآن: ${speed.toFixed(2)} TH/s`);
+        alert(currentLang === "ar" ? `🎉 تمت ترقية العتاد بنجاح!` : `🎉 Rig upgraded successfully!`);
       } else {
         alert(data.msg);
       }
@@ -1011,13 +1066,13 @@ MINI_APP_HTML = """<!DOCTYPE html>
     async function executeSwap() {
       const amt = parseFloat(document.getElementById("swap-olk-input").value) || 0;
       if (amt <= 0 || amt > appOlk) {
-        alert("⚠️ يرجى إدخال كمية OLK صالحة ومتوفرة!");
+        alert(currentLang === "ar" ? "⚠️ يرجى إدخال كمية OLK صالحة!" : "⚠️ Invalid OLK amount!");
         return;
       }
       const res = await fetch("/api/convert", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId, amount: amt })
+        body: JSON.stringify({ user_id: userId, amount: amt, fingerprint: currentFingerprint })
       });
       const data = await res.json();
       if (data.ok) {
@@ -1027,7 +1082,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         document.getElementById("ton-bal-val").innerText = appTon.toFixed(4) + " TON";
         document.getElementById("swap-olk-input").value = "";
         calcSwap();
-        alert(`✅ تم تحويل ${amt} OLK إلى TON بنجاح!`);
+        alert(currentLang === "ar" ? `✅ تم التحويل بنجاح!` : `✅ Converted successfully!`);
       } else {
         alert(data.msg);
       }
@@ -1035,7 +1090,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
 
     async function depositDirect() {
       if (!connectedWallet) {
-        alert("❌ يرجى ربط المحفظة أولاً عبر شريط TON Wallet بالأعلى!");
+        alert(currentLang === "ar" ? "❌ يرجى ربط المحفظة أولاً!" : "❌ Please connect wallet first!");
         handleWalletClick();
         return;
       }
@@ -1051,37 +1106,37 @@ MINI_APP_HTML = """<!DOCTYPE html>
           await fetch("/api/deposit_ton_credit", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: userId, amount_ton: 0.1 })
+            body: JSON.stringify({ user_id: userId, amount_ton: 0.1, fingerprint: currentFingerprint })
           });
-          alert("🎉 تم تأكيد إيداع 0.1 TON بنجاح!");
+          alert(currentLang === "ar" ? "🎉 تم تأكيد إيداع 0.1 TON بنجاح!" : "🎉 0.1 TON deposit confirmed!");
         }
       } catch (e) {
-        alert("❌ تم إلغاء الإيداع.");
+        alert(currentLang === "ar" ? "❌ تم إلغاء الإيداع." : "❌ Deposit canceled.");
       }
     }
 
     async function submitWithdraw() {
       if (!connectedWallet) {
-        alert("❌ يرجى ربط محفظتك أولاً!");
+        alert(currentLang === "ar" ? "❌ يرجى ربط المحفظة أولاً!" : "❌ Please connect wallet first!");
         handleWalletClick();
         return;
       }
       const amt = parseFloat(document.getElementById("withdraw-amt-input").value) || 0;
       if (amt < 0.1 || amt > appTon) {
-        alert("⚠️ المبلغ أقل من 0.1 TON أو أكبر من رصيدك المتوفر!");
+        alert(currentLang === "ar" ? "⚠️ المبلغ غير صالح!" : "⚠️ Invalid amount!");
         return;
       }
       const res = await fetch("/api/withdraw", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId, address: connectedWallet, amount_ton: amt })
+        body: JSON.stringify({ user_id: userId, address: connectedWallet, amount_ton: amt, fingerprint: currentFingerprint })
       });
       const data = await res.json();
       if (data.ok) {
         appTon = data.remaining_ton;
         document.getElementById("ton-bal-val").innerText = appTon.toFixed(4) + " TON";
         document.getElementById("withdraw-amt-input").value = "";
-        alert("✅ تم إرسال طلب السحب بنجاح للمراجعة والإرسال إلى محفظتك!");
+        alert(currentLang === "ar" ? "✅ تم إرسال طلب السحب بنجاح للمراجعة!" : "✅ Withdrawal request submitted!");
       } else {
         alert(data.msg);
       }
@@ -1098,14 +1153,29 @@ MINI_APP_HTML = """<!DOCTYPE html>
     function copyInvite() {
       const link = `https://t.me/OlkaVip_bot?start=${userId}`;
       navigator.clipboard.writeText(link);
-      alert("✅ تم نسخ رابط الدعوة الخاص بك!");
+      alert(currentLang === "ar" ? "✅ تم نسخ رابط الدعوة الخاص بك!" : "✅ Invite link copied!");
     }
 
     async function verifyTask(taskId) {
       const res = await fetch("/api/verify_channel_task", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId, task_id: taskId })
+        body: JSON.stringify({ user_id: userId, task_id: taskId, fingerprint: currentFingerprint })
+      });
+      const data = await res.json();
+      alert(data.msg);
+      if (data.ok) {
+        appOlk += data.reward;
+        document.getElementById("olk-bal-val").innerText = appOlk.toFixed(2) + " OLK";
+        loadTasks();
+      }
+    }
+
+    async function verifyGroupTask(taskId) {
+      const res = await fetch("/api/verify_group_task", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userId, task_id: taskId, fingerprint: currentFingerprint })
       });
       const data = await res.json();
       alert(data.msg);
@@ -1120,7 +1190,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       const res = await fetch("/api/verify_bot_task", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId, task_id: taskId })
+        body: JSON.stringify({ user_id: userId, task_id: taskId, fingerprint: currentFingerprint })
       });
       const data = await res.json();
       alert(data.msg);
@@ -1131,6 +1201,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       }
     }
 
+    applyLanguage(currentLang);
     loadData();
   </script>
 </body>
@@ -1164,6 +1235,7 @@ async def init_db():
             session_start_timestamp BIGINT DEFAULT 0,
             session_active INTEGER DEFAULT 0,
             tasks_completed TEXT DEFAULT '[]',
+            group_tasks_completed TEXT DEFAULT '[]',
             bot_tasks_completed TEXT DEFAULT '[]',
             saved_wallet TEXT DEFAULT NULL,
             ip_address TEXT DEFAULT NULL,
@@ -1175,12 +1247,30 @@ async def init_db():
         );
         """)
 
-        # إضافة عمود مهام البوتات في حال وجود الجدول مسبقاً
+        # إضافة جميع الأعمدة الناقصة ديناميكياً لتفادي أي خطأ
         await conn.execute("""
         DO $$
         BEGIN
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='session_start_timestamp') THEN
+                ALTER TABLE users ADD COLUMN session_start_timestamp BIGINT DEFAULT 0;
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='session_active') THEN
+                ALTER TABLE users ADD COLUMN session_active INTEGER DEFAULT 0;
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='group_tasks_completed') THEN
+                ALTER TABLE users ADD COLUMN group_tasks_completed TEXT DEFAULT '[]';
+            END IF;
             IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='bot_tasks_completed') THEN
                 ALTER TABLE users ADD COLUMN bot_tasks_completed TEXT DEFAULT '[]';
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='device_fingerprint') THEN
+                ALTER TABLE users ADD COLUMN device_fingerprint TEXT DEFAULT NULL;
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='ip_address') THEN
+                ALTER TABLE users ADD COLUMN ip_address TEXT DEFAULT NULL;
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='is_whitelisted') THEN
+                ALTER TABLE users ADD COLUMN is_whitelisted INTEGER DEFAULT 0;
             END IF;
         END $$;
         """)
@@ -1196,7 +1286,6 @@ async def init_db():
         );
         """)
 
-        # جدول قنوات تيليجرام
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS dynamic_tasks (
             id SERIAL PRIMARY KEY,
@@ -1208,7 +1297,17 @@ async def init_db():
         );
         """)
 
-        # جدول مهام البوتات
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS dynamic_group_tasks (
+            id SERIAL PRIMARY KEY,
+            title TEXT,
+            group_id TEXT,
+            link TEXT,
+            reward DOUBLE PRECISION DEFAULT 10.0,
+            is_active INTEGER DEFAULT 1
+        );
+        """)
+
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS dynamic_bot_tasks (
             id SERIAL PRIMARY KEY,
@@ -1258,6 +1357,30 @@ async def get_admin_permissions(user_id: int):
             }
     return None
 
+# منع الحسابات المتعددة
+async def check_multi_account_fraud(conn, user_id: int, fp: str, ip: str, wallet: str = None) -> tuple[bool, str]:
+    u_row = await conn.fetchrow("SELECT is_whitelisted FROM users WHERE user_id = $1", user_id)
+    if u_row and u_row["is_whitelisted"] == 1:
+        return False, ""
+
+    if fp:
+        multi_fp = await conn.fetchval(
+            "SELECT user_id FROM users WHERE device_fingerprint = $1 AND user_id != $2 AND is_whitelisted = 0 LIMIT 1",
+            fp, user_id
+        )
+        if multi_fp:
+            return True, "كشف حسابات متعددة على نفس الجهاز (Anti-Multi Device)"
+
+    if wallet:
+        multi_wallet = await conn.fetchval(
+            "SELECT user_id FROM users WHERE saved_wallet = $1 AND user_id != $2 AND is_whitelisted = 0 LIMIT 1",
+            wallet, user_id
+        )
+        if multi_wallet:
+            return True, "كشف محفظة مستخدمة في أكثر من حساب (Anti-Multi Wallet)"
+
+    return False, ""
+
 async def api_manifest(request):
     return web.json_response(TON_MANIFEST)
 
@@ -1267,9 +1390,18 @@ async def api_save_wallet(request):
         user_id = int(data.get("user_id"))
         address = str(data.get("address", "")).strip()
         friendly_address = raw_to_user_friendly(address)
+        fp = str(data.get("fingerprint", ""))
+        client_ip = request.headers.get("X-Forwarded-For", request.remote)
 
         async with db_pool.acquire() as conn:
-            await conn.execute("UPDATE users SET saved_wallet = $1 WHERE user_id = $2", friendly_address, user_id)
+            is_fraud, reason = await check_multi_account_fraud(conn, user_id, fp, client_ip, friendly_address)
+            if is_fraud:
+                await conn.execute("UPDATE users SET is_banned = 1, ban_reason = $1 WHERE user_id = $2", reason, user_id)
+                return web.json_response({"ok": False, "msg": reason})
+
+            await conn.execute("UPDATE users SET saved_wallet = $1, device_fingerprint = $2, ip_address = $3 WHERE user_id = $4",
+                               friendly_address, fp, client_ip, user_id)
+
         return web.json_response({"ok": True, "address": friendly_address})
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
@@ -1278,23 +1410,27 @@ async def api_get_tasks(request):
     try:
         user_id = int(request.query.get("user_id", 0))
         async with db_pool.acquire() as conn:
-            # قنوات
             rows = await conn.fetch("SELECT id, title, channel_id, link, reward FROM dynamic_tasks WHERE is_active = 1 ORDER BY id DESC")
             tasks = [dict(r) for r in rows]
-            
-            # بوتات
+
+            group_rows = await conn.fetch("SELECT id, title, group_id, link, reward FROM dynamic_group_tasks WHERE is_active = 1 ORDER BY id DESC")
+            group_tasks = [dict(r) for r in group_rows]
+
             bot_rows = await conn.fetch("SELECT id, title, link, reward FROM dynamic_bot_tasks WHERE is_active = 1 ORDER BY id DESC")
             bot_tasks = [dict(r) for r in bot_rows]
 
-            u_row = await conn.fetchrow("SELECT tasks_completed, bot_tasks_completed FROM users WHERE user_id = $1", user_id)
+            u_row = await conn.fetchrow("SELECT tasks_completed, group_tasks_completed, bot_tasks_completed FROM users WHERE user_id = $1", user_id)
             completed_ids = json.loads(u_row["tasks_completed"]) if u_row and u_row["tasks_completed"] else []
+            completed_group_ids = json.loads(u_row["group_tasks_completed"]) if u_row and u_row["group_tasks_completed"] else []
             completed_bot_ids = json.loads(u_row["bot_tasks_completed"]) if u_row and u_row["bot_tasks_completed"] else []
 
         return web.json_response({
             "ok": True,
             "tasks": tasks,
+            "group_tasks": group_tasks,
             "bot_tasks": bot_tasks,
             "completed_ids": completed_ids,
+            "completed_group_ids": completed_group_ids,
             "completed_bot_ids": completed_bot_ids
         })
     except Exception as e:
@@ -1303,8 +1439,11 @@ async def api_get_tasks(request):
 async def api_get_user(request):
     try:
         user_id = int(request.query.get("user_id", 0))
+        fp = str(request.query.get("fp", ""))
+        client_ip = request.headers.get("X-Forwarded-For", request.remote)
         now = int(time.time())
 
+        # التحقق من الاشتراك الإجباري في القناة الرسمية
         is_sub = True
         try:
             member = await bot.get_chat_member(chat_id=SPONSOR_CHANNEL, user_id=user_id)
@@ -1314,6 +1453,11 @@ async def api_get_user(request):
             is_sub = True
 
         async with db_pool.acquire() as conn:
+            # فحص منع التعدد
+            is_fraud, reason = await check_multi_account_fraud(conn, user_id, fp, client_ip)
+            if is_fraud:
+                await conn.execute("UPDATE users SET is_banned = 1, ban_reason = $1 WHERE user_id = $2", reason, user_id)
+
             row = await conn.fetchrow("""
                 SELECT is_banned, ban_reason, olk_balance, ton_balance, mining_speed, miner_level,
                        saved_wallet, referred_by, ref_reward_claimed, activated_miner,
@@ -1331,7 +1475,8 @@ async def api_get_user(request):
                 olk = row["olk_balance"]
                 if row["activated_miner"] == 0:
                     olk += SIGNUP_BONUS
-                    await conn.execute("UPDATE users SET activated_miner = 1, olk_balance = $1 WHERE user_id = $2", olk, user_id)
+                    await conn.execute("UPDATE users SET activated_miner = 1, olk_balance = $1, device_fingerprint = $2, ip_address = $3 WHERE user_id = $4",
+                                       olk, fp, client_ip, user_id)
 
                 return web.json_response({
                     "ok": True,
@@ -1347,9 +1492,9 @@ async def api_get_user(request):
                 })
             else:
                 await conn.execute("""
-                    INSERT INTO users (user_id, last_mining_timestamp, mining_speed, olk_balance, activated_miner)
-                    VALUES ($1, $2, 0.25, $3, 1) ON CONFLICT (user_id) DO NOTHING
-                """, user_id, now, SIGNUP_BONUS)
+                    INSERT INTO users (user_id, last_mining_timestamp, mining_speed, olk_balance, activated_miner, device_fingerprint, ip_address)
+                    VALUES ($1, $2, 0.25, $3, 1, $4, $5) ON CONFLICT (user_id) DO NOTHING
+                """, user_id, now, SIGNUP_BONUS, fp, client_ip)
                 return web.json_response({
                     "ok": True,
                     "need_sub": False,
@@ -1369,12 +1514,19 @@ async def api_start_mining_session(request):
     try:
         data = await request.json()
         user_id = int(data.get("user_id"))
+        fp = str(data.get("fingerprint", ""))
+        client_ip = request.headers.get("X-Forwarded-For", request.remote)
         now = int(time.time())
 
         async with db_pool.acquire() as conn:
+            is_fraud, reason = await check_multi_account_fraud(conn, user_id, fp, client_ip)
+            if is_fraud:
+                await conn.execute("UPDATE users SET is_banned = 1, ban_reason = $1 WHERE user_id = $2", reason, user_id)
+                return web.json_response({"ok": False, "msg": reason})
+
             await conn.execute("""
-                UPDATE users SET session_start_timestamp = $1, session_active = 1 WHERE user_id = $2
-            """, now, user_id)
+                UPDATE users SET session_start_timestamp = $1, session_active = 1, device_fingerprint = $2, ip_address = $3 WHERE user_id = $4
+            """, now, fp, client_ip, user_id)
 
             row = await conn.fetchrow("SELECT referred_by, ref_reward_claimed FROM users WHERE user_id = $1", user_id)
             if row and row["referred_by"] and row["ref_reward_claimed"] == 0:
@@ -1462,11 +1614,11 @@ async def api_convert(request):
                 return web.json_response({"ok": False, "msg": "رصيد OLK غير كافٍ"})
 
             ton_add = amount / CONVERSION_RATE
-            new_folk = row["olk_balance"] - amount
+            new_olk = row["olk_balance"] - amount
             new_ton = row["ton_balance"] + ton_add
 
-            await conn.execute("UPDATE users SET olk_balance = $1, ton_balance = $2 WHERE user_id = $3", new_folk, new_ton, user_id)
-            return web.json_response({"ok": True, "olk_balance": new_folk, "ton_balance": new_ton})
+            await conn.execute("UPDATE users SET olk_balance = $1, ton_balance = $2 WHERE user_id = $3", new_olk, new_ton, user_id)
+            return web.json_response({"ok": True, "olk_balance": new_olk, "ton_balance": new_ton})
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
@@ -1548,6 +1700,39 @@ async def api_verify_channel_task(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
+async def api_verify_group_task(request):
+    try:
+        data = await request.json()
+        user_id = int(data.get("user_id"))
+        task_id = int(data.get("task_id"))
+
+        async with db_pool.acquire() as conn:
+            task = await conn.fetchrow("SELECT * FROM dynamic_group_tasks WHERE id = $1 AND is_active = 1", task_id)
+            if not task:
+                return web.json_response({"ok": False, "msg": "المجموعة غير متوفرة"})
+
+            row = await conn.fetchrow("SELECT group_tasks_completed FROM users WHERE user_id = $1", user_id)
+            tasks = json.loads(row["group_tasks_completed"]) if row and row["group_tasks_completed"] else []
+
+            if task_id in tasks:
+                return web.json_response({"ok": False, "msg": "تم استلام مكافأة هذه المجموعة مسبقاً!"})
+
+            try:
+                chat_member = await bot.get_chat_member(chat_id=task["group_id"], user_id=user_id)
+                if chat_member.status in ["left", "kicked"]:
+                    return web.json_response({"ok": False, "msg": "❌ لم تنضم للمجموعة بعد! انضم ثم تحقق."})
+            except Exception:
+                return web.json_response({"ok": False, "msg": "⚠️ تعذر التحقق، تأكد من إضافة البوت مشرفاً في المجموعة."})
+
+            tasks.append(task_id)
+            reward = task["reward"]
+            await conn.execute("UPDATE users SET olk_balance = olk_balance + $1, group_tasks_completed = $2 WHERE user_id = $3",
+                               reward, json.dumps(tasks), user_id)
+
+            return web.json_response({"ok": True, "reward": reward, "msg": f"✅ مبروك! تمت إضافة +{reward:.0f} OLK"})
+    except Exception as e:
+        return web.json_response({"ok": False, "msg": str(e)})
+
 async def api_verify_bot_task(request):
     try:
         data = await request.json()
@@ -1591,7 +1776,10 @@ def build_main_admin_keyboard(perms):
         buttons.append([InlineKeyboardButton(text="⏳ طلبات السحب المعلقة", callback_data="adm_view_withdraws")])
     if perms.get("can_manage_tasks"):
         buttons.append([InlineKeyboardButton(text="📢 إدارة مهام القنوات (إضافة/حذف)", callback_data="adm_tasks_menu")])
+        buttons.append([InlineKeyboardButton(text="👥 إدارة مهام المجموعات (إضافة/حذف)", callback_data="adm_groups_menu")])
         buttons.append([InlineKeyboardButton(text="🤖 إدارة مهام البوتات (إضافة/حذف)", callback_data="adm_bot_tasks_menu")])
+    if perms.get("can_ban_users"):
+        buttons.append([InlineKeyboardButton(text="🔓 فك الحظر عن مستخدم (Unban)", callback_data="adm_unban_start")])
     if perms.get("can_broadcast"):
         buttons.append([InlineKeyboardButton(text="📨 إرسال إذاعة عامة (Broadcast)", callback_data="adm_start_bc")])
     if perms.get("is_super"):
@@ -1612,7 +1800,7 @@ async def render_admin_perms_keyboard(target_id: int):
         [InlineKeyboardButton(text=f"إدارة السحب: {mark(row['can_manage_withdrawals'])}", callback_data=f"adm_tog_{target_id}_w")],
         [InlineKeyboardButton(text=f"إدارة المهام: {mark(row['can_manage_tasks'])}", callback_data=f"adm_tog_{target_id}_t")],
         [InlineKeyboardButton(text=f"إرسال إذاعة: {mark(row['can_broadcast'])}", callback_data=f"adm_tog_{target_id}_b")],
-        [InlineKeyboardButton(text=f"حظر المستخدمين: {mark(row['can_ban_users'])}", callback_data=f"adm_tog_{target_id}_u")],
+        [InlineKeyboardButton(text=f"حظر وفك حظر: {mark(row['can_ban_users'])}", callback_data=f"adm_tog_{target_id}_u")],
         [InlineKeyboardButton(text="🗑️ إزالة هذا المشرف بالكامل", callback_data=f"adm_rm_admin_{target_id}")],
         [InlineKeyboardButton(text="🔙 رجوع لقائمة المشرفين", callback_data="adm_manage_admins")]
     ]
@@ -1629,7 +1817,7 @@ async def start_handler(message: Message, command: CommandObject, state: FSMCont
         user = await conn.fetchrow("SELECT is_banned, ban_reason FROM users WHERE user_id = $1", user_id)
 
         if user and user["is_banned"] == 1:
-            await message.answer(f"⛔ هذا الحساب محظور: {user['ban_reason']}")
+            await message.answer(f"⛔ هذا الحساب محظور:\nالسبب: {user['ban_reason']}\nإذا كنت تعتقد أن هذا خطأ تواصل مع الإدارة.")
             return
 
         if not user and ref_param:
@@ -1657,6 +1845,7 @@ async def start_handler(message: Message, command: CommandObject, state: FSMCont
         "⛏️ **جلسات تعدين يدوية:** اضغط على زر التشغيل لبدء الإنتاج السحابي.\n"
         "💰 **أرباح فورية ومضمونة:** أرباحك تذهب مباشرة لمحفظتك داخل التطبيق.\n"
         "🎁 **مكافأة البدء:** احصل على **+50 OLK** فور تشغيل الجلسة الأولى!\n"
+        "🌐 **اللغات:** يدعم التطبيق العربية والإنجليزية بزر واحد داخل الواجهة.\n"
         "──────────────────────\n"
         "اختر أحد الخيارات للبدء:"
     )
@@ -1715,23 +1904,81 @@ async def cb_admin_stats(callback: CallbackQuery):
         users_count = row_users[0] or 0
         total_olk = row_users[1] or 0.0
         total_ton = row_users[2] or 0.0
+        banned_users = await conn.fetchval("SELECT COUNT(*) FROM users WHERE is_banned = 1") or 0
         pending_withdraws = await conn.fetchval("SELECT COUNT(*) FROM withdrawals WHERE status = 'PENDING'") or 0
         active_tasks = await conn.fetchval("SELECT COUNT(*) FROM dynamic_tasks WHERE is_active = 1") or 0
+        active_group_tasks = await conn.fetchval("SELECT COUNT(*) FROM dynamic_group_tasks WHERE is_active = 1") or 0
         active_bot_tasks = await conn.fetchval("SELECT COUNT(*) FROM dynamic_bot_tasks WHERE is_active = 1") or 0
 
     stats_msg = (
         "📊 **إحصائيات المنظومة الحية:**\n"
         "──────────────────────\n"
-        f"👥 إجمالي المستخدمين: `{users_count}`\n"
+        f"👥 إجمالي المستخدمين النشطين: `{users_count}`\n"
+        f"🚫 المحظورين (تعدد/مخالفات): `{banned_users}`\n"
         f"🪙 إجمالي رصيد OLK: `{total_olk:.2f}`\n"
         f"💎 إجمالي رصيد TON: `{total_ton:.4f}`\n"
         f"⏳ طلبات السحب المعلقة: `{pending_withdraws}`\n"
         f"📢 مهام القنوات: `{active_tasks}`\n"
+        f"👥 مهام المجموعات: `{active_group_tasks}`\n"
         f"🤖 مهام البوتات: `{active_bot_tasks}`\n"
         "──────────────────────"
     )
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 العودة للرئيسية", callback_data="adm_home")]])
     await callback.message.edit_text(stats_msg, parse_mode="Markdown", reply_markup=kb)
+
+# فك الحظر
+@dp.callback_query(F.data == "adm_unban_start")
+async def cb_unban_start(callback: CallbackQuery, state: FSMContext):
+    perms = await get_admin_permissions(callback.from_user.id)
+    if not perms or not perms.get("can_ban_users"):
+        await callback.answer("⛔ ليس لديك صلاحية فك الحظر", show_alert=True)
+        return
+    await callback.answer()
+    await callback.message.answer("🆔 أرسل الآن **معرّف المستخدم (Telegram ID)** لفك الحظر عنه فوراً وإضافته للقائمة البيضاء:")
+    await state.set_state(UnbanStates.waiting_for_id)
+
+@dp.message(UnbanStates.waiting_for_id)
+async def state_execute_unban(message: Message, state: FSMContext):
+    try: target_id = int(message.text.strip())
+    except ValueError:
+        await message.answer("❌ يرجى إدخال رقم المعرف صحيحاً:")
+        return
+
+    await state.clear()
+    async with db_pool.acquire() as conn:
+        await conn.execute("UPDATE users SET is_banned = 0, ban_reason = NULL, is_whitelisted = 1 WHERE user_id = $1", target_id)
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 العودة للوحة التحكم", callback_data="adm_home")]])
+    await message.answer(f"✅ تم فك الحظر عن `{target_id}` بنجاح وإدراجه في القائمة البيضاء لمنع الحظر التلقائي!", reply_markup=kb, parse_mode="Markdown")
+
+@dp.message(Command("unban"))
+async def unban_user_direct(message: Message, command: CommandObject):
+    perms = await get_admin_permissions(message.from_user.id)
+    if not perms or not perms.get("can_ban_users"): return
+    if not command.args:
+        await message.answer("⚠️ الصيغة:\n`/unban USER_ID`", parse_mode="Markdown")
+        return
+    try:
+        target_id = int(command.args.strip())
+        async with db_pool.acquire() as conn:
+            await conn.execute("UPDATE users SET is_banned = 0, ban_reason = NULL, is_whitelisted = 1 WHERE user_id = $1", target_id)
+        await message.answer(f"✅ تم فك الحظر عن `{target_id}` بنجاح!", parse_mode="Markdown")
+    except ValueError:
+        await message.answer("❌ المعرف يجب أن يكون رقماً.")
+
+@dp.message(Command("ban"))
+async def ban_user_direct(message: Message, command: CommandObject):
+    perms = await get_admin_permissions(message.from_user.id)
+    if not perms or not perms.get("can_ban_users"): return
+    if not command.args:
+        await message.answer("⚠️ الصيغة:\n`/ban USER_ID سبب الحظر`", parse_mode="Markdown")
+        return
+    parts = command.args.split(maxsplit=1)
+    target_id = int(parts[0])
+    reason = parts[1] if len(parts) > 1 else "حظر إداري"
+    async with db_pool.acquire() as conn:
+        await conn.execute("UPDATE users SET is_banned = 1, ban_reason = $1, is_whitelisted = 0 WHERE user_id = $2", reason, target_id)
+    await message.answer(f"✅ تم حظر المستخدم `{target_id}` بنجاح.", parse_mode="Markdown")
 
 @dp.callback_query(F.data == "adm_view_withdraws")
 async def cb_view_withdraws(callback: CallbackQuery):
@@ -1767,7 +2014,7 @@ async def cb_view_withdraws(callback: CallbackQuery):
             reply_markup=kb
         )
 
-# مهام القنوات
+# قنوات
 @dp.callback_query(F.data == "adm_tasks_menu")
 async def cb_tasks_menu(callback: CallbackQuery):
     perms = await get_admin_permissions(callback.from_user.id)
@@ -1781,18 +2028,15 @@ async def cb_tasks_menu(callback: CallbackQuery):
 
     buttons = [[InlineKeyboardButton(text="➕ إضافة مهمة قناة جديدة", callback_data="adm_add_task_start")]]
     for r in rows:
-        buttons.append([
-            InlineKeyboardButton(text=f"🗑️ حذف: {r['title']} (+{r['reward']} OLK)", callback_data=f"adm_del_task_{r['id']}")
-        ])
+        buttons.append([InlineKeyboardButton(text=f"🗑️ حذف: {r['title']} (+{r['reward']} OLK)", callback_data=f"adm_del_task_{r['id']}")])
     buttons.append([InlineKeyboardButton(text="🔙 العودة للرئيسية", callback_data="adm_home")])
 
-    await callback.message.edit_text("📢 **إدارة مهام القنوات:**\nيمكنك إضافة قنوات جديدة تظهر فوراً بالتطبيق أو حذف القنوات القديمة:", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+    await callback.message.edit_text("📢 **إدارة مهام القنوات:**", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
 
 @dp.callback_query(F.data == "adm_add_task_start")
 async def cb_add_task_start(callback: CallbackQuery, state: FSMContext):
     perms = await get_admin_permissions(callback.from_user.id)
-    if not perms or not perms.get("can_manage_tasks"):
-        return
+    if not perms or not perms.get("can_manage_tasks"): return
     await callback.answer()
     await callback.message.answer("📝 أرسل الآن **عنوان مهمة القناة**:")
     await state.set_state(AddTaskStates.waiting_for_title)
@@ -1800,7 +2044,7 @@ async def cb_add_task_start(callback: CallbackQuery, state: FSMContext):
 @dp.message(AddTaskStates.waiting_for_title)
 async def state_task_title(message: Message, state: FSMContext):
     await state.update_data(title=message.text.strip())
-    await message.answer("📢 أرسل الآن **معرّف القناة** (مثال: `@channel_name` أو Chat ID مع التأكد من إضافة البوت مشرفاً فيها):")
+    await message.answer("📢 أرسل الآن **معرّف القناة** (مثال: `@channel_name`):")
     await state.set_state(AddTaskStates.waiting_for_channel_id)
 
 @dp.message(AddTaskStates.waiting_for_channel_id)
@@ -1817,36 +2061,102 @@ async def state_task_link(message: Message, state: FSMContext):
 
 @dp.message(AddTaskStates.waiting_for_reward)
 async def state_task_reward(message: Message, state: FSMContext):
-    try:
-        reward = float(message.text.strip())
+    try: reward = float(message.text.strip())
     except ValueError:
         await message.answer("❌ يرجى إدخال رقم صحيح للمكافأة:")
         return
 
     data = await state.get_data()
     await state.clear()
-
     async with db_pool.acquire() as conn:
-        await conn.execute("""
-            INSERT INTO dynamic_tasks (title, channel_id, link, reward)
-            VALUES ($1, $2, $3, $4)
-        """, data["title"], data["channel_id"], data["link"], reward)
+        await conn.execute("INSERT INTO dynamic_tasks (title, channel_id, link, reward) VALUES ($1, $2, $3, $4)",
+                           data["title"], data["channel_id"], data["link"], reward)
 
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 العودة لقائمة القنوات", callback_data="adm_tasks_menu")]])
-    await message.answer(f"🎉 **تمت إضافة مهمة القناة بنجاح!**\nالعنوان: {data['title']}\nالمكافأة: +{reward} OLK", reply_markup=kb, parse_mode="Markdown")
+    await message.answer(f"🎉 تمت إضافة مهمة القناة: {data['title']}", reply_markup=kb)
 
 @dp.callback_query(F.data.startswith("adm_del_task_"))
 async def cb_del_task(callback: CallbackQuery):
     perms = await get_admin_permissions(callback.from_user.id)
-    if not perms or not perms.get("can_manage_tasks"):
-        return
+    if not perms or not perms.get("can_manage_tasks"): return
     t_id = int(callback.data.split("_")[3])
     async with db_pool.acquire() as conn:
         await conn.execute("UPDATE dynamic_tasks SET is_active = 0 WHERE id = $1", t_id)
-    await callback.answer("🗑️ تم حذف المهمة بنجاح!", show_alert=True)
+    await callback.answer("🗑️ تم حذف المهمة!", show_alert=True)
     await cb_tasks_menu(callback)
 
-# مهام البوتات
+# مجموعات
+@dp.callback_query(F.data == "adm_groups_menu")
+async def cb_groups_menu(callback: CallbackQuery):
+    perms = await get_admin_permissions(callback.from_user.id)
+    if not perms or not perms.get("can_manage_tasks"):
+        await callback.answer("⛔ ليس لديك صلاحية إدارة المهام", show_alert=True)
+        return
+    await callback.answer()
+
+    async with db_pool.acquire() as conn:
+        rows = await conn.fetch("SELECT id, title, reward FROM dynamic_group_tasks WHERE is_active = 1 ORDER BY id DESC")
+
+    buttons = [[InlineKeyboardButton(text="➕ إضافة مهمة مجموعة جديدة", callback_data="adm_add_group_start")]]
+    for r in rows:
+        buttons.append([InlineKeyboardButton(text=f"🗑️ حذف: {r['title']} (+{r['reward']} OLK)", callback_data=f"adm_del_group_{r['id']}")])
+    buttons.append([InlineKeyboardButton(text="🔙 العودة للرئيسية", callback_data="adm_home")])
+
+    await callback.message.edit_text("👥 **إدارة مهام المجموعات:**", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+
+@dp.callback_query(F.data == "adm_add_group_start")
+async def cb_add_group_start(callback: CallbackQuery, state: FSMContext):
+    perms = await get_admin_permissions(callback.from_user.id)
+    if not perms or not perms.get("can_manage_tasks"): return
+    await callback.answer()
+    await callback.message.answer("📝 أرسل الآن **عنوان مهمة المجموعة**:")
+    await state.set_state(AddGroupTaskStates.waiting_for_title)
+
+@dp.message(AddGroupTaskStates.waiting_for_title)
+async def state_group_title(message: Message, state: FSMContext):
+    await state.update_data(title=message.text.strip())
+    await message.answer("👥 أرسل الآن **معرّف المجموعة** (مثال: `@group_name` أو الـ Chat ID):")
+    await state.set_state(AddGroupTaskStates.waiting_for_group_id)
+
+@dp.message(AddGroupTaskStates.waiting_for_group_id)
+async def state_group_id(message: Message, state: FSMContext):
+    await state.update_data(group_id=message.text.strip())
+    await message.answer("🔗 أرسل الآن **رابط المجموعة**:")
+    await state.set_state(AddGroupTaskStates.waiting_for_link)
+
+@dp.message(AddGroupTaskStates.waiting_for_link)
+async def state_group_link(message: Message, state: FSMContext):
+    await state.update_data(link=message.text.strip())
+    await message.answer("💰 أرسل **قيمة المكافأة** بعملة OLK (مثال: 15):")
+    await state.set_state(AddGroupTaskStates.waiting_for_reward)
+
+@dp.message(AddGroupTaskStates.waiting_for_reward)
+async def state_group_reward(message: Message, state: FSMContext):
+    try: reward = float(message.text.strip())
+    except ValueError:
+        await message.answer("❌ يرجى إدخال رقم صحيح للمكافأة:")
+        return
+
+    data = await state.get_data()
+    await state.clear()
+    async with db_pool.acquire() as conn:
+        await conn.execute("INSERT INTO dynamic_group_tasks (title, group_id, link, reward) VALUES ($1, $2, $3, $4)",
+                           data["title"], data["group_id"], data["link"], reward)
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 العودة لقائمة المجموعات", callback_data="adm_groups_menu")]])
+    await message.answer(f"🎉 تمت إضافة مهمة المجموعة: {data['title']}", reply_markup=kb)
+
+@dp.callback_query(F.data.startswith("adm_del_group_"))
+async def cb_del_group(callback: CallbackQuery):
+    perms = await get_admin_permissions(callback.from_user.id)
+    if not perms or not perms.get("can_manage_tasks"): return
+    t_id = int(callback.data.split("_")[3])
+    async with db_pool.acquire() as conn:
+        await conn.execute("UPDATE dynamic_group_tasks SET is_active = 0 WHERE id = $1", t_id)
+    await callback.answer("🗑️ تم حذف مهمة المجموعة!", show_alert=True)
+    await cb_groups_menu(callback)
+
+# بوتات
 @dp.callback_query(F.data == "adm_bot_tasks_menu")
 async def cb_bot_tasks_menu(callback: CallbackQuery):
     perms = await get_admin_permissions(callback.from_user.id)
@@ -1860,26 +2170,23 @@ async def cb_bot_tasks_menu(callback: CallbackQuery):
 
     buttons = [[InlineKeyboardButton(text="➕ إضافة مهمة بوت جديدة", callback_data="adm_add_bot_task_start")]]
     for r in rows:
-        buttons.append([
-            InlineKeyboardButton(text=f"🗑️ حذف: {r['title']} (+{r['reward']} OLK)", callback_data=f"adm_del_bottask_{r['id']}")
-        ])
+        buttons.append([InlineKeyboardButton(text=f"🗑️ حذف: {r['title']} (+{r['reward']} OLK)", callback_data=f"adm_del_bottask_{r['id']}")])
     buttons.append([InlineKeyboardButton(text="🔙 العودة للرئيسية", callback_data="adm_home")])
 
-    await callback.message.edit_text("🤖 **إدارة مهام البوتات:**\nيمكنك إضافة بوتات جديدة وتحديد رابط الإحالة الخاص بها والمكافأة:", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+    await callback.message.edit_text("🤖 **إدارة مهام البوتات:**", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
 
 @dp.callback_query(F.data == "adm_add_bot_task_start")
 async def cb_add_bot_task_start(callback: CallbackQuery, state: FSMContext):
     perms = await get_admin_permissions(callback.from_user.id)
-    if not perms or not perms.get("can_manage_tasks"):
-        return
+    if not perms or not perms.get("can_manage_tasks"): return
     await callback.answer()
-    await callback.message.answer("📝 أرسل **اسم أو عنوان البوت** (مثال: ابدأ في بوت Blum):")
+    await callback.message.answer("📝 أرسل **اسم أو عنوان البوت**:")
     await state.set_state(AddBotTaskStates.waiting_for_title)
 
 @dp.message(AddBotTaskStates.waiting_for_title)
 async def state_bot_task_title(message: Message, state: FSMContext):
     await state.update_data(title=message.text.strip())
-    await message.answer("🔗 أرسل **رابط البوت أو رابط إحالتك للبوت** (مثال: `https://t.me/BotFather?start=...`):")
+    await message.answer("🔗 أرسل **رابط البوت أو رابط إحالتك للبوت**:")
     await state.set_state(AddBotTaskStates.waiting_for_link)
 
 @dp.message(AddBotTaskStates.waiting_for_link)
@@ -1890,33 +2197,28 @@ async def state_bot_task_link(message: Message, state: FSMContext):
 
 @dp.message(AddBotTaskStates.waiting_for_reward)
 async def state_bot_task_reward(message: Message, state: FSMContext):
-    try:
-        reward = float(message.text.strip())
+    try: reward = float(message.text.strip())
     except ValueError:
         await message.answer("❌ يرجى إدخال رقم صحيح للمكافأة:")
         return
 
     data = await state.get_data()
     await state.clear()
-
     async with db_pool.acquire() as conn:
-        await conn.execute("""
-            INSERT INTO dynamic_bot_tasks (title, link, reward)
-            VALUES ($1, $2, $3)
-        """, data["title"], data["link"], reward)
+        await conn.execute("INSERT INTO dynamic_bot_tasks (title, link, reward) VALUES ($1, $2, $3)",
+                           data["title"], data["link"], reward)
 
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 العودة لقائمة البوتات", callback_data="adm_bot_tasks_menu")]])
-    await message.answer(f"🎉 **تمت إضافة مهمة البوت بنجاح!**\nالعنوان: {data['title']}\nالمكافأة: +{reward} OLK", reply_markup=kb, parse_mode="Markdown")
+    await message.answer(f"🎉 تمت إضافة مهمة البوت: {data['title']}", reply_markup=kb)
 
 @dp.callback_query(F.data.startswith("adm_del_bottask_"))
 async def cb_del_bot_task(callback: CallbackQuery):
     perms = await get_admin_permissions(callback.from_user.id)
-    if not perms or not perms.get("can_manage_tasks"):
-        return
+    if not perms or not perms.get("can_manage_tasks"): return
     t_id = int(callback.data.split("_")[3])
     async with db_pool.acquire() as conn:
         await conn.execute("UPDATE dynamic_bot_tasks SET is_active = 0 WHERE id = $1", t_id)
-    await callback.answer("🗑️ تم حذف مهمة البوت بنجاح!", show_alert=True)
+    await callback.answer("🗑️ تم حذف مهمة البوت!", show_alert=True)
     await cb_bot_tasks_menu(callback)
 
 # إدارة المشرفين
@@ -1935,20 +2237,18 @@ async def cb_manage_admins(callback: CallbackQuery):
         buttons.append([InlineKeyboardButton(text=f"⚙️ المشرف: {r['user_id']}", callback_data=f"adm_edit_admin_{r['user_id']}")])
     buttons.append([InlineKeyboardButton(text="🔙 العودة للرئيسية", callback_data="adm_home")])
 
-    await callback.message.edit_text("👑 **إدارة المشرفين والصلاحيات:**\nيمكنك تعيين مشرفين جدد وتحديد ما يظهر لكل منهم:", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+    await callback.message.edit_text("👑 **إدارة المشرفين والصلاحيات:**", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
 
 @dp.callback_query(F.data == "adm_add_admin_start")
 async def cb_add_admin_start(callback: CallbackQuery, state: FSMContext):
-    if callback.from_user.id != SUPER_ADMIN_ID:
-        return
+    if callback.from_user.id != SUPER_ADMIN_ID: return
     await callback.answer()
     await callback.message.answer("🆔 أرسل الآن **معرّف المشرف (Telegram ID)** الذي تريد إضافته:")
     await state.set_state(AddAdminStates.waiting_for_id)
 
 @dp.message(AddAdminStates.waiting_for_id)
 async def state_save_new_admin(message: Message, state: FSMContext):
-    try:
-        new_admin_id = int(message.text.strip())
+    try: new_admin_id = int(message.text.strip())
     except ValueError:
         await message.answer("❌ المعرف يجب أن يكون رقماً صحيحاً:")
         return
@@ -1958,65 +2258,41 @@ async def state_save_new_admin(message: Message, state: FSMContext):
     async with db_pool.acquire() as conn:
         await conn.execute("""
             INSERT INTO bot_admins (user_id, can_manage_withdrawals, can_manage_tasks, can_broadcast, can_ban_users, created_at)
-            VALUES ($1, 1, 0, 0, 0, $2)
-            ON CONFLICT (user_id) DO NOTHING
+            VALUES ($1, 1, 0, 0, 0, $2) ON CONFLICT (user_id) DO NOTHING
         """, new_admin_id, now)
 
-    await message.answer(f"✅ تم إضافة المشرف `{new_admin_id}` بنجاح! يمكنك الآن ضبط صلاحياته من قائمة المشرفين.", parse_mode="Markdown")
+    await message.answer(f"✅ تم إضافة المشرف `{new_admin_id}` بنجاح!", parse_mode="Markdown")
 
 @dp.callback_query(F.data.startswith("adm_edit_admin_"))
 async def cb_edit_admin(callback: CallbackQuery):
     await callback.answer()
-    if callback.from_user.id != SUPER_ADMIN_ID:
-        return
+    if callback.from_user.id != SUPER_ADMIN_ID: return
     target_id = int(callback.data.split("_")[3])
     kb = await render_admin_perms_keyboard(target_id)
-    if not kb:
-        await callback.message.answer("المشرف غير موجود")
-        return
-
-    await callback.message.edit_text(
-        f"⚙️ **ضبط صلاحيات المشرف:** `{target_id}`\nانقر على أي خيار لتفعيله أو تعطيله فورياً:",
-        parse_mode="Markdown",
-        reply_markup=kb
-    )
+    if not kb: return
+    await callback.message.edit_text(f"⚙️ **ضبط صلاحيات المشرف:** `{target_id}`", parse_mode="Markdown", reply_markup=kb)
 
 @dp.callback_query(F.data.startswith("adm_tog_"))
 async def cb_toggle_permission(callback: CallbackQuery):
     await callback.answer()
-    if callback.from_user.id != SUPER_ADMIN_ID:
-        return
+    if callback.from_user.id != SUPER_ADMIN_ID: return
     parts = callback.data.split("_")
-    target_id = int(parts[2])
-    field_code = parts[3]
-
-    col_map = {
-        "w": "can_manage_withdrawals",
-        "t": "can_manage_tasks",
-        "b": "can_broadcast",
-        "u": "can_ban_users"
-    }
+    target_id, field_code = int(parts[2]), parts[3]
+    col_map = {"w": "can_manage_withdrawals", "t": "can_manage_tasks", "b": "can_broadcast", "u": "can_ban_users"}
     col = col_map.get(field_code)
-    if not col:
-        return
+    if not col: return
 
     async with db_pool.acquire() as conn:
-        await conn.execute(
-            f"UPDATE bot_admins SET {col} = (CASE WHEN {col} = 1 THEN 0 ELSE 1 END) WHERE user_id = $1",
-            target_id
-        )
+        await conn.execute(f"UPDATE bot_admins SET {col} = (CASE WHEN {col} = 1 THEN 0 ELSE 1 END) WHERE user_id = $1", target_id)
 
     kb = await render_admin_perms_keyboard(target_id)
     if kb:
-        try:
-            await callback.message.edit_reply_markup(reply_markup=kb)
-        except Exception:
-            pass
+        try: await callback.message.edit_reply_markup(reply_markup=kb)
+        except Exception: pass
 
 @dp.callback_query(F.data.startswith("adm_rm_admin_"))
 async def cb_remove_admin(callback: CallbackQuery):
-    if callback.from_user.id != SUPER_ADMIN_ID:
-        return
+    if callback.from_user.id != SUPER_ADMIN_ID: return
     target_id = int(callback.data.split("_")[3])
     async with db_pool.acquire() as conn:
         await conn.execute("DELETE FROM bot_admins WHERE user_id = $1", target_id)
@@ -2055,8 +2331,7 @@ async def process_broadcast(message: Message, state: FSMContext):
 @dp.callback_query(F.data.startswith("adm_app_"))
 async def approve_withdraw(callback: CallbackQuery):
     perms = await get_admin_permissions(callback.from_user.id)
-    if not perms or not perms.get("can_manage_withdrawals"):
-        return
+    if not perms or not perms.get("can_manage_withdrawals"): return
     await callback.answer()
     w_id = int(callback.data.split("_")[2])
     async with db_pool.acquire() as conn:
@@ -2066,15 +2341,13 @@ async def approve_withdraw(callback: CallbackQuery):
             await conn.execute("UPDATE withdrawals SET status = 'APPROVED' WHERE id = $1", w_id)
             try:
                 await bot.send_message(chat_id=uid, text=f"🎉 **تمت الموافقة ودفع سحب {amount:.4f} TON لمحفظتك!**", parse_mode="Markdown")
-            except Exception:
-                pass
+            except Exception: pass
     await callback.message.edit_text(callback.message.text + "\n\n✅ **تمت الموافقة والدفع بنجاح.**")
 
 @dp.callback_query(F.data.startswith("adm_rej_"))
 async def reject_withdraw(callback: CallbackQuery):
     perms = await get_admin_permissions(callback.from_user.id)
-    if not perms or not perms.get("can_manage_withdrawals"):
-        return
+    if not perms or not perms.get("can_manage_withdrawals"): return
     await callback.answer()
     w_id = int(callback.data.split("_")[2])
     async with db_pool.acquire() as conn:
@@ -2085,8 +2358,7 @@ async def reject_withdraw(callback: CallbackQuery):
             await conn.execute("UPDATE withdrawals SET status = 'REJECTED' WHERE id = $1", w_id)
             try:
                 await bot.send_message(chat_id=uid, text=f"❌ **تم رفض طلب السحب وإعادة {amount:.4f} TON لرصيدك.**", parse_mode="Markdown")
-            except Exception:
-                pass
+            except Exception: pass
     await callback.message.edit_text(callback.message.text + "\n\n❌ **تم رفض الطلب وإعادة الرصيد.**")
 
 async def web_handler(request):
@@ -2094,7 +2366,7 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("OLK Cyber Session & Admin Engine is LIVE...")
+    print("OLK Cyber Session, Anti-Multi & Admin Engine is LIVE...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
@@ -2109,6 +2381,7 @@ async def main():
     app.router.add_post("/api/convert", api_convert)
     app.router.add_post("/api/withdraw", api_withdraw)
     app.router.add_post("/api/verify_channel_task", api_verify_channel_task)
+    app.router.add_post("/api/verify_group_task", api_verify_group_task)
     app.router.add_post("/api/verify_bot_task", api_verify_bot_task)
 
     runner = web.AppRunner(app)
