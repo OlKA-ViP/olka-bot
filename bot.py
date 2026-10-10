@@ -26,14 +26,14 @@ PROJECT_TON_WALLET = "UQB3Xs8jkbebkVumWJlnEmDkjN4YXsZuHPrXSpZT1RtmZrCB"
 
 CONVERSION_RATE = 10000
 
-# الحد الأدنى للسحب تم تعديله إلى 0.05 TON (Gram)
+# الحد الأدنى للسحب 0.05 TON (Gram)
 MIN_WITHDRAW_TON = 0.05
 
 REFERRAL_REWARD = 70.0
 SIGNUP_BONUS = 50.0
 
-# سرعة التعدين الأساسية تم تعديلها إلى 0.27 TH/s
-DEFAULT_SPEED = 0.27
+# سرعة التعدين للمستخدمين غير الدافعين 0.21 TH/s
+DEFAULT_SPEED = 0.21
 
 WEBAPP_URL = "https://olka-bot-service.onrender.com"
 
@@ -430,7 +430,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
 
         <div class="central-rig-emblem">
           <i class="fa-solid fa-microchip"></i>
-          <div class="speed-badge" id="speed-display">0.27 TH/s</div>
+          <div class="speed-badge" id="speed-display">0.21 TH/s</div>
         </div>
 
         <button class="btn-main-action" id="btn-session-control" onclick="handleMiningAction()">
@@ -439,7 +439,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب الباقات (دفع مباشر بالمحفظة) -->
+    <!-- تبويب الباقات (بدون أقواس) -->
     <div class="page-tab" id="tab-miners">
       <div class="card-panel">
         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -447,27 +447,27 @@ MINI_APP_HTML = """<!DOCTYPE html>
         </div>
 
         <div class="plan-card">
-          <div><div class="plan-info-title">CPU Micro Rig</div><div class="plan-info-sub">+0.15 TH/s (~66.7 OLK/day)</div></div>
+          <div><div class="plan-info-title">CPU Micro Rig</div><div class="plan-info-sub">+0.15 TH/s</div></div>
           <button class="btn-buy-plan" onclick="purchasePlan(0.1, 0.15)">0.1 TON</button>
         </div>
         <div class="plan-card">
-          <div><div class="plan-info-title">GPU Pro Miner</div><div class="plan-info-sub">+0.77 TH/s (~333.3 OLK/day)</div></div>
+          <div><div class="plan-info-title">GPU Pro Miner</div><div class="plan-info-sub">+0.77 TH/s</div></div>
           <button class="btn-buy-plan" onclick="purchasePlan(0.5, 0.77)">0.5 TON</button>
         </div>
         <div class="plan-card">
-          <div><div class="plan-info-title">ASIC Mini Rig</div><div class="plan-info-sub">+1.55 TH/s (~666.7 OLK/day)</div></div>
+          <div><div class="plan-info-title">ASIC Mini Rig</div><div class="plan-info-sub">+1.55 TH/s</div></div>
           <button class="btn-buy-plan" onclick="purchasePlan(1.0, 1.55)">1.0 TON</button>
         </div>
         <div class="plan-card">
-          <div><div class="plan-info-title">Titan Quantum Rig</div><div class="plan-info-sub">+3.86 TH/s (~1,666.7 OLK/day)</div></div>
+          <div><div class="plan-info-title">Titan Quantum Rig</div><div class="plan-info-sub">+3.86 TH/s</div></div>
           <button class="btn-buy-plan" onclick="purchasePlan(2.5, 3.86)">2.5 TON</button>
         </div>
         <div class="plan-card">
-          <div><div class="plan-info-title">Enterprise Mining Node</div><div class="plan-info-sub">+7.72 TH/s (~3,333.3 OLK/day)</div></div>
+          <div><div class="plan-info-title">Enterprise Mining Node</div><div class="plan-info-sub">+7.72 TH/s</div></div>
           <button class="btn-buy-plan" onclick="purchasePlan(5.0, 7.72)">5.0 TON</button>
         </div>
         <div class="plan-card" style="border: 1.5px solid var(--gold-neon);">
-          <div><div class="plan-info-title" style="color:var(--gold-neon);">Apex VIP Supercluster</div><div class="plan-info-sub" style="color:var(--gold-neon);">+15.43 TH/s (~6,666.7 OLK/day)</div></div>
+          <div><div class="plan-info-title" style="color:var(--gold-neon);">Apex VIP Supercluster</div><div class="plan-info-sub" style="color:var(--gold-neon);">+15.43 TH/s</div></div>
           <button class="btn-buy-plan" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#000;" onclick="purchasePlan(10.0, 15.43)">10.0 TON</button>
         </div>
       </div>
@@ -481,7 +481,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
           <span style="font-size:11px; color:var(--cyan-neon); direction:ltr;">1 TON = 10,000 OLK</span>
         </div>
         <div class="convert-input-box">
-          <input type="number" id="swap-olk-input" class="convert-input" placeholder="1000" oninput="calcSwap()">
+          <input type="number" id="swap-folk-input" class="convert-input" placeholder="1000" oninput="calcSwap()">
           <button style="background:#1e3d6b; border:1px solid var(--gold-neon); color:var(--gold-neon); padding:5px 12px; border-radius:8px; font-size:11px; font-weight:800; cursor:pointer;" onclick="setMaxSwap()">MAX</button>
         </div>
         <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted);">
@@ -504,14 +504,37 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب الإحالات -->
+    <!-- تبويب الإحالات المطور (مع عرض الإحصائيات وأسماء المدعوين) -->
     <div class="page-tab" id="tab-frens">
       <div class="card-panel">
         <div style="font-weight:bold; color:var(--cyan-neon); font-size:14px;"><i class="fa-solid fa-users"></i> <span id="t-frens-title">شبكة التعدين التشاركية</span></div>
         <div style="font-size:12px; color:#cbd5e1; line-height:1.6;" id="t-frens-desc">
           شارك رابط جهازك واحصل على <strong>70 OLK</strong> فور قيام صديقك بالاشتراك في القناة وتشغيل أول جلسة تعدين!
         </div>
+
         <button class="btn-main-action" onclick="copyInvite()"><i class="fa-solid fa-copy"></i> <span id="t-btn-copy-invite">نسخ رابط الدعوة الخاص بي</span></button>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
+          <div style="background:#081324; border:1px solid var(--card-border); border-radius:12px; padding:10px; text-align:center;">
+            <div style="font-size:11px; color:var(--text-muted);" id="t-total-invites-lbl">إجمالي الإحالات</div>
+            <div style="font-size:18px; font-weight:900; color:#fff; margin-top:4px;" id="ref-count-val">0</div>
+          </div>
+          <div style="background:#081324; border:1px solid var(--card-border); border-radius:12px; padding:10px; text-align:center;">
+            <div style="font-size:11px; color:var(--text-muted);" id="t-total-ref-earnings-lbl">أرباح الإحالات</div>
+            <div style="font-size:18px; font-weight:900; color:var(--gold-neon); margin-top:4px;" id="ref-earned-val">0 OLK</div>
+          </div>
+        </div>
+
+        <hr style="border:0; border-top:1px solid var(--card-border); margin:6px 0;">
+
+        <div style="font-weight:bold; color:#fff; font-size:13px; display:flex; justify-content:space-between;">
+          <span id="t-invited-friends-lbl">الأصدقاء المدعوون</span>
+          <span style="font-size:11px; color:var(--text-muted);" id="ref-list-count-text">0 أصدقاء</span>
+        </div>
+
+        <div id="referred-users-list" style="display:flex; flex-direction:column; gap:6px; max-height:220px; overflow-y:auto;">
+          <div style="font-size:12px; color:var(--text-muted); text-align:center; padding:10px;">لا توجد إحالات مسجلة بعد.</div>
+        </div>
       </div>
     </div>
 
@@ -601,6 +624,9 @@ MINI_APP_HTML = """<!DOCTYPE html>
         frensTitle: "شبكة التعدين التشاركية",
         frensDesc: "شارك رابط جهازك واحصل على 70 OLK فور قيام صديقك بالاشتراك في القناة وتشغيل أول جلسة تعدين!",
         btnCopyInvite: "نسخ رابط الدعوة الخاص بي",
+        totalInvitesLbl: "إجمالي الإحالات",
+        totalRefEarningsLbl: "أرباح الإحالات",
+        invitedFriendsLbl: "الأصدقاء المدعوون",
         subtabChannels: "القنوات",
         subtabGroups: "المجموعات",
         subtabBots: "البوتات",
@@ -648,6 +674,9 @@ MINI_APP_HTML = """<!DOCTYPE html>
         frensTitle: "Collaborative Mining Network",
         frensDesc: "Share your referral link and get 70 OLK once your invited friend joins the official channel and runs their first session!",
         btnCopyInvite: "Copy My Invite Link",
+        totalInvitesLbl: "Total Invites",
+        totalRefEarningsLbl: "Referral Earnings",
+        invitedFriendsLbl: "Invited Friends",
         subtabChannels: "Channels",
         subtabGroups: "Groups",
         subtabBots: "Bots",
@@ -695,6 +724,9 @@ MINI_APP_HTML = """<!DOCTYPE html>
       document.getElementById("t-frens-title").innerText = t.frensTitle;
       document.getElementById("t-frens-desc").innerText = t.frensDesc;
       document.getElementById("t-btn-copy-invite").innerText = t.btnCopyInvite;
+      document.getElementById("t-total-invites-lbl").innerText = t.totalInvitesLbl;
+      document.getElementById("t-total-ref-earnings-lbl").innerText = t.totalRefEarningsLbl;
+      document.getElementById("t-invited-friends-lbl").innerText = t.invitedFriendsLbl;
       document.getElementById("t-subtab-channels").innerText = t.subtabChannels;
       document.getElementById("t-subtab-groups").innerText = t.subtabGroups;
       document.getElementById("t-subtab-bots").innerText = t.subtabBots;
@@ -721,7 +753,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
 
     let appOlk = 0.0;
     let appTon = 0.0;
-    let speed = 0.27;
+    let speed = 0.21;
     let minerLevel = 1;
     let connectedWallet = null;
 
@@ -790,7 +822,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         if (data.ok) {
           appOlk = data.olk_balance;
           appTon = data.ton_balance;
-          speed = data.mining_speed || 0.27;
+          speed = data.mining_speed || 0.21;
           minerLevel = data.miner_level || 1;
           sessionStartTs = data.session_start_timestamp || 0;
           sessionActive = data.session_active || false;
@@ -808,9 +840,59 @@ MINI_APP_HTML = """<!DOCTYPE html>
           }
           evaluateSessionState();
           loadTasks();
+          loadReferralsData();
         }
       } catch (e) {
         console.error("Load failed", e);
+      }
+    }
+
+    async function loadReferralsData() {
+      try {
+        const res = await fetch(`/api/get_referrals?user_id=${userId}`);
+        const data = await res.json();
+        if (data.ok) {
+          document.getElementById("ref-count-val").innerText = data.total_count;
+          document.getElementById("ref-earned-val").innerText = (data.earned_olk || 0).toFixed(0) + " OLK";
+          document.getElementById("ref-list-count-text").innerText = `${data.total_count} ${currentLang === "ar" ? "أصدقاء" : "frens"}`;
+
+          const listEl = document.getElementById("referred-users-list");
+          listEl.innerHTML = "";
+
+          if (!data.referrals || data.referrals.length === 0) {
+            listEl.innerHTML = `<div style="font-size:12px; color:var(--text-muted); text-align:center; padding:10px;">${currentLang === "ar" ? "لا توجد إحالات مسجلة بعد." : "No referrals yet."}</div>`;
+            return;
+          }
+
+          data.referrals.forEach(ref => {
+            const row = document.createElement("div");
+            row.style.display = "flex";
+            row.style.justifyContent = "space-between";
+            row.style.alignItems = "center";
+            row.style.background = "#081324";
+            row.style.border = "1px solid var(--card-border)";
+            row.style.borderRadius = "10px";
+            row.style.padding = "8px 12px";
+
+            const statusBadge = ref.is_active 
+              ? `<span style="color:var(--green-neon); font-size:11px; font-weight:800;">+70 OLK ✅</span>`
+              : `<span style="color:#eab308; font-size:11px; font-weight:700;">${currentLang === "ar" ? "قيد التفعيل" : "Pending"} ⏳</span>`;
+
+            row.innerHTML = `
+              <div style="display:flex; align-items:center; gap:8px;">
+                <i class="fa-solid fa-circle-user" style="font-size:18px; color:var(--cyan-neon);"></i>
+                <div style="display:flex; flex-direction:column;">
+                  <span style="font-size:12px; font-weight:800; color:#fff;">${ref.name || 'User'}</span>
+                  <span style="font-size:10px; color:var(--text-muted); direction:ltr; text-align:left;">${ref.username ? '@' + ref.username : 'ID: ' + ref.user_id}</span>
+                </div>
+              </div>
+              <div>${statusBadge}</div>
+            `;
+            listEl.appendChild(row);
+          });
+        }
+      } catch (e) {
+        console.error("Referrals load failed", e);
       }
     }
 
@@ -1079,17 +1161,17 @@ MINI_APP_HTML = """<!DOCTYPE html>
     }
 
     function calcSwap() {
-      const v = parseFloat(document.getElementById("swap-olk-input").value) || 0;
+      const v = parseFloat(document.getElementById("swap-folk-input").value) || 0;
       document.getElementById("swap-preview").innerText = (v / 10000).toFixed(4) + " TON";
     }
 
     function setMaxSwap() {
-      document.getElementById("swap-olk-input").value = Math.floor(appOlk);
+      document.getElementById("swap-folk-input").value = Math.floor(appOlk);
       calcSwap();
     }
 
     async function executeSwap() {
-      const amt = parseFloat(document.getElementById("swap-olk-input").value) || 0;
+      const amt = parseFloat(document.getElementById("swap-folk-input").value) || 0;
       if (amt <= 0 || amt > appOlk) {
         alert(currentLang === "ar" ? "⚠️ يرجى إدخال كمية OLK صالحة!" : "⚠️ Invalid OLK amount!");
         return;
@@ -1105,7 +1187,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         appTon = data.ton_balance;
         document.getElementById("olk-bal-val").innerText = appOlk.toFixed(2) + " OLK";
         document.getElementById("ton-bal-val").innerText = appTon.toFixed(4) + " TON";
-        document.getElementById("swap-olk-input").value = "";
+        document.getElementById("swap-folk-input").value = "";
         calcSwap();
         alert(currentLang === "ar" ? `✅ تم التحويل بنجاح!` : `✅ Converted successfully!`);
       } else {
@@ -1248,13 +1330,15 @@ async def init_db():
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS users (
             user_id BIGINT PRIMARY KEY,
+            username TEXT,
+            first_name TEXT,
             phone_number TEXT,
             olk_balance DOUBLE PRECISION DEFAULT 0.0,
             ton_balance DOUBLE PRECISION DEFAULT 0.0,
             last_claim BIGINT DEFAULT 0,
             referred_by BIGINT DEFAULT NULL,
             ref_reward_claimed INTEGER DEFAULT 0,
-            mining_speed DOUBLE PRECISION DEFAULT 0.27,
+            mining_speed DOUBLE PRECISION DEFAULT 0.21,
             miner_level INTEGER DEFAULT 1,
             last_mining_timestamp BIGINT DEFAULT 0,
             session_start_timestamp BIGINT DEFAULT 0,
@@ -1275,6 +1359,12 @@ async def init_db():
         await conn.execute("""
         DO $$
         BEGIN
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='username') THEN
+                ALTER TABLE users ADD COLUMN username TEXT;
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='first_name') THEN
+                ALTER TABLE users ADD COLUMN first_name TEXT;
+            END IF;
             IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='session_start_timestamp') THEN
                 ALTER TABLE users ADD COLUMN session_start_timestamp BIGINT DEFAULT 0;
             END IF;
@@ -1299,9 +1389,9 @@ async def init_db():
         END $$;
         """)
 
-        # تحديث سرعة الحسابات المجانية القائمة إلى 0.27
+        # ضبط سرعة المستخدمين غير الدافعين في قاعدة البيانات إلى 0.21
         await conn.execute("""
-            UPDATE users SET mining_speed = 0.27 WHERE (mining_speed = 0.25 OR mining_speed = 0.30) AND miner_level = 1;
+            UPDATE users SET mining_speed = 0.21 WHERE miner_level = 1;
         """)
 
         await conn.execute("""
@@ -1438,6 +1528,43 @@ async def api_save_wallet(request):
                                friendly_address, fp, client_ip, user_id)
 
         return web.json_response({"ok": True, "address": friendly_address})
+    except Exception as e:
+        return web.json_response({"ok": False, "msg": str(e)})
+
+# API لجلب إحصائيات الإحالة وقائمة الأشخاص المحالين
+async def api_get_referrals(request):
+    try:
+        user_id = int(request.query.get("user_id", 0))
+        async with db_pool.acquire() as conn:
+            rows = await conn.fetch("""
+                SELECT user_id, username, first_name, ref_reward_claimed 
+                FROM users 
+                WHERE referred_by = $1 
+                ORDER BY user_id DESC
+            """, user_id)
+
+            referrals = []
+            active_count = 0
+            for r in rows:
+                is_active = bool(r["ref_reward_claimed"] == 1)
+                if is_active:
+                    active_count += 1
+                referrals.append({
+                    "user_id": r["user_id"],
+                    "username": r["username"] or "",
+                    "name": r["first_name"] or "User",
+                    "is_active": is_active
+                })
+
+            earned_olk = active_count * REFERRAL_REWARD
+
+        return web.json_response({
+            "ok": True,
+            "total_count": len(rows),
+            "active_count": active_count,
+            "earned_olk": earned_olk,
+            "referrals": referrals
+        })
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
@@ -1799,7 +1926,8 @@ def build_combined_start_keyboard(user_id: int, perms: dict | None):
 
 def build_main_admin_keyboard(perms):
     buttons = [
-        [InlineKeyboardButton(text="📊 إحصائيات المنظومة والمستخدمين", callback_data="adm_stats")]
+        [InlineKeyboardButton(text="📊 إحصائيات المنظومة والمستخدمين", callback_data="adm_stats")],
+        [InlineKeyboardButton(text="🏆 توب 20 الأكثر إحالة (Top 20 Referrers)", callback_data="adm_top_refs")]
     ]
     if perms.get("can_manage_withdrawals"):
         buttons.append([InlineKeyboardButton(text="⏳ طلبات السحب المعلقة", callback_data="adm_view_withdraws")])
@@ -1839,6 +1967,8 @@ async def render_admin_perms_keyboard(target_id: int):
 async def start_handler(message: Message, command: CommandObject, state: FSMContext):
     await state.clear()
     user_id = message.from_user.id
+    username = message.from_user.username
+    first_name = message.from_user.first_name
     ref_param = command.args
     now = int(time.time())
 
@@ -1854,18 +1984,27 @@ async def start_handler(message: Message, command: CommandObject, state: FSMCont
                 referrer_id = int(ref_param.replace("ref_", ""))
                 if referrer_id != user_id:
                     await conn.execute("""
-                        INSERT INTO users (user_id, referred_by, last_mining_timestamp, mining_speed, olk_balance, activated_miner)
-                        VALUES ($1, $2, $3, $4, 0, 0)
-                        ON CONFLICT (user_id) DO UPDATE SET referred_by = EXCLUDED.referred_by
-                    """, user_id, referrer_id, now, DEFAULT_SPEED)
+                        INSERT INTO users (user_id, username, first_name, referred_by, last_mining_timestamp, mining_speed, olk_balance, activated_miner)
+                        VALUES ($1, $2, $3, $4, $5, $6, 0, 0)
+                        ON CONFLICT (user_id) DO UPDATE SET 
+                            referred_by = EXCLUDED.referred_by,
+                            username = EXCLUDED.username,
+                            first_name = EXCLUDED.first_name
+                    """, user_id, username, first_name, referrer_id, now, DEFAULT_SPEED)
             except ValueError:
                 pass
         elif not user:
             await conn.execute("""
-                INSERT INTO users (user_id, last_mining_timestamp, mining_speed, olk_balance, activated_miner)
-                VALUES ($1, $2, $3, 0, 0)
-                ON CONFLICT (user_id) DO NOTHING
-            """, user_id, now, DEFAULT_SPEED)
+                INSERT INTO users (user_id, username, first_name, last_mining_timestamp, mining_speed, olk_balance, activated_miner)
+                VALUES ($1, $2, $3, $4, $5, 0, 0)
+                ON CONFLICT (user_id) DO UPDATE SET 
+                    username = EXCLUDED.username,
+                    first_name = EXCLUDED.first_name
+            """, user_id, username, first_name, now, DEFAULT_SPEED)
+        else:
+            await conn.execute("""
+                UPDATE users SET username = $1, first_name = $2 WHERE user_id = $3
+            """, username, first_name, user_id)
 
     perms = await get_admin_permissions(user_id)
     welcome_text = (
@@ -1894,6 +2033,36 @@ async def admin_panel(message: Message, state: FSMContext):
         reply_markup=build_main_admin_keyboard(perms),
         parse_mode="Markdown"
     )
+
+# عرض توب 20 الأكثر إحالة
+@dp.callback_query(F.data == "adm_top_refs")
+async def cb_admin_top_refs(callback: CallbackQuery):
+    perms = await get_admin_permissions(callback.from_user.id)
+    if not perms:
+        return
+    await callback.answer()
+
+    async with db_pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT u.user_id, u.username, u.first_name, COUNT(r.user_id) AS ref_count
+            FROM users u
+            JOIN users r ON r.referred_by = u.user_id
+            GROUP BY u.user_id, u.username, u.first_name
+            ORDER BY ref_count DESC
+            LIMIT 20;
+        """)
+
+    if not rows:
+        text = "🏆 **قائمة أفضل 20 مستخدم في الإحالات:**\n\nلا توجد إحالات مسجلة بعد."
+    else:
+        text = "🏆 **ترتيب أفضل 20 مستخدم من ناحية الإحالات:**\n──────────────────────\n"
+        for idx, r in enumerate(rows, 1):
+            name_display = f"@{r['username']}" if r['username'] else (r['first_name'] or f"ID: {r['user_id']}")
+            text += f"**{idx}.** {name_display} — 👥 `{r['ref_count']}` إحالة\n"
+        text += "──────────────────────"
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 العودة للرئيسية", callback_data="adm_home")]])
+    await callback.message.edit_text(text, parse_mode="Markdown", reply_markup=kb)
 
 @dp.callback_query(F.data == "adm_back_to_start")
 async def cb_back_to_start(callback: CallbackQuery, state: FSMContext):
@@ -2396,13 +2565,14 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("OLK Cyber Session, Anti-Multi, Direct-Pay & Admin Engine is LIVE...")
+    print("OLK Cyber Session, Anti-Multi, Top 20 & Ref Tracking Engine is LIVE...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
     app.router.add_get("/tonconnect-manifest.json", api_manifest)
     app.router.add_get("/api/get_user", api_get_user)
     app.router.add_get("/api/get_tasks", api_get_tasks)
+    app.router.add_get("/api/get_referrals", api_get_referrals)
     app.router.add_post("/api/save_wallet", api_save_wallet)
     app.router.add_post("/api/start_mining_session", api_start_mining_session)
     app.router.add_post("/api/claim_session_rewards", api_claim_session_rewards)
