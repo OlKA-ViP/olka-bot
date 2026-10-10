@@ -70,6 +70,11 @@ class AddTaskStates(StatesGroup):
     waiting_for_link = State()
     waiting_for_reward = State()
 
+class AddBotTaskStates(StatesGroup):
+    waiting_for_title = State()
+    waiting_for_link = State()
+    waiting_for_reward = State()
+
 class AddAdminStates(StatesGroup):
     waiting_for_id = State()
 
@@ -387,7 +392,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
     }
     .plan-info-title { font-size: 13px; font-weight: 800; color: #fff; }
     .plan-info-sub { font-size: 11px; color: var(--green-neon); margin-top: 2px; direction: ltr; text-align: right; }
-    .plan-roi-sub { font-size: 10px; color: var(--text-muted); }
     .btn-buy-plan {
       background: linear-gradient(135deg, #0284c7, #0ea5e9);
       border: none;
@@ -542,7 +546,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         </div>
 
         <button class="btn-main-action" id="btn-session-control" onclick="handleMiningAction()">
-          <i class="fa-solid fa-power-off"></i> <span>تشغيل جلسة التعدين (8 ساعات)</span>
+          <i class="fa-solid fa-power-off"></i> <span>تشغيل جلسة التعدين</span>
         </button>
       </div>
     </div>
@@ -552,14 +556,12 @@ MINI_APP_HTML = """<!DOCTYPE html>
       <div class="card-panel">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <span style="font-weight:900; color:var(--cyan-neon); font-size:14px;"><i class="fa-solid fa-bolt"></i> باقات أجهزة التعدين</span>
-          <span style="font-size:10px; color:var(--text-muted);">استرجاع رأس المال: 15 يوماً</span>
         </div>
 
         <div class="plan-card">
           <div>
             <div class="plan-info-title">CPU Micro Rig</div>
             <div class="plan-info-sub">+0.15 TH/s (~66.7 OLK/يوم)</div>
-            <div class="plan-roi-sub">استرجاع رأس المال خلال 15 يوماً</div>
           </div>
           <button class="btn-buy-plan" onclick="purchasePlan(0.1, 0.15)">0.1 TON</button>
         </div>
@@ -568,7 +570,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
           <div>
             <div class="plan-info-title">GPU Pro Miner</div>
             <div class="plan-info-sub">+0.77 TH/s (~333.3 OLK/يوم)</div>
-            <div class="plan-roi-sub">استرجاع رأس المال خلال 15 يوماً</div>
           </div>
           <button class="btn-buy-plan" onclick="purchasePlan(0.5, 0.77)">0.5 TON</button>
         </div>
@@ -577,7 +578,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
           <div>
             <div class="plan-info-title">ASIC Mini Rig</div>
             <div class="plan-info-sub">+1.55 TH/s (~666.7 OLK/يوم)</div>
-            <div class="plan-roi-sub">استرجاع رأس المال خلال 15 يوماً</div>
           </div>
           <button class="btn-buy-plan" onclick="purchasePlan(1.0, 1.55)">1.0 TON</button>
         </div>
@@ -586,7 +586,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
           <div>
             <div class="plan-info-title">Titan Quantum Rig</div>
             <div class="plan-info-sub">+3.86 TH/s (~1,666.7 OLK/يوم)</div>
-            <div class="plan-roi-sub">استرجاع رأس المال خلال 15 يوماً</div>
           </div>
           <button class="btn-buy-plan" onclick="purchasePlan(2.5, 3.86)">2.5 TON</button>
         </div>
@@ -595,7 +594,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
           <div>
             <div class="plan-info-title">Enterprise Mining Node</div>
             <div class="plan-info-sub">+7.72 TH/s (~3,333.3 OLK/يوم)</div>
-            <div class="plan-roi-sub">استرجاع رأس المال خلال 15 يوماً</div>
           </div>
           <button class="btn-buy-plan" onclick="purchasePlan(5.0, 7.72)">5.0 TON</button>
         </div>
@@ -604,7 +602,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
           <div>
             <div class="plan-info-title" style="color:var(--gold-neon);">Apex VIP Supercluster</div>
             <div class="plan-info-sub" style="color:var(--gold-neon);">+15.43 TH/s (~6,666.7 OLK/يوم)</div>
-            <div class="plan-roi-sub">استرجاع رأس المال خلال 15 يوماً</div>
           </div>
           <button class="btn-buy-plan" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#000;" onclick="purchasePlan(10.0, 15.43)">10.0 TON</button>
         </div>
@@ -668,12 +665,19 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب المهام -->
+    <!-- تبويب المهام (قنوات + بوتات) -->
     <div class="page-tab" id="tab-tasks">
       <div class="card-panel">
-        <div style="font-weight:bold; color:var(--gold-neon); font-size:14px;"><i class="fa-solid fa-list-check"></i> المهام الإضافية المتاحة</div>
+        <div style="font-weight:bold; color:var(--gold-neon); font-size:14px;"><i class="fa-solid fa-bullhorn"></i> مهام قنوات تيليجرام</div>
         <div id="dynamic-tasks-list" style="display:flex; flex-direction:column; gap:8px;">
           <div style="font-size:12px; color:var(--text-muted); text-align:center;">جاري تحميل المهام...</div>
+        </div>
+      </div>
+
+      <div class="card-panel" style="margin-top:10px;">
+        <div style="font-weight:bold; color:var(--cyan-neon); font-size:14px;"><i class="fa-solid fa-robot"></i> مهام بوتات تيليجرام</div>
+        <div id="dynamic-bot-tasks-list" style="display:flex; flex-direction:column; gap:8px;">
+          <div style="font-size:12px; color:var(--text-muted); text-align:center;">جاري تحميل مهام البوتات...</div>
         </div>
       </div>
     </div>
@@ -692,7 +696,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
     if (tg) { tg.ready(); tg.expand(); }
 
     const urlParams = new URLSearchParams(window.location.search);
-    const userId = tg?.initDataUnsafe?.user?.id || urlParams.get('user_id') || 1932161126;
+    let userId = tg?.initDataUnsafe?.user?.id || urlParams.get('user_id') || 1932161126;
 
     let appOlk = 0.0;
     let appTon = 0.0;
@@ -792,33 +796,61 @@ MINI_APP_HTML = """<!DOCTYPE html>
       try {
         const res = await fetch(`/api/get_tasks?user_id=${userId}`);
         const data = await res.json();
+        
+        // قنوات
         const container = document.getElementById("dynamic-tasks-list");
         container.innerHTML = "";
-
         if (!data.tasks || data.tasks.length === 0) {
-          container.innerHTML = `<div style="font-size:12px; color:var(--text-muted); text-align:center;">لا توجد مهام إضافية حالياً.</div>`;
-          return;
+          container.innerHTML = `<div style="font-size:12px; color:var(--text-muted); text-align:center;">لا توجد مهام قنوات حالياً.</div>`;
+        } else {
+          data.tasks.forEach(task => {
+            const isDone = data.completed_ids.includes(task.id);
+            const div = document.createElement("div");
+            div.className = "plan-card";
+            div.innerHTML = `
+              <div>
+                <div class="plan-info-title">${task.title}</div>
+                <div class="plan-info-sub" style="color:var(--gold-neon);">+${task.reward} OLK</div>
+              </div>
+              <div style="display:flex; gap:6px;">
+                <button class="btn-buy-plan" onclick="window.open('${task.link}', '_blank')">انضمام</button>
+                ${isDone 
+                  ? `<button class="btn-buy-plan" style="background:#475569; cursor:default;" disabled>مكتملة ✅</button>`
+                  : `<button class="btn-buy-plan" style="background:#10b981;" onclick="verifyTask(${task.id})">تحقق</button>`
+                }
+              </div>
+            `;
+            container.appendChild(div);
+          });
         }
 
-        data.tasks.forEach(task => {
-          const isDone = data.completed_ids.includes(task.id);
-          const div = document.createElement("div");
-          div.className = "plan-card";
-          div.innerHTML = `
-            <div>
-              <div class="plan-info-title">${task.title}</div>
-              <div class="plan-info-sub" style="color:var(--gold-neon);">+${task.reward} OLK</div>
-            </div>
-            <div style="display:flex; gap:6px;">
-              <button class="btn-buy-plan" onclick="window.open('${task.link}', '_blank')">انضمام</button>
-              ${isDone 
-                ? `<button class="btn-buy-plan" style="background:#475569; cursor:default;" disabled>مكتملة ✅</button>`
-                : `<button class="btn-buy-plan" style="background:#10b981;" onclick="verifyTask(${task.id})">تحقق</button>`
-              }
-            </div>
-          `;
-          container.appendChild(div);
-        });
+        // بوتات
+        const botContainer = document.getElementById("dynamic-bot-tasks-list");
+        botContainer.innerHTML = "";
+        if (!data.bot_tasks || data.bot_tasks.length === 0) {
+          botContainer.innerHTML = `<div style="font-size:12px; color:var(--text-muted); text-align:center;">لا توجد مهام بوتات حالياً.</div>`;
+        } else {
+          data.bot_tasks.forEach(task => {
+            const isDone = (data.completed_bot_ids || []).includes(task.id);
+            const div = document.createElement("div");
+            div.className = "plan-card";
+            div.innerHTML = `
+              <div>
+                <div class="plan-info-title">${task.title}</div>
+                <div class="plan-info-sub" style="color:var(--cyan-neon);">+${task.reward} OLK</div>
+              </div>
+              <div style="display:flex; gap:6px;">
+                <button class="btn-buy-plan" onclick="window.open('${task.link}', '_blank')">دخول البوت</button>
+                ${isDone 
+                  ? `<button class="btn-buy-plan" style="background:#475569; cursor:default;" disabled>مكتملة ✅</button>`
+                  : `<button class="btn-buy-plan" style="background:#0284c7;" onclick="verifyBotTask(${task.id})">استلام</button>`
+                }
+              </div>
+            `;
+            botContainer.appendChild(div);
+          });
+        }
+
       } catch (e) {
         console.error("Tasks load failed", e);
       }
@@ -826,35 +858,36 @@ MINI_APP_HTML = """<!DOCTYPE html>
 
     function evaluateSessionState() {
       const now = Math.floor(Date.now() / 1000);
-      const elapsed = now - sessionStartTs;
+      const elapsed = Math.max(0, now - sessionStartTs);
+
+      const btn = document.getElementById("btn-session-control");
+      const dot = document.getElementById("mining-status-dot");
+      const statusText = document.getElementById("mining-status-text");
 
       if (sessionActive && elapsed < EIGHT_HOURS_SEC) {
         sessionClaimReady = false;
-        document.getElementById("mining-status-dot").classList.add("active");
-        document.getElementById("mining-status-text").innerText = "جلسة التعدين نشطة الآن";
+        dot.classList.add("active");
+        statusText.innerText = "جلسة التعدين نشطة الآن";
 
-        const btn = document.getElementById("btn-session-control");
         btn.classList.remove("claim-state");
         btn.disabled = true;
         btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> التعدين يعمل الآن تلقائياً...`;
       } else if (sessionActive && elapsed >= EIGHT_HOURS_SEC) {
         sessionClaimReady = true;
-        document.getElementById("mining-status-dot").classList.remove("active");
-        document.getElementById("mining-status-text").innerText = "اكتملت الجلسة! طالب بأرباحك الآن";
+        dot.classList.remove("active");
+        statusText.innerText = "اكتملت الجلسة! طالب بأرباحك الآن";
 
-        const btn = document.getElementById("btn-session-control");
         btn.classList.add("claim-state");
         btn.disabled = false;
         btn.innerHTML = `<i class="fa-solid fa-hand-holding-dollar"></i> المطالبة بأرباح الجلسة وتحديث المحفظة`;
       } else {
         sessionClaimReady = false;
-        document.getElementById("mining-status-dot").classList.remove("active");
-        document.getElementById("mining-status-text").innerText = "متوقف (جاهز لبدء 8 ساعات جديدة)";
+        dot.classList.remove("active");
+        statusText.innerText = "متوقف (جاهز لبدء جلسة جديدة)";
 
-        const btn = document.getElementById("btn-session-control");
         btn.classList.remove("claim-state");
         btn.disabled = false;
-        btn.innerHTML = `<i class="fa-solid fa-power-off"></i> تشغيل جلسة التعدين (8 ساعات)`;
+        btn.innerHTML = `<i class="fa-solid fa-power-off"></i> <span>تشغيل جلسة التعدين</span>`;
       }
     }
 
@@ -890,35 +923,54 @@ MINI_APP_HTML = """<!DOCTYPE html>
     }, 1000);
 
     async function handleMiningAction() {
+      const btn = document.getElementById("btn-session-control");
+      btn.disabled = true;
+
       if (sessionClaimReady) {
-        const res = await fetch("/api/claim_session_rewards", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId, amount: currentUnclaimed })
-        });
-        const data = await res.json();
-        if (data.ok) {
-          appOlk = data.olk_balance;
-          document.getElementById("olk-bal-val").innerText = appOlk.toFixed(2) + " OLK";
-          sessionActive = false;
-          sessionStartTs = 0;
-          sessionClaimReady = false;
-          currentUnclaimed = 0;
-          evaluateSessionState();
-          alert(`🎉 تم تحويل +${data.claimed.toFixed(2)} OLK بنجاح إلى رصيدك الأساسي!`);
+        try {
+          const res = await fetch("/api/claim_session_rewards", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: userId, amount: currentUnclaimed })
+          });
+          const data = await res.json();
+          if (data.ok) {
+            appOlk = data.olk_balance;
+            document.getElementById("olk-bal-val").innerText = appOlk.toFixed(2) + " OLK";
+            sessionActive = false;
+            sessionStartTs = 0;
+            sessionClaimReady = false;
+            currentUnclaimed = 0;
+            evaluateSessionState();
+            alert(`🎉 تم تحويل +${data.claimed.toFixed(2)} OLK بنجاح إلى رصيدك الأساسي!`);
+          } else {
+            alert(data.msg || "حدث خطأ أثناء المطالبة");
+            btn.disabled = false;
+          }
+        } catch (err) {
+          alert("خطأ في الاتصال بالسيرفر");
+          btn.disabled = false;
         }
       } else {
-        const res = await fetch("/api/start_mining_session", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId })
-        });
-        const data = await res.json();
-        if (data.ok) {
-          sessionActive = true;
-          sessionStartTs = data.session_start_timestamp;
-          evaluateSessionState();
-          alert("🚀 تم تشغيل جهاز التعدين لمدة 8 ساعات بنجاح!");
+        try {
+          const res = await fetch("/api/start_mining_session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: userId })
+          });
+          const data = await res.json();
+          if (data.ok) {
+            sessionActive = true;
+            sessionStartTs = data.session_start_timestamp;
+            evaluateSessionState();
+            alert("🚀 تم تشغيل جهاز التعدين بنجاح!");
+          } else {
+            alert(data.msg || "تعذر بدء الجلسة");
+            btn.disabled = false;
+          }
+        } catch (err) {
+          alert("خطأ في الاتصال بالخادم");
+          btn.disabled = false;
         }
       }
     }
@@ -947,7 +999,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
     }
 
     function calcSwap() {
-      const v = parseFloat(document.getElementById("swap-folk-input")?.value || document.getElementById("swap-olk-input").value) || 0;
+      const v = parseFloat(document.getElementById("swap-olk-input").value) || 0;
       document.getElementById("swap-preview").innerText = (v / 10000).toFixed(4) + " TON";
     }
 
@@ -1064,6 +1116,21 @@ MINI_APP_HTML = """<!DOCTYPE html>
       }
     }
 
+    async function verifyBotTask(taskId) {
+      const res = await fetch("/api/verify_bot_task", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userId, task_id: taskId })
+      });
+      const data = await res.json();
+      alert(data.msg);
+      if (data.ok) {
+        appOlk += data.reward;
+        document.getElementById("olk-bal-val").innerText = appOlk.toFixed(2) + " OLK";
+        loadTasks();
+      }
+    }
+
     loadData();
   </script>
 </body>
@@ -1097,6 +1164,7 @@ async def init_db():
             session_start_timestamp BIGINT DEFAULT 0,
             session_active INTEGER DEFAULT 0,
             tasks_completed TEXT DEFAULT '[]',
+            bot_tasks_completed TEXT DEFAULT '[]',
             saved_wallet TEXT DEFAULT NULL,
             ip_address TEXT DEFAULT NULL,
             device_fingerprint TEXT DEFAULT NULL,
@@ -1105,6 +1173,16 @@ async def init_db():
             activated_miner INTEGER DEFAULT 0,
             is_whitelisted INTEGER DEFAULT 0
         );
+        """)
+
+        # إضافة عمود مهام البوتات في حال وجود الجدول مسبقاً
+        await conn.execute("""
+        DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='bot_tasks_completed') THEN
+                ALTER TABLE users ADD COLUMN bot_tasks_completed TEXT DEFAULT '[]';
+            END IF;
+        END $$;
         """)
 
         await conn.execute("""
@@ -1118,11 +1196,23 @@ async def init_db():
         );
         """)
 
+        # جدول قنوات تيليجرام
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS dynamic_tasks (
             id SERIAL PRIMARY KEY,
             title TEXT,
             channel_id TEXT,
+            link TEXT,
+            reward DOUBLE PRECISION DEFAULT 10.0,
+            is_active INTEGER DEFAULT 1
+        );
+        """)
+
+        # جدول مهام البوتات
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS dynamic_bot_tasks (
+            id SERIAL PRIMARY KEY,
+            title TEXT,
             link TEXT,
             reward DOUBLE PRECISION DEFAULT 10.0,
             is_active INTEGER DEFAULT 1
@@ -1188,11 +1278,25 @@ async def api_get_tasks(request):
     try:
         user_id = int(request.query.get("user_id", 0))
         async with db_pool.acquire() as conn:
+            # قنوات
             rows = await conn.fetch("SELECT id, title, channel_id, link, reward FROM dynamic_tasks WHERE is_active = 1 ORDER BY id DESC")
             tasks = [dict(r) for r in rows]
-            u_row = await conn.fetchrow("SELECT tasks_completed FROM users WHERE user_id = $1", user_id)
+            
+            # بوتات
+            bot_rows = await conn.fetch("SELECT id, title, link, reward FROM dynamic_bot_tasks WHERE is_active = 1 ORDER BY id DESC")
+            bot_tasks = [dict(r) for r in bot_rows]
+
+            u_row = await conn.fetchrow("SELECT tasks_completed, bot_tasks_completed FROM users WHERE user_id = $1", user_id)
             completed_ids = json.loads(u_row["tasks_completed"]) if u_row and u_row["tasks_completed"] else []
-        return web.json_response({"ok": True, "tasks": tasks, "completed_ids": completed_ids})
+            completed_bot_ids = json.loads(u_row["bot_tasks_completed"]) if u_row and u_row["bot_tasks_completed"] else []
+
+        return web.json_response({
+            "ok": True,
+            "tasks": tasks,
+            "bot_tasks": bot_tasks,
+            "completed_ids": completed_ids,
+            "completed_bot_ids": completed_bot_ids
+        })
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
@@ -1358,11 +1462,11 @@ async def api_convert(request):
                 return web.json_response({"ok": False, "msg": "رصيد OLK غير كافٍ"})
 
             ton_add = amount / CONVERSION_RATE
-            new_olk = row["olk_balance"] - amount
+            new_folk = row["olk_balance"] - amount
             new_ton = row["ton_balance"] + ton_add
 
-            await conn.execute("UPDATE users SET olk_balance = $1, ton_balance = $2 WHERE user_id = $3", new_olk, new_ton, user_id)
-            return web.json_response({"ok": True, "olk_balance": new_olk, "ton_balance": new_ton})
+            await conn.execute("UPDATE users SET olk_balance = $1, ton_balance = $2 WHERE user_id = $3", new_folk, new_ton, user_id)
+            return web.json_response({"ok": True, "olk_balance": new_folk, "ton_balance": new_ton})
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
@@ -1444,7 +1548,31 @@ async def api_verify_channel_task(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
-# ==================== لوحة التحكم والتبديل المباشر ====================
+async def api_verify_bot_task(request):
+    try:
+        data = await request.json()
+        user_id = int(data.get("user_id"))
+        task_id = int(data.get("task_id"))
+
+        async with db_pool.acquire() as conn:
+            task = await conn.fetchrow("SELECT * FROM dynamic_bot_tasks WHERE id = $1 AND is_active = 1", task_id)
+            if not task:
+                return web.json_response({"ok": False, "msg": "مهمة البوت غير متوفرة"})
+
+            row = await conn.fetchrow("SELECT bot_tasks_completed FROM users WHERE user_id = $1", user_id)
+            tasks = json.loads(row["bot_tasks_completed"]) if row and row["bot_tasks_completed"] else []
+
+            if task_id in tasks:
+                return web.json_response({"ok": False, "msg": "تم استلام مكافأة هذا البوت مسبقاً!"})
+
+            tasks.append(task_id)
+            reward = task["reward"]
+            await conn.execute("UPDATE users SET olk_balance = olk_balance + $1, bot_tasks_completed = $2 WHERE user_id = $3",
+                               reward, json.dumps(tasks), user_id)
+
+            return web.json_response({"ok": True, "reward": reward, "msg": f"✅ مبروك! تمت إضافة +{reward:.0f} OLK"})
+    except Exception as e:
+        return web.json_response({"ok": False, "msg": str(e)})
 
 def build_combined_start_keyboard(user_id: int, perms: dict | None):
     app_url = f"{WEBAPP_URL}?user_id={user_id}"
@@ -1463,6 +1591,7 @@ def build_main_admin_keyboard(perms):
         buttons.append([InlineKeyboardButton(text="⏳ طلبات السحب المعلقة", callback_data="adm_view_withdraws")])
     if perms.get("can_manage_tasks"):
         buttons.append([InlineKeyboardButton(text="📢 إدارة مهام القنوات (إضافة/حذف)", callback_data="adm_tasks_menu")])
+        buttons.append([InlineKeyboardButton(text="🤖 إدارة مهام البوتات (إضافة/حذف)", callback_data="adm_bot_tasks_menu")])
     if perms.get("can_broadcast"):
         buttons.append([InlineKeyboardButton(text="📨 إرسال إذاعة عامة (Broadcast)", callback_data="adm_start_bc")])
     if perms.get("is_super"):
@@ -1525,7 +1654,7 @@ async def start_handler(message: Message, command: CommandObject, state: FSMCont
     welcome_text = (
         "⚡ **مرحباً بك في منظومة OLKA VIP Cyber Mining**\n"
         "──────────────────────\n"
-        "⛏️ **جلسات تعدين يدوية كل 8 ساعات:** اضغط على زر التشغيل لبدء الإنتاج السحابي.\n"
+        "⛏️ **جلسات تعدين يدوية:** اضغط على زر التشغيل لبدء الإنتاج السحابي.\n"
         "💰 **أرباح فورية ومضمونة:** أرباحك تذهب مباشرة لمحفظتك داخل التطبيق.\n"
         "🎁 **مكافأة البدء:** احصل على **+50 OLK** فور تشغيل الجلسة الأولى!\n"
         "──────────────────────\n"
@@ -1588,6 +1717,7 @@ async def cb_admin_stats(callback: CallbackQuery):
         total_ton = row_users[2] or 0.0
         pending_withdraws = await conn.fetchval("SELECT COUNT(*) FROM withdrawals WHERE status = 'PENDING'") or 0
         active_tasks = await conn.fetchval("SELECT COUNT(*) FROM dynamic_tasks WHERE is_active = 1") or 0
+        active_bot_tasks = await conn.fetchval("SELECT COUNT(*) FROM dynamic_bot_tasks WHERE is_active = 1") or 0
 
     stats_msg = (
         "📊 **إحصائيات المنظومة الحية:**\n"
@@ -1596,7 +1726,8 @@ async def cb_admin_stats(callback: CallbackQuery):
         f"🪙 إجمالي رصيد OLK: `{total_olk:.2f}`\n"
         f"💎 إجمالي رصيد TON: `{total_ton:.4f}`\n"
         f"⏳ طلبات السحب المعلقة: `{pending_withdraws}`\n"
-        f"📢 المهام النشطة: `{active_tasks}`\n"
+        f"📢 مهام القنوات: `{active_tasks}`\n"
+        f"🤖 مهام البوتات: `{active_bot_tasks}`\n"
         "──────────────────────"
     )
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 العودة للرئيسية", callback_data="adm_home")]])
@@ -1636,6 +1767,7 @@ async def cb_view_withdraws(callback: CallbackQuery):
             reply_markup=kb
         )
 
+# مهام القنوات
 @dp.callback_query(F.data == "adm_tasks_menu")
 async def cb_tasks_menu(callback: CallbackQuery):
     perms = await get_admin_permissions(callback.from_user.id)
@@ -1662,19 +1794,19 @@ async def cb_add_task_start(callback: CallbackQuery, state: FSMContext):
     if not perms or not perms.get("can_manage_tasks"):
         return
     await callback.answer()
-    await callback.message.answer("📝 أرسل الآن **عنوان المهمة** (مثال: اشترك في قناة الأخبار):")
+    await callback.message.answer("📝 أرسل الآن **عنوان مهمة القناة**:")
     await state.set_state(AddTaskStates.waiting_for_title)
 
 @dp.message(AddTaskStates.waiting_for_title)
 async def state_task_title(message: Message, state: FSMContext):
     await state.update_data(title=message.text.strip())
-    await message.answer("📢 أرسل الآن **معرّف القناة** (مثال: `@channel_name` أو الـ Chat ID مع التأكد من إضافة البوت مشرفاً فيها):")
+    await message.answer("📢 أرسل الآن **معرّف القناة** (مثال: `@channel_name` أو Chat ID مع التأكد من إضافة البوت مشرفاً فيها):")
     await state.set_state(AddTaskStates.waiting_for_channel_id)
 
 @dp.message(AddTaskStates.waiting_for_channel_id)
 async def state_task_channel_id(message: Message, state: FSMContext):
     await state.update_data(channel_id=message.text.strip())
-    await message.answer("🔗 أرسل الآن **رابط القناة** ليضغط عليه المستخدم (مثال: `https://t.me/channel_name`):")
+    await message.answer("🔗 أرسل الآن **رابط القناة** (مثال: `https://t.me/channel_name`):")
     await state.set_state(AddTaskStates.waiting_for_link)
 
 @dp.message(AddTaskStates.waiting_for_link)
@@ -1700,8 +1832,8 @@ async def state_task_reward(message: Message, state: FSMContext):
             VALUES ($1, $2, $3, $4)
         """, data["title"], data["channel_id"], data["link"], reward)
 
-    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 العودة لقائمة المهام", callback_data="adm_tasks_menu")]])
-    await message.answer(f"🎉 **تمت إضافة المهمة بنجاح!**\nالعنوان: {data['title']}\nالمكافأة: +{reward} OLK", reply_markup=kb, parse_mode="Markdown")
+    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 العودة لقائمة القنوات", callback_data="adm_tasks_menu")]])
+    await message.answer(f"🎉 **تمت إضافة مهمة القناة بنجاح!**\nالعنوان: {data['title']}\nالمكافأة: +{reward} OLK", reply_markup=kb, parse_mode="Markdown")
 
 @dp.callback_query(F.data.startswith("adm_del_task_"))
 async def cb_del_task(callback: CallbackQuery):
@@ -1714,6 +1846,80 @@ async def cb_del_task(callback: CallbackQuery):
     await callback.answer("🗑️ تم حذف المهمة بنجاح!", show_alert=True)
     await cb_tasks_menu(callback)
 
+# مهام البوتات
+@dp.callback_query(F.data == "adm_bot_tasks_menu")
+async def cb_bot_tasks_menu(callback: CallbackQuery):
+    perms = await get_admin_permissions(callback.from_user.id)
+    if not perms or not perms.get("can_manage_tasks"):
+        await callback.answer("⛔ ليس لديك صلاحية إدارة المهام", show_alert=True)
+        return
+    await callback.answer()
+
+    async with db_pool.acquire() as conn:
+        rows = await conn.fetch("SELECT id, title, reward FROM dynamic_bot_tasks WHERE is_active = 1 ORDER BY id DESC")
+
+    buttons = [[InlineKeyboardButton(text="➕ إضافة مهمة بوت جديدة", callback_data="adm_add_bot_task_start")]]
+    for r in rows:
+        buttons.append([
+            InlineKeyboardButton(text=f"🗑️ حذف: {r['title']} (+{r['reward']} OLK)", callback_data=f"adm_del_bottask_{r['id']}")
+        ])
+    buttons.append([InlineKeyboardButton(text="🔙 العودة للرئيسية", callback_data="adm_home")])
+
+    await callback.message.edit_text("🤖 **إدارة مهام البوتات:**\nيمكنك إضافة بوتات جديدة وتحديد رابط الإحالة الخاص بها والمكافأة:", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+
+@dp.callback_query(F.data == "adm_add_bot_task_start")
+async def cb_add_bot_task_start(callback: CallbackQuery, state: FSMContext):
+    perms = await get_admin_permissions(callback.from_user.id)
+    if not perms or not perms.get("can_manage_tasks"):
+        return
+    await callback.answer()
+    await callback.message.answer("📝 أرسل **اسم أو عنوان البوت** (مثال: ابدأ في بوت Blum):")
+    await state.set_state(AddBotTaskStates.waiting_for_title)
+
+@dp.message(AddBotTaskStates.waiting_for_title)
+async def state_bot_task_title(message: Message, state: FSMContext):
+    await state.update_data(title=message.text.strip())
+    await message.answer("🔗 أرسل **رابط البوت أو رابط إحالتك للبوت** (مثال: `https://t.me/BotFather?start=...`):")
+    await state.set_state(AddBotTaskStates.waiting_for_link)
+
+@dp.message(AddBotTaskStates.waiting_for_link)
+async def state_bot_task_link(message: Message, state: FSMContext):
+    await state.update_data(link=message.text.strip())
+    await message.answer("💰 أرسل **قيمة المكافأة** بعملة OLK (مثال: 20):")
+    await state.set_state(AddBotTaskStates.waiting_for_reward)
+
+@dp.message(AddBotTaskStates.waiting_for_reward)
+async def state_bot_task_reward(message: Message, state: FSMContext):
+    try:
+        reward = float(message.text.strip())
+    except ValueError:
+        await message.answer("❌ يرجى إدخال رقم صحيح للمكافأة:")
+        return
+
+    data = await state.get_data()
+    await state.clear()
+
+    async with db_pool.acquire() as conn:
+        await conn.execute("""
+            INSERT INTO dynamic_bot_tasks (title, link, reward)
+            VALUES ($1, $2, $3)
+        """, data["title"], data["link"], reward)
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 العودة لقائمة البوتات", callback_data="adm_bot_tasks_menu")]])
+    await message.answer(f"🎉 **تمت إضافة مهمة البوت بنجاح!**\nالعنوان: {data['title']}\nالمكافأة: +{reward} OLK", reply_markup=kb, parse_mode="Markdown")
+
+@dp.callback_query(F.data.startswith("adm_del_bottask_"))
+async def cb_del_bot_task(callback: CallbackQuery):
+    perms = await get_admin_permissions(callback.from_user.id)
+    if not perms or not perms.get("can_manage_tasks"):
+        return
+    t_id = int(callback.data.split("_")[3])
+    async with db_pool.acquire() as conn:
+        await conn.execute("UPDATE dynamic_bot_tasks SET is_active = 0 WHERE id = $1", t_id)
+    await callback.answer("🗑️ تم حذف مهمة البوت بنجاح!", show_alert=True)
+    await cb_bot_tasks_menu(callback)
+
+# إدارة المشرفين
 @dp.callback_query(F.data == "adm_manage_admins")
 async def cb_manage_admins(callback: CallbackQuery):
     if callback.from_user.id != SUPER_ADMIN_ID:
@@ -1888,7 +2094,7 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("OLK Cyber 8-Hour Session & Admin Engine is LIVE...")
+    print("OLK Cyber Session & Admin Engine is LIVE...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
@@ -1903,6 +2109,7 @@ async def main():
     app.router.add_post("/api/convert", api_convert)
     app.router.add_post("/api/withdraw", api_withdraw)
     app.router.add_post("/api/verify_channel_task", api_verify_channel_task)
+    app.router.add_post("/api/verify_bot_task", api_verify_bot_task)
 
     runner = web.AppRunner(app)
     await runner.setup()
