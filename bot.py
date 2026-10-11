@@ -4,6 +4,7 @@ import time
 import os
 import json
 import base64
+import html
 from aiohttp import web
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart, Command, CommandObject
@@ -88,7 +89,11 @@ class AddAdminStates(StatesGroup):
     waiting_for_id = State()
 
 class UnbanStates(StatesGroup):
-    waiting_for_id = State()
+    waiting_for_target = State()
+
+class BanStates(StatesGroup):
+    waiting_for_target = State()
+    waiting_for_reason = State()
 
 MINI_APP_HTML = """<!DOCTYPE html>
 <html lang="ar" dir="rtl" id="html-root">
@@ -298,13 +303,22 @@ MINI_APP_HTML = """<!DOCTYPE html>
       background: var(--card-blue-light); border: 1px solid var(--card-border);
       border-radius: 16px; padding: 14px;
       display: flex; justify-content: space-between; align-items: center;
+      gap: 8px;
     }
     .plan-info-title { font-size: 13px; font-weight: 800; color: #fff; }
     .plan-info-sub { font-size: 11px; color: var(--green-neon); margin-top: 2px; direction: ltr; text-align: right; }
+    .plan-buy-buttons { display: flex; gap: 6px; align-items: center; }
     .btn-buy-plan {
       background: linear-gradient(135deg, #0284c7, #0ea5e9);
-      border: none; color: #fff; font-weight: 800; font-size: 12px;
-      padding: 9px 14px; border-radius: 12px; cursor: pointer;
+      border: none; color: #fff; font-weight: 800; font-size: 11px;
+      padding: 8px 10px; border-radius: 10px; cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-buy-olk {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      border: none; color: #000; font-weight: 800; font-size: 11px;
+      padding: 8px 10px; border-radius: 10px; cursor: pointer;
+      white-space: nowrap;
     }
     .convert-input-box {
       background: #081324; border: 1px solid var(--card-border);
@@ -356,14 +370,12 @@ MINI_APP_HTML = """<!DOCTYPE html>
 </head>
 <body>
 
-  <!-- شاشة الحظر ومنع التعدد -->
   <div id="banned-overlay">
     <i class="fa-solid fa-ban" style="font-size:60px; color:#ef4444; margin-bottom:16px;"></i>
     <h2 style="color:#ef4444; margin-bottom:8px;" id="t-banned-title">⛔ تم حظر هذا الحساب!</h2>
     <p id="ban-reason-text" style="font-size:13px; color:#cbd5e1; line-height:1.6;">تم اكتشاف مخالفة لقوانين المنظومة.</p>
   </div>
 
-  <!-- شاشة الاشتراك الإجباري -->
   <div id="channel-lock-overlay">
     <i class="fa-brands fa-telegram" style="font-size:65px; color:var(--cyan-neon); margin-bottom:16px;"></i>
     <h2 style="color:#ffffff; margin-bottom:8px;" id="t-lock-title">📢 خطوة أخيرة للتفعيل!</h2>
@@ -445,28 +457,51 @@ MINI_APP_HTML = """<!DOCTYPE html>
         </div>
 
         <div class="plan-card">
-          <div><div class="plan-info-title">CPU Micro Rig</div><div class="plan-info-sub">+0.15 TH/s</div></div>
-          <button class="btn-buy-plan" onclick="purchasePlan(0.1, 0.15)">0.1 TON</button>
+          <div><div class="plan-info-title">CPU Micro Rig</div><div class="plan-info-sub">+0.18 TH/s</div></div>
+          <div class="plan-buy-buttons">
+            <button class="btn-buy-plan" onclick="purchasePlan(0.1, 0.18)">0.1 TON</button>
+            <button class="btn-buy-olk" onclick="purchasePlanWithOlk(1000, 0.18)">1,000 OLK</button>
+          </div>
         </div>
+
         <div class="plan-card">
-          <div><div class="plan-info-title">GPU Pro Miner</div><div class="plan-info-sub">+0.77 TH/s</div></div>
-          <button class="btn-buy-plan" onclick="purchasePlan(0.5, 0.77)">0.5 TON</button>
+          <div><div class="plan-info-title">GPU Pro Miner</div><div class="plan-info-sub">+0.89 TH/s</div></div>
+          <div class="plan-buy-buttons">
+            <button class="btn-buy-plan" onclick="purchasePlan(0.5, 0.89)">0.5 TON</button>
+            <button class="btn-buy-olk" onclick="purchasePlanWithOlk(5000, 0.89)">5,000 OLK</button>
+          </div>
         </div>
+
         <div class="plan-card">
-          <div><div class="plan-info-title">ASIC Mini Rig</div><div class="plan-info-sub">+1.55 TH/s</div></div>
-          <button class="btn-buy-plan" onclick="purchasePlan(1.0, 1.55)">1.0 TON</button>
+          <div><div class="plan-info-title">ASIC Mini Rig</div><div class="plan-info-sub">+1.78 TH/s</div></div>
+          <div class="plan-buy-buttons">
+            <button class="btn-buy-plan" onclick="purchasePlan(1.0, 1.78)">1.0 TON</button>
+            <button class="btn-buy-olk" onclick="purchasePlanWithOlk(10000, 1.78)">10,000 OLK</button>
+          </div>
         </div>
+
         <div class="plan-card">
-          <div><div class="plan-info-title">Titan Quantum Rig</div><div class="plan-info-sub">+3.86 TH/s</div></div>
-          <button class="btn-buy-plan" onclick="purchasePlan(2.5, 3.86)">2.5 TON</button>
+          <div><div class="plan-info-title">Titan Quantum Rig</div><div class="plan-info-sub">+4.46 TH/s</div></div>
+          <div class="plan-buy-buttons">
+            <button class="btn-buy-plan" onclick="purchasePlan(2.5, 4.46)">2.5 TON</button>
+            <button class="btn-buy-olk" onclick="purchasePlanWithOlk(25000, 4.46)">25,000 OLK</button>
+          </div>
         </div>
+
         <div class="plan-card">
-          <div><div class="plan-info-title">Enterprise Mining Node</div><div class="plan-info-sub">+7.72 TH/s</div></div>
-          <button class="btn-buy-plan" onclick="purchasePlan(5.0, 7.72)">5.0 TON</button>
+          <div><div class="plan-info-title">Enterprise Mining Node</div><div class="plan-info-sub">+8.91 TH/s</div></div>
+          <div class="plan-buy-buttons">
+            <button class="btn-buy-plan" onclick="purchasePlan(5.0, 8.91)">5.0 TON</button>
+            <button class="btn-buy-olk" onclick="purchasePlanWithOlk(50000, 8.91)">50,000 OLK</button>
+          </div>
         </div>
+
         <div class="plan-card" style="border: 1.5px solid var(--gold-neon);">
-          <div><div class="plan-info-title" style="color:var(--gold-neon);">Apex VIP Supercluster</div><div class="plan-info-sub" style="color:var(--gold-neon);">+15.43 TH/s</div></div>
-          <button class="btn-buy-plan" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#000;" onclick="purchasePlan(10.0, 15.43)">10.0 TON</button>
+          <div><div class="plan-info-title" style="color:var(--gold-neon);">Apex VIP Supercluster</div><div class="plan-info-sub" style="color:var(--gold-neon);">+17.82 TH/s</div></div>
+          <div class="plan-buy-buttons">
+            <button class="btn-buy-plan" style="background:linear-gradient(135deg, #0284c7, #0ea5e9);" onclick="purchasePlan(10.0, 17.82)">10.0 TON</button>
+            <button class="btn-buy-olk" onclick="purchasePlanWithOlk(100000, 17.82)">100,000 OLK</button>
+          </div>
         </div>
       </div>
     </div>
@@ -502,7 +537,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب الإحالات المطور -->
+    <!-- تبويب الإحالات -->
     <div class="page-tab" id="tab-frens">
       <div class="card-panel">
         <div style="font-weight:bold; color:var(--cyan-neon); font-size:14px;"><i class="fa-solid fa-users"></i> <span id="t-frens-title">شبكة التعدين التشاركية</span></div>
@@ -1161,6 +1196,48 @@ MINI_APP_HTML = """<!DOCTYPE html>
       }
     }
 
+    async function purchasePlanWithOlk(costOlk, speedGain) {
+      if (appOlk < costOlk) {
+        alert(currentLang === "ar" 
+          ? `⚠️ رصيدك من OLK غير كافٍ! يلزمك ${costOlk.toLocaleString()} OLK للمتابعة.` 
+          : `⚠️ Insufficient OLK balance! You need ${costOlk.toLocaleString()} OLK.`);
+        return;
+      }
+
+      const confirmMsg = currentLang === "ar" 
+        ? `هل تريد ترقية الجهاز بمقدار +${speedGain} TH/s مقابل ${costOlk.toLocaleString()} OLK؟`
+        : `Upgrade rig by +${speedGain} TH/s for ${costOlk.toLocaleString()} OLK?`;
+
+      if (!confirm(confirmMsg)) return;
+
+      try {
+        const res = await fetch("/api/upgrade_rig_olk", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: userId,
+            cost_olk: costOlk,
+            speed_gain: speedGain,
+            fingerprint: currentFingerprint
+          })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          appOlk = data.olk_balance;
+          speed = data.mining_speed;
+          document.getElementById("olk-bal-val").innerText = appOlk.toFixed(2) + " OLK";
+          document.getElementById("speed-display").innerText = speed.toFixed(2) + " TH/s";
+          alert(currentLang === "ar" 
+            ? `🎉 تم خصم ${costOlk.toLocaleString()} OLK وترقية جهاز التعدين بنجاح! السرعة الآن: ${speed.toFixed(2)} TH/s` 
+            : `🎉 Upgraded successfully! Current speed: ${speed.toFixed(2)} TH/s`);
+        } else {
+          alert(data.msg || "حدث خطأ أثناء الترقية");
+        }
+      } catch (e) {
+        alert("Server error");
+      }
+    }
+
     function calcSwap() {
       const v = parseFloat(document.getElementById("swap-folk-input").value) || 0;
       document.getElementById("swap-preview").innerText = (v / 10000).toFixed(4) + " TON";
@@ -1774,6 +1851,33 @@ async def api_upgrade_rig_ton_direct(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
+async def api_upgrade_rig_olk(request):
+    try:
+        data = await request.json()
+        user_id = int(data.get("user_id"))
+        cost_olk = float(data.get("cost_olk", 0))
+        speed_gain = float(data.get("speed_gain", 0))
+
+        if cost_olk <= 0 or speed_gain <= 0:
+            return web.json_response({"ok": False, "msg": "بيانات غير صالحة"})
+
+        async with db_pool.acquire() as conn:
+            row = await conn.fetchrow("SELECT olk_balance, mining_speed, miner_level FROM users WHERE user_id = $1", user_id)
+            if not row or row["olk_balance"] < cost_olk:
+                return web.json_response({"ok": False, "msg": "رصيد OLK غير كافٍ"})
+
+            new_olk = row["olk_balance"] - cost_olk
+            new_speed = row["mining_speed"] + speed_gain
+            new_lvl = row["miner_level"] + 1
+
+            await conn.execute("""
+                UPDATE users SET olk_balance = $1, mining_speed = $2, miner_level = $3 WHERE user_id = $4
+            """, new_olk, new_speed, new_lvl, user_id)
+
+        return web.json_response({"ok": True, "olk_balance": new_olk, "mining_speed": new_speed})
+    except Exception as e:
+        return web.json_response({"ok": False, "msg": str(e)})
+
 async def api_deposit_ton_credit(request):
     try:
         data = await request.json()
@@ -1979,7 +2083,11 @@ def build_main_admin_keyboard(perms):
         buttons.append([InlineKeyboardButton(text="👥 إدارة مهام المجموعات (إضافة/حذف)", callback_data="adm_groups_menu")])
         buttons.append([InlineKeyboardButton(text="🤖 إدارة مهام البوتات (إضافة/حذف)", callback_data="adm_bot_tasks_menu")])
     if perms.get("can_ban_users"):
-        buttons.append([InlineKeyboardButton(text="🔓 فك الحظر عن مستخدم (Unban)", callback_data="adm_unban_start")])
+        # خيارا الحظر وفك الحظر جنباً إلى جنب
+        buttons.append([
+            InlineKeyboardButton(text="🚫 حظر مستخدم (Ban)", callback_data="adm_ban_start"),
+            InlineKeyboardButton(text="🔓 فك الحظر (Unban)", callback_data="adm_unban_start")
+        ])
     if perms.get("can_broadcast"):
         buttons.append([InlineKeyboardButton(text="📨 إرسال إذاعة عامة (Broadcast)", callback_data="adm_start_bc")])
     if perms.get("is_super"):
@@ -2010,8 +2118,8 @@ async def render_admin_perms_keyboard(target_id: int):
 async def start_handler(message: Message, command: CommandObject, state: FSMContext):
     await state.clear()
     user_id = message.from_user.id
-    username = message.from_user.username
-    first_name = message.from_user.first_name
+    username = (message.from_user.username or "").lower().replace("@", "")
+    first_name = message.from_user.first_name or "User"
     ref_param = command.args
     now = int(time.time())
 
@@ -2051,9 +2159,8 @@ async def start_handler(message: Message, command: CommandObject, state: FSMCont
 
     perms = await get_admin_permissions(user_id)
     
-    # رسالة الترحيب المحددة من الصورة
     welcome_text = (
-        "🐐⚡ أهلاً بك في عالم **OLK VIP CYBER MINING** ⚡\n\n"
+        "🐐⚡ أهلاً بك في عالم <b>OLK VIP CYBER MINING</b> ⚡\n\n"
         "━━━━━━━━━━━━━━━━━━━━━\n\n"
         "⛏️ ابدأ التعدين واجمع العملات بكل سهولة!\n\n"
         "💰 تابع أرباحك ومكافآتك من داخل البوت.\n\n"
@@ -2064,7 +2171,7 @@ async def start_handler(message: Message, command: CommandObject, state: FSMCont
         "🚀 رحلتك تبدأ الآن... كن جزءاً من عالم OLK! 👾\n\n"
         "👇 اضغط هنا في الأسفل للبدء معنا وتحقيق الأرباح."
     )
-    await message.answer(welcome_text, parse_mode="Markdown", reply_markup=build_combined_start_keyboard(user_id, perms))
+    await message.answer(welcome_text, parse_mode="HTML", reply_markup=build_combined_start_keyboard(user_id, perms))
 
 @dp.message(Command("admin"))
 async def admin_panel(message: Message, state: FSMContext):
@@ -2075,11 +2182,12 @@ async def admin_panel(message: Message, state: FSMContext):
         return
     rank = "👑 الرئيس الأعلى (Super Admin)" if perms.get("is_super") else "🛡️ مشرف فرعي (Sub-Admin)"
     await message.answer(
-        f"⚡ **لوحة التحكم والإدارة**\nرتبتك: **{rank}**\n\nاختر من الأزرار أدناه:",
+        f"⚡ <b>لوحة التحكم والإدارة</b>\nرتبتك: <b>{rank}</b>\n\nاختر من الأزرار أدناه:",
         reply_markup=build_main_admin_keyboard(perms),
-        parse_mode="Markdown"
+        parse_mode="HTML"
     )
 
+# توب 20 الأكثر إحالة (استعلام نظيف ومحصن)
 @dp.callback_query(F.data == "adm_top_refs")
 async def cb_admin_top_refs(callback: CallbackQuery):
     perms = await get_admin_permissions(callback.from_user.id)
@@ -2087,39 +2195,165 @@ async def cb_admin_top_refs(callback: CallbackQuery):
         return
     await callback.answer()
 
-    async with db_pool.acquire() as conn:
-        rows = await conn.fetch("""
-            SELECT referred_by, COUNT(*) as ref_count 
-            FROM users 
-            WHERE referred_by IS NOT NULL 
-            GROUP BY referred_by 
-            ORDER BY ref_count DESC 
-            LIMIT 20;
-        """)
+    try:
+        async with db_pool.acquire() as conn:
+            rows = await conn.fetch("""
+                SELECT 
+                    u.user_id,
+                    u.username,
+                    u.first_name,
+                    COUNT(r.user_id) AS ref_count
+                FROM users r
+                JOIN users u ON u.user_id = r.referred_by
+                WHERE r.referred_by IS NOT NULL
+                GROUP BY u.user_id, u.username, u.first_name
+                ORDER BY ref_count DESC
+                LIMIT 20;
+            """)
 
-        user_details = []
-        for r in rows:
-            u_info = await conn.fetchrow("SELECT username, first_name FROM users WHERE user_id = $1", r["referred_by"])
-            uname = u_info["username"] if u_info and u_info["username"] else None
-            fname = u_info["first_name"] if u_info and u_info["first_name"] else None
-            user_details.append({
-                "user_id": r["referred_by"],
-                "username": uname,
-                "first_name": fname,
-                "ref_count": r["ref_count"]
-            })
+        if not rows:
+            text = "🏆 <b>قائمة أفضل 20 مستخدم في الإحالات:</b>\n\nلا توجد إحالات مسجلة حتى الآن."
+        else:
+            text = "🏆 <b>ترتيب أفضل 20 مستخدم من ناحية الإحالات:</b>\n──────────────────────\n"
+            for idx, r in enumerate(rows, 1):
+                if r['username']:
+                    uname_esc = html.escape(r['username'])
+                    name_display = f"@{uname_esc}"
+                else:
+                    fname_esc = html.escape(r['first_name'] or 'User')
+                    name_display = f"{fname_esc} (<code>{r['user_id']}</code>)"
 
-    if not user_details:
-        text = "🏆 **قائمة أفضل 20 مستخدم في الإحالات:**\n\nلا توجد إحالات مسجلة حتى الآن."
-    else:
-        text = "🏆 **ترتيب أفضل 20 مستخدم من ناحية الإحالات:**\n──────────────────────\n"
-        for idx, r in enumerate(user_details, 1):
-            name_display = f"@{r['username']}" if r['username'] else (r['first_name'] or f"ID: {r['user_id']}")
-            text += f"**{idx}.** {name_display} — 👥 `{r['ref_count']}` إحالة\n"
-        text += "──────────────────────"
+                text += f"<b>{idx}.</b> {name_display} — 👥 <code>{r['ref_count']}</code> إحالة\n"
+            text += "──────────────────────"
+    except Exception as e:
+        text = f"⚠️ حدث خطأ أثناء جلب قائمة التوب: {e}"
 
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 العودة للرئيسية", callback_data="adm_home")]])
-    await callback.message.edit_text(text, parse_mode="Markdown", reply_markup=kb)
+    await callback.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
+
+# حظر مستخدم (عن طريق ID أو يوزر)
+@dp.callback_query(F.data == "adm_ban_start")
+async def cb_ban_start(callback: CallbackQuery, state: FSMContext):
+    perms = await get_admin_permissions(callback.from_user.id)
+    if not perms or not perms.get("can_ban_users"):
+        await callback.answer("⛔ ليس لديك صلاحية الحظر", show_alert=True)
+        return
+    await callback.answer()
+    await callback.message.answer("🚫 أرسل الآن **معرّف المستخدم (Telegram ID)** أو **اليوزر (@username)** لحظره:")
+    await state.set_state(BanStates.waiting_for_target)
+
+@dp.message(BanStates.waiting_for_target)
+async def state_ban_target(message: Message, state: FSMContext):
+    raw = message.text.strip()
+    target_clean = raw.lower().replace("@", "")
+
+    async with db_pool.acquire() as conn:
+        if raw.isdigit():
+            user = await conn.fetchrow("SELECT user_id, username, first_name FROM users WHERE user_id = $1", int(raw))
+        else:
+            user = await conn.fetchrow("SELECT user_id, username, first_name FROM users WHERE LOWER(username) = $1", target_clean)
+
+    if not user:
+        await message.answer("❌ لم يتم العثور على هذا المستخدم في قاعدة البيانات! تأكد من المعرف أو اليوزر:")
+        return
+
+    await state.update_data(target_id=user["user_id"], target_name=user["first_name"] or str(user["user_id"]))
+    await message.answer(f"⚠️ المستخدم المحدد: <b>{html.escape(user['first_name'] or '')}</b> (<code>{user['user_id']}</code>)\n\nأرسل الآن **سبب الحظر** (أو اكتب `مخالفة الشروط`):", parse_mode="HTML")
+    await state.set_state(BanStates.waiting_for_reason)
+
+@dp.message(BanStates.waiting_for_reason)
+async def state_ban_execute(message: Message, state: FSMContext):
+    reason = message.text.strip()
+    data = await state.get_data()
+    target_id = data.get("target_id")
+    await state.clear()
+
+    async with db_pool.acquire() as conn:
+        await conn.execute("UPDATE users SET is_banned = 1, ban_reason = $1, is_whitelisted = 0 WHERE user_id = $2", reason, target_id)
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 العودة للوحة التحكم", callback_data="adm_home")]])
+    await message.answer(f"✅ تم حظر المستخدم <code>{target_id}</code> بنجاح!\nالسبب: {html.escape(reason)}", parse_mode="HTML", reply_markup=kb)
+
+# فك الحظر (عن طريق ID أو يوزر)
+@dp.callback_query(F.data == "adm_unban_start")
+async def cb_unban_start(callback: CallbackQuery, state: FSMContext):
+    perms = await get_admin_permissions(callback.from_user.id)
+    if not perms or not perms.get("can_ban_users"):
+        await callback.answer("⛔ ليس لديك صلاحية فك الحظر", show_alert=True)
+        return
+    await callback.answer()
+    await callback.message.answer("🔓 أرسل الآن **معرّف المستخدم (Telegram ID)** أو **اليوزر (@username)** لفك الحظر عنه فوراً:")
+    await state.set_state(UnbanStates.waiting_for_target)
+
+@dp.message(UnbanStates.waiting_for_target)
+async def state_execute_unban(message: Message, state: FSMContext):
+    raw = message.text.strip()
+    target_clean = raw.lower().replace("@", "")
+
+    async with db_pool.acquire() as conn:
+        if raw.isdigit():
+            user = await conn.fetchrow("SELECT user_id FROM users WHERE user_id = $1", int(raw))
+        else:
+            user = await conn.fetchrow("SELECT user_id FROM users WHERE LOWER(username) = $1", target_clean)
+
+        if not user:
+            await message.answer("❌ لم يتم العثور على هذا المستخدم في قاعدة البيانات! تأكد من صحة الـ ID أو اليوزر:")
+            return
+
+        target_id = user["user_id"]
+        await conn.execute("UPDATE users SET is_banned = 0, ban_reason = NULL, is_whitelisted = 1 WHERE user_id = $1", target_id)
+
+    await state.clear()
+    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 العودة للوحة التحكم", callback_data="adm_home")]])
+    await message.answer(f"✅ تم فك الحظر عن <code>{target_id}</code> بنجاح وإدراجه في القائمة البيضاء لمنع الحظر التلقائي!", parse_mode="HTML", reply_markup=kb)
+
+# أوامر مباشرة
+@dp.message(Command("unban"))
+async def unban_user_direct(message: Message, command: CommandObject):
+    perms = await get_admin_permissions(message.from_user.id)
+    if not perms or not perms.get("can_ban_users"): return
+    if not command.args:
+        await message.answer("⚠️ الصيغة:\n`/unban USER_ID أو @username`", parse_mode="Markdown")
+        return
+    raw = command.args.strip()
+    target_clean = raw.lower().replace("@", "")
+    async with db_pool.acquire() as conn:
+        if raw.isdigit():
+            user = await conn.fetchrow("SELECT user_id FROM users WHERE user_id = $1", int(raw))
+        else:
+            user = await conn.fetchrow("SELECT user_id FROM users WHERE LOWER(username) = $1", target_clean)
+
+        if not user:
+            await message.answer("❌ المستخدم غير موجود.")
+            return
+
+        await conn.execute("UPDATE users SET is_banned = 0, ban_reason = NULL, is_whitelisted = 1 WHERE user_id = $1", user["user_id"])
+    await message.answer(f"✅ تم فك الحظر عن `{user['user_id']}` بنجاح!", parse_mode="Markdown")
+
+@dp.message(Command("ban"))
+async def ban_user_direct(message: Message, command: CommandObject):
+    perms = await get_admin_permissions(message.from_user.id)
+    if not perms or not perms.get("can_ban_users"): return
+    if not command.args:
+        await message.answer("⚠️ الصيغة:\n`/ban USER_ID_او_يوزر سبب الحظر`", parse_mode="Markdown")
+        return
+    parts = command.args.split(maxsplit=1)
+    raw = parts[0].strip()
+    target_clean = raw.lower().replace("@", "")
+    reason = parts[1] if len(parts) > 1 else "حظر إداري"
+
+    async with db_pool.acquire() as conn:
+        if raw.isdigit():
+            user = await conn.fetchrow("SELECT user_id FROM users WHERE user_id = $1", int(raw))
+        else:
+            user = await conn.fetchrow("SELECT user_id FROM users WHERE LOWER(username) = $1", target_clean)
+
+        if not user:
+            await message.answer("❌ المستخدم غير موجود.")
+            return
+
+        await conn.execute("UPDATE users SET is_banned = 1, ban_reason = $1, is_whitelisted = 0 WHERE user_id = $2", reason, user["user_id"])
+    await message.answer(f"✅ تم حظر المستخدم `{user['user_id']}` بنجاح.", parse_mode="Markdown")
 
 @dp.callback_query(F.data == "adm_back_to_start")
 async def cb_back_to_start(callback: CallbackQuery, state: FSMContext):
@@ -2128,7 +2362,7 @@ async def cb_back_to_start(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     perms = await get_admin_permissions(user_id)
     welcome_text = (
-        "🐐⚡ أهلاً بك في عالم **OLK VIP CYBER MINING** ⚡\n\n"
+        "🐐⚡ أهلاً بك في عالم <b>OLK VIP CYBER MINING</b> ⚡\n\n"
         "━━━━━━━━━━━━━━━━━━━━━\n\n"
         "⛏️ ابدأ التعدين واجمع العملات بكل سهولة!\n\n"
         "💰 تابع أرباحك ومكافآتك من داخل البوت.\n\n"
@@ -2139,7 +2373,7 @@ async def cb_back_to_start(callback: CallbackQuery, state: FSMContext):
         "🚀 رحلتك تبدأ الآن... كن جزءاً من عالم OLK! 👾\n\n"
         "👇 اضغط هنا في الأسفل للبدء معنا وتحقيق الأرباح."
     )
-    await callback.message.edit_text(welcome_text, parse_mode="Markdown", reply_markup=build_combined_start_keyboard(user_id, perms))
+    await callback.message.edit_text(welcome_text, parse_mode="HTML", reply_markup=build_combined_start_keyboard(user_id, perms))
 
 @dp.callback_query(F.data == "adm_home")
 async def cb_admin_home(callback: CallbackQuery, state: FSMContext):
@@ -2150,9 +2384,9 @@ async def cb_admin_home(callback: CallbackQuery, state: FSMContext):
         return
     rank = "👑 الرئيس الأعلى (Super Admin)" if perms.get("is_super") else "🛡️ مشرف فرعي (Sub-Admin)"
     await callback.message.edit_text(
-        f"⚡ **لوحة التحكم والإدارة**\nرتبتك: **{rank}**\n\nاختر من الأزرار أدناه:",
+        f"⚡ <b>لوحة التحكم والإدارة</b>\nرتبتك: <b>{rank}</b>\n\nاختر من الأزرار أدناه:",
         reply_markup=build_main_admin_keyboard(perms),
-        parse_mode="Markdown"
+        parse_mode="HTML"
     )
 
 @dp.callback_query(F.data == "adm_stats")
@@ -2174,74 +2408,20 @@ async def cb_admin_stats(callback: CallbackQuery):
         active_bot_tasks = await conn.fetchval("SELECT COUNT(*) FROM dynamic_bot_tasks WHERE is_active = 1") or 0
 
     stats_msg = (
-        "📊 **إحصائيات المنظومة الحية:**\n"
+        "📊 <b>إحصائيات المنظومة الحية:</b>\n"
         "──────────────────────\n"
-        f"👥 إجمالي المستخدمين النشطين: `{users_count}`\n"
-        f"🚫 المحظورين (تعدد/مخالفات): `{banned_users}`\n"
-        f"🪙 إجمالي رصيد OLK: `{total_olk:.2f}`\n"
-        f"💎 إجمالي رصيد TON: `{total_ton:.4f}`\n"
-        f"⏳ طلبات السحب المعلقة: `{pending_withdraws}`\n"
-        f"📢 مهام القنوات: `{active_tasks}`\n"
-        f"👥 مهام المجموعات: `{active_group_tasks}`\n"
-        f"🤖 مهام البوتات: `{active_bot_tasks}`\n"
+        f"👥 إجمالي المستخدمين النشطين: <code>{users_count}</code>\n"
+        f"🚫 المحظورين: <code>{banned_users}</code>\n"
+        f"🪙 إجمالي رصيد OLK: <code>{total_olk:.2f}</code>\n"
+        f"💎 إجمالي رصيد TON: <code>{total_ton:.4f}</code>\n"
+        f"⏳ طلبات السحب المعلقة: <code>{pending_withdraws}</code>\n"
+        f"📢 مهام القنوات: <code>{active_tasks}</code>\n"
+        f"👥 مهام المجموعات: <code>{active_group_tasks}</code>\n"
+        f"🤖 مهام البوتات: <code>{active_bot_tasks}</code>\n"
         "──────────────────────"
     )
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 العودة للرئيسية", callback_data="adm_home")]])
-    await callback.message.edit_text(stats_msg, parse_mode="Markdown", reply_markup=kb)
-
-# فك الحظر
-@dp.callback_query(F.data == "adm_unban_start")
-async def cb_unban_start(callback: CallbackQuery, state: FSMContext):
-    perms = await get_admin_permissions(callback.from_user.id)
-    if not perms or not perms.get("can_ban_users"):
-        await callback.answer("⛔ ليس لديك صلاحية فك الحظر", show_alert=True)
-        return
-    await callback.answer()
-    await callback.message.answer("🆔 أرسل الآن **معرّف المستخدم (Telegram ID)** لفك الحظر عنه فوراً وإضافته للقائمة البيضاء:")
-    await state.set_state(UnbanStates.waiting_for_id)
-
-@dp.message(UnbanStates.waiting_for_id)
-async def state_execute_unban(message: Message, state: FSMContext):
-    try: target_id = int(message.text.strip())
-    except ValueError:
-        await message.answer("❌ يرجى إدخال رقم المعرف صحيحاً:")
-        return
-
-    await state.clear()
-    async with db_pool.acquire() as conn:
-        await conn.execute("UPDATE users SET is_banned = 0, ban_reason = NULL, is_whitelisted = 1 WHERE user_id = $1", target_id)
-
-    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 العودة للوحة التحكم", callback_data="adm_home")]])
-    await message.answer(f"✅ تم فك الحظر عن `{target_id}` بنجاح وإدراجه في القائمة البيضاء لمنع الحظر التلقائي!", reply_markup=kb, parse_mode="Markdown")
-
-@dp.message(Command("unban"))
-async def unban_user_direct(message: Message, command: CommandObject):
-    perms = await get_admin_permissions(message.from_user.id)
-    if not perms or not perms.get("can_ban_users"): return
-    if not command.args:
-        await message.answer("⚠️ الصيغة:\n`/unban USER_ID`", parse_mode="Markdown")
-        return
-    try:
-        target_id = int(command.args.strip())
-        async with db_pool.acquire() as conn:
-            await conn.execute("UPDATE users SET is_banned = 0, ban_reason = NULL, is_whitelisted = 1 WHERE user_id = $1", target_id)
-        await message.answer(f"✅ تم فك الحظر عن `{target_id}` بنجاح!", parse_mode="Markdown")
-    except ValueError:
-        await message.answer("❌ المعرف يجب أن يكون رقماً.")
-
-@dp.message(Command("ban"))
-async def ban_user_direct(message: Message, command: CommandObject):
-    perms = await get_admin_permissions(message.from_user.id)
-    if not perms or not perms.get("can_ban_users"): return
-    if not command.args:
-        await message.answer("⚠️ الصيغة:\n`/ban USER_ID سبب الحظر`", parse_mode="Markdown")
-        return
-    parts = command.args.split(maxsplit=1)
-    target_id = int(parts[0])
-    reason = parts[1] if len(parts) > 1 else "حظر إداري"
-    async with db_pool.acquire() as conn:
-        await conn.execute("UPDATE users SET is_banned = 1, ban_reason = $1, is_whitelisted = 0 WHERE user_id = $2", reason, target_id)
-    await message.answer(f"✅ تم حظر المستخدم `{target_id}` بنجاح.", parse_mode="Markdown")
+    await callback.message.edit_text(stats_msg, parse_mode="HTML", reply_markup=kb)
 
 @dp.callback_query(F.data == "adm_view_withdraws")
 async def cb_view_withdraws(callback: CallbackQuery):
@@ -2272,12 +2452,12 @@ async def cb_view_withdraws(callback: CallbackQuery):
             ]
         ])
         await callback.message.answer(
-            f"📄 **طلب سحب #{w_id}**\n👤 المستخدم: `{uid}`\n💎 المبلغ: `{amt:.4f} TON`\n📫 المحفظة:\n`{w_addr}`",
-            parse_mode="Markdown",
+            f"📄 <b>طلب سحب #{w_id}</b>\n👤 المستخدم: <code>{uid}</code>\n💎 المبلغ: <code>{amt:.4f} TON</code>\n📫 المحفظة:\n<code>{w_addr}</code>",
+            parse_mode="HTML",
             reply_markup=kb
         )
 
-# قنوات
+# مهام القنوات
 @dp.callback_query(F.data == "adm_tasks_menu")
 async def cb_tasks_menu(callback: CallbackQuery):
     perms = await get_admin_permissions(callback.from_user.id)
@@ -2295,7 +2475,7 @@ async def cb_tasks_menu(callback: CallbackQuery):
         buttons.append([InlineKeyboardButton(text=f"🗑️ حذف: {r['title']} {lim_str}", callback_data=f"adm_del_task_{r['id']}")])
     buttons.append([InlineKeyboardButton(text="🔙 العودة للرئيسية", callback_data="adm_home")])
 
-    await callback.message.edit_text("📢 **إدارة مهام القنوات:**", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+    await callback.message.edit_text("📢 <b>إدارة مهام القنوات:</b>", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
 
 @dp.callback_query(F.data == "adm_add_task_start")
 async def cb_add_task_start(callback: CallbackQuery, state: FSMContext):
@@ -2365,7 +2545,7 @@ async def cb_del_task(callback: CallbackQuery):
     await callback.answer("🗑️ تم حذف المهمة!", show_alert=True)
     await cb_tasks_menu(callback)
 
-# مجموعات
+# مهام المجموعات
 @dp.callback_query(F.data == "adm_groups_menu")
 async def cb_groups_menu(callback: CallbackQuery):
     perms = await get_admin_permissions(callback.from_user.id)
@@ -2383,7 +2563,7 @@ async def cb_groups_menu(callback: CallbackQuery):
         buttons.append([InlineKeyboardButton(text=f"🗑️ حذف: {r['title']} {lim_str}", callback_data=f"adm_del_group_{r['id']}")])
     buttons.append([InlineKeyboardButton(text="🔙 العودة للرئيسية", callback_data="adm_home")])
 
-    await callback.message.edit_text("👥 **إدارة مهام المجموعات:**", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+    await callback.message.edit_text("👥 <b>إدارة مهام المجموعات:</b>", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
 
 @dp.callback_query(F.data == "adm_add_group_start")
 async def cb_add_group_start(callback: CallbackQuery, state: FSMContext):
@@ -2453,7 +2633,7 @@ async def cb_del_group(callback: CallbackQuery):
     await callback.answer("🗑️ تم حذف مهمة المجموعة!", show_alert=True)
     await cb_groups_menu(callback)
 
-# بوتات
+# مهام البوتات
 @dp.callback_query(F.data == "adm_bot_tasks_menu")
 async def cb_bot_tasks_menu(callback: CallbackQuery):
     perms = await get_admin_permissions(callback.from_user.id)
@@ -2471,7 +2651,7 @@ async def cb_bot_tasks_menu(callback: CallbackQuery):
         buttons.append([InlineKeyboardButton(text=f"🗑️ حذف: {r['title']} (+{r['reward']} OLK) {lim_str}", callback_data=f"adm_del_bottask_{r['id']}")])
     buttons.append([InlineKeyboardButton(text="🔙 العودة للرئيسية", callback_data="adm_home")])
 
-    await callback.message.edit_text("🤖 **إدارة مهام البوتات:**", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+    await callback.message.edit_text("🤖 <b>إدارة مهام البوتات:</b>", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
 
 @dp.callback_query(F.data == "adm_add_bot_task_start")
 async def cb_add_bot_task_start(callback: CallbackQuery, state: FSMContext):
@@ -2551,7 +2731,7 @@ async def cb_manage_admins(callback: CallbackQuery):
         buttons.append([InlineKeyboardButton(text=f"⚙️ المشرف: {r['user_id']}", callback_data=f"adm_edit_admin_{r['user_id']}")])
     buttons.append([InlineKeyboardButton(text="🔙 العودة للرئيسية", callback_data="adm_home")])
 
-    await callback.message.edit_text("👑 **إدارة المشرفين والصلاحيات:**", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+    await callback.message.edit_text("👑 <b>إدارة المشرفين والصلاحيات:</b>", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
 
 @dp.callback_query(F.data == "adm_add_admin_start")
 async def cb_add_admin_start(callback: CallbackQuery, state: FSMContext):
@@ -2575,7 +2755,7 @@ async def state_save_new_admin(message: Message, state: FSMContext):
             VALUES ($1, 1, 0, 0, 0, $2) ON CONFLICT (user_id) DO NOTHING
         """, new_admin_id, now)
 
-    await message.answer(f"✅ تم إضافة المشرف `{new_admin_id}` بنجاح!", parse_mode="Markdown")
+    await message.answer(f"✅ تم إضافة المشرف <code>{new_admin_id}</code> بنجاح!", parse_mode="HTML")
 
 @dp.callback_query(F.data.startswith("adm_edit_admin_"))
 async def cb_edit_admin(callback: CallbackQuery):
@@ -2584,7 +2764,7 @@ async def cb_edit_admin(callback: CallbackQuery):
     target_id = int(callback.data.split("_")[3])
     kb = await render_admin_perms_keyboard(target_id)
     if not kb: return
-    await callback.message.edit_text(f"⚙️ **ضبط صلاحيات المشرف:** `{target_id}`", parse_mode="Markdown", reply_markup=kb)
+    await callback.message.edit_text(f"⚙️ <b>ضبط صلاحيات المشرف:</b> <code>{target_id}</code>", parse_mode="HTML", reply_markup=kb)
 
 @dp.callback_query(F.data.startswith("adm_tog_"))
 async def cb_toggle_permission(callback: CallbackQuery):
@@ -2654,9 +2834,9 @@ async def approve_withdraw(callback: CallbackQuery):
             uid, amount = row["user_id"], row["amount_ton"]
             await conn.execute("UPDATE withdrawals SET status = 'APPROVED' WHERE id = $1", w_id)
             try:
-                await bot.send_message(chat_id=uid, text=f"🎉 **تمت الموافقة ودفع سحب {amount:.4f} TON لمحفظتك!**", parse_mode="Markdown")
+                await bot.send_message(chat_id=uid, text=f"🎉 <b>تمت الموافقة ودفع سحب {amount:.4f} TON لمحفظتك!</b>", parse_mode="HTML")
             except Exception: pass
-    await callback.message.edit_text(callback.message.text + "\n\n✅ **تمت الموافقة والدفع بنجاح.**")
+    await callback.message.edit_text(callback.message.text + "\n\n✅ <b>تمت الموافقة والدفع بنجاح.</b>", parse_mode="HTML")
 
 @dp.callback_query(F.data.startswith("adm_rej_"))
 async def reject_withdraw(callback: CallbackQuery):
@@ -2671,16 +2851,16 @@ async def reject_withdraw(callback: CallbackQuery):
             await conn.execute("UPDATE users SET ton_balance = ton_balance + $1 WHERE user_id = $2", amount, uid)
             await conn.execute("UPDATE withdrawals SET status = 'REJECTED' WHERE id = $1", w_id)
             try:
-                await bot.send_message(chat_id=uid, text=f"❌ **تم رفض طلب السحب وإعادة {amount:.4f} TON لرصيدك.**", parse_mode="Markdown")
+                await bot.send_message(chat_id=uid, text=f"❌ <b>تم رفض طلب السحب وإعادة {amount:.4f} TON لرصيدك.</b>", parse_mode="HTML")
             except Exception: pass
-    await callback.message.edit_text(callback.message.text + "\n\n❌ **تم رفض الطلب وإعادة الرصيد.**")
+    await callback.message.edit_text(callback.message.text + "\n\n❌ <b>تم رفض الطلب وإعادة الرصيد.</b>", parse_mode="HTML")
 
 async def web_handler(request):
     return web.Response(text=MINI_APP_HTML, content_type="text/html")
 
 async def main():
     await init_db()
-    print("OLK Cyber Session, Anti-Multi, Top 20, Limits & Admin Engine is LIVE...")
+    print("OLK Cyber Session, Top 20, Advanced Ban & Task Limits Engine is LIVE...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
@@ -2692,6 +2872,7 @@ async def main():
     app.router.add_post("/api/start_mining_session", api_start_mining_session)
     app.router.add_post("/api/claim_session_rewards", api_claim_session_rewards)
     app.router.add_post("/api/upgrade_rig_ton_direct", api_upgrade_rig_ton_direct)
+    app.router.add_post("/api/upgrade_rig_olk", api_upgrade_rig_olk)
     app.router.add_post("/api/deposit_ton_credit", api_deposit_ton_credit)
     app.router.add_post("/api/convert", api_convert)
     app.router.add_post("/api/withdraw", api_withdraw)
