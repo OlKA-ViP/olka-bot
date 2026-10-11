@@ -38,13 +38,16 @@ DEFAULT_SPEED = 0.21
 
 ADMIN_MAX_TASK_REWARD = 70.0
 
-# روابط الصور الرسمية المباشرة المعتمدة
+# روابط الصور الرسمية المباشرة (رابط مباشر فائق السرعة يدعم تيليجرام بدون حظر imgbox)
 WELCOME_IMAGE_URL = "https://i.ibb.co/vzR0j4m/olk-bot-logo.jpg"
-PAYOUT_PROOF_IMAGE_URL = "https://images2.imgbox.com/71/6a/G9371QkQ_o.jpg"
+PAYOUT_PROOF_IMAGE_URL = "https://i.ibb.co/k5yFzT5/olk-deposit-withdraw.jpg"
 
 WEBAPP_URL = "https://olka-bot-service.onrender.com"
 
 db_pool = None
+
+# قاموس لتتبع رسائل السحب وتحديثها فورياً لدى الجميع لمنع الدفع المكرر
+admin_withdrawal_messages = {}
 
 def raw_to_user_friendly(raw_addr: str) -> str:
     if not raw_addr or not str(raw_addr).startswith("0:"):
@@ -426,7 +429,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
 
     <div class="overview-grid">
       <div class="overview-card">
-        <div class="overview-label"><i class="fa-solid fa-coins" style="color:var(--gold-neon);"></i> <span id="t-olk-bal-lbl">رصيد OLK الأساسي:</span></div>
+        <div class="overview-label"><i class="fa-solid fa-coins" style="color:var(--gold-neon);"></i> <span id="t-folk-bal-lbl">رصيد OLK الأساسي:</span></div>
         <div class="overview-value" style="color:var(--gold-neon);" id="olk-bal-val">0.00 OLK</div>
       </div>
       <div class="overview-card">
@@ -435,7 +438,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب التعدين (يحتوي على خانة البرومو كود في الصفحة الرئيسية) -->
+    <!-- تبويب التعدين والبرومو كود -->
     <div class="page-tab active" id="tab-mining">
       <div class="mining-stage-card">
         <div class="status-pill">
@@ -468,7 +471,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
         </button>
       </div>
 
-      <!-- بطاقة إدخال كود الهدية (Promo Code) -->
       <div class="card-panel" style="margin-top: 14px;">
         <div style="font-weight:900; color:var(--gold-neon); font-size:13px; display:flex; align-items:center; gap:6px;">
           <i class="fa-solid fa-gift"></i> <span id="t-promo-title">رمز الهدية الترويجي (Promo Code)</span>
@@ -798,7 +800,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       document.getElementById("html-root").dir = t.dir;
       document.getElementById("lang-btn-text").innerText = t.btnLang;
 
-      document.getElementById("t-olk-bal-lbl").innerText = t.olkBal;
+      document.getElementById("t-folk-bal-lbl").innerText = t.olkBal;
       document.getElementById("t-ton-bal-lbl").innerText = t.tonBal;
       document.getElementById("t-mining-earnings-lbl").innerText = t.miningEarnings;
       document.getElementById("t-plans-title").innerText = t.plansTitle;
@@ -1576,7 +1578,6 @@ async def init_db():
         );
         """)
 
-        # جدول أكواد البرومو والمستفيدين منها
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS promo_codes (
             id SERIAL PRIMARY KEY,
@@ -1733,7 +1734,6 @@ async def api_save_wallet(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
-# API تفعيل كود البرومو
 async def api_redeem_promo(request):
     try:
         data = await request.json()
@@ -2055,7 +2055,6 @@ async def api_convert(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
-# API السحب مع إشعار فوري لجميع الأدمنز المؤهلين
 async def api_withdraw(request):
     try:
         data = await request.json()
@@ -2083,7 +2082,6 @@ async def api_withdraw(request):
             )
             await conn.execute("UPDATE users SET ton_balance = $1 WHERE user_id = $2", remaining, user_id)
 
-            # استخراج قائمة كل الأدمنز المؤهلين لإدارة السحب
             admin_rows = await conn.fetch("SELECT user_id FROM bot_admins WHERE can_manage_withdrawals = 1")
             admin_ids = {SUPER_ADMIN_ID}
             for ar in admin_rows:
@@ -2102,10 +2100,11 @@ async def api_withdraw(request):
             f"📫 المحفظة:\n<code>{friendly_address}</code>"
         )
         
-        # إرسال الإشعار الفوري التلقائي للرئيس ولكل الأدمنز المعينين
+        admin_withdrawal_messages[w_id] = []
         for adm_id in admin_ids:
             try:
-                await bot.send_message(chat_id=adm_id, text=admin_notification, reply_markup=admin_kb, parse_mode="HTML")
+                sent_msg = await bot.send_message(chat_id=adm_id, text=admin_notification, reply_markup=admin_kb, parse_mode="HTML")
+                admin_withdrawal_messages[w_id].append((adm_id, sent_msg.message_id))
             except Exception:
                 pass
 
@@ -2232,7 +2231,6 @@ def build_main_admin_keyboard(perms):
         [InlineKeyboardButton(text="🏆 توب 20 الأكثر إحالة (Top 20 Referrers)", callback_data="adm_top_refs")]
     ]
     if perms.get("is_super"):
-        # خيار إنشاء أكواد برومو مخصص للرئيس الأعلى فقط
         buttons.append([InlineKeyboardButton(text="🎁 إنشاء كود برومو (خاص بالرئيس)", callback_data="adm_create_promo_start")])
     if perms.get("can_manage_withdrawals"):
         buttons.append([InlineKeyboardButton(text="⏳ طلبات السحب المعلقة", callback_data="adm_view_withdraws")])
@@ -2358,7 +2356,6 @@ async def admin_panel(message: Message, state: FSMContext):
         parse_mode="HTML"
     )
 
-# تدفق إنشاء كود برومو بواسطة الرئيس فقط
 @dp.callback_query(F.data == "adm_create_promo_start")
 async def cb_create_promo_start(callback: CallbackQuery, state: FSMContext):
     if callback.from_user.id != SUPER_ADMIN_ID:
@@ -2527,9 +2524,9 @@ async def state_execute_unban(message: Message, state: FSMContext):
 
     async with db_pool.acquire() as conn:
         if raw.isdigit():
-            user = await conn.fetchrow("SELECT user_id FROM users WHERE user_id = $1", int(raw))
+            user = await conn.fetchrow("SELECT user_id, username, first_name FROM users WHERE user_id = $1", int(raw))
         else:
-            user = await conn.fetchrow("SELECT user_id FROM users WHERE LOWER(username) = $1", target_clean)
+            user = await conn.fetchrow("SELECT user_id, username, first_name FROM users WHERE LOWER(username) = $1", target_clean)
 
         if not user:
             await message.answer("❌ لم يتم العثور على هذا المستخدم في قاعدة البيانات! تأكد من صحة الـ ID أو اليوزر:")
@@ -2553,9 +2550,9 @@ async def unban_user_direct(message: Message, command: CommandObject):
     target_clean = raw.lower().replace("@", "")
     async with db_pool.acquire() as conn:
         if raw.isdigit():
-            user = await conn.fetchrow("SELECT user_id FROM users WHERE user_id = $1", int(raw))
+            user = await conn.fetchrow("SELECT user_id, username, first_name FROM users WHERE user_id = $1", int(raw))
         else:
-            user = await conn.fetchrow("SELECT user_id FROM users WHERE LOWER(username) = $1", target_clean)
+            user = await conn.fetchrow("SELECT user_id, username, first_name FROM users WHERE LOWER(username) = $1", target_clean)
 
         if not user:
             await message.answer("❌ المستخدم غير موجود.")
@@ -2578,9 +2575,9 @@ async def ban_user_direct(message: Message, command: CommandObject):
 
     async with db_pool.acquire() as conn:
         if raw.isdigit():
-            user = await conn.fetchrow("SELECT user_id FROM users WHERE user_id = $1", int(raw))
+            user = await conn.fetchrow("SELECT user_id, username, first_name FROM users WHERE user_id = $1", int(raw))
         else:
-            user = await conn.fetchrow("SELECT user_id FROM users WHERE LOWER(username) = $1", target_clean)
+            user = await conn.fetchrow("SELECT user_id, username, first_name FROM users WHERE LOWER(username) = $1", target_clean)
 
         if not user:
             await message.answer("❌ المستخدم غير موجود.")
@@ -2694,7 +2691,7 @@ async def cb_view_withdraws(callback: CallbackQuery):
         kb = InlineKeyboardMarkup(inline_keyboard=[
             [
                 InlineKeyboardButton(text="✅ موافقة ودفع", callback_data=f"adm_app_{w_id}"),
-                InlineKeyboardButton(text="❌ رفض وإرجاع الرصيد", callback_data=f"adm_rej_{w_id}")
+                InlineKeyboardButton(text="❌ رفض", callback_data=f"adm_rej_{w_id}")
             ]
         ])
         await callback.message.answer(
@@ -3095,112 +3092,172 @@ async def process_broadcast(message: Message, state: FSMContext):
 
     await message.answer(f"✅ اكتملت الإذاعة!\nالناجحة: {success} | الفاشلة: {fail}")
 
-# الموافقة على السحب ونشر إثبات الدفع تلقائياً مع الصورة المضمونة في قناة الإثباتات
+# الموافقة على السحب مع قفل فوري وتحديث لجميع الإداريين
 @dp.callback_query(F.data.startswith("adm_app_"))
 async def approve_withdraw(callback: CallbackQuery):
     perms = await get_admin_permissions(callback.from_user.id)
     if not perms or not perms.get("can_manage_withdrawals"): return
-    await callback.answer()
     w_id = int(callback.data.split("_")[2])
 
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow("""
-            SELECT w.id, w.user_id, w.amount_ton, w.wallet_address, u.username, u.first_name 
+            SELECT w.id, w.user_id, w.amount_ton, w.wallet_address, w.status, u.username, u.first_name 
             FROM withdrawals w
             LEFT JOIN users u ON u.user_id = w.user_id
-            WHERE w.id = $1 AND w.status = 'PENDING'
+            WHERE w.id = $1
         """, w_id)
 
         if not row:
-            await callback.message.answer("⚠️ هذا الطلب تمت معالجته بالفعل مسبقاً.")
+            await callback.answer("⚠️ طلب السحب غير موجود.", show_alert=True)
+            return
+
+        if row["status"] != 'PENDING':
+            await callback.answer("⚠️ تم اتخاذ إجراء على هذا الطلب مسبقاً!", show_alert=True)
+            try:
+                await callback.message.edit_text(callback.message.text + f"\n\n🔒 <b>هذا الطلب منفذ بالفعل بحالة: {row['status']}</b>", parse_mode="HTML")
+            except Exception: pass
             return
 
         uid = row["user_id"]
         amount = row["amount_ton"]
         wallet_raw = row["wallet_address"]
         uname = row["username"]
-        fname = row["first_name"] or "مستخدم محترم"
+        fname = row["first_name"] or "مستخدم"
 
         await conn.execute("UPDATE withdrawals SET status = 'APPROVED' WHERE id = $1", w_id)
 
-        try:
-            await bot.send_message(
-                chat_id=uid,
-                text=f"🎉 <b>تمت الموافقة ودفع سحب {amount:.4f} TON لمحفظتك بنجاح!</b>\n\nتأكد من محفظتك الآن، شكراً لثقتكم.",
-                parse_mode="HTML"
-            )
-        except Exception:
-            pass
+    await callback.answer("✅ تمت الموافقة بنجاح!", show_alert=False)
 
-        if len(wallet_raw) > 10:
-            masked_wallet = wallet_raw[:4] + "..." + wallet_raw[-4:]
-        else:
-            masked_wallet = wallet_raw
-
-        user_tag = f"@{uname}" if uname else f"{fname}"
-        now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        proof_caption = (
-            "✅ <b>إثبات دفع وسحب جديد | NEW PAYOUT</b>\n\n"
-            f"👤 <b>المستلم:</b> {html.escape(user_tag)}\n"
-            f"💰 <b>المبلغ:</b> <code>{amount:.4f} TON</code> 💎\n"
-            f"📫 <b>المحفظة:</b> <code>{masked_wallet}</code>\n"
-            f"⚡ <b>الحالة:</b> مكتمل ومدفوع (Paid)\n"
-            f"🕒 <b>التاريخ:</b> <code>{now_time}</code>\n\n"
-            "💎 <i>استمر في التعدين واكسب TON و OLK يومياً!</i>\n"
-            "🤖 <b>البوت الرسمي:</b> @OlkaVip_bot"
+    try:
+        await bot.send_message(
+            chat_id=uid,
+            text=f"🎉 <b>تمت الموافقة ودفع سحب {amount:.4f} TON لمحفظتك بنجاح!</b>\n\nتأكد من محفظتك الآن، شكراً لثقتكم.",
+            parse_mode="HTML"
         )
+    except Exception:
+        pass
 
-        proof_kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="⚡ ابدأ التعدين الآن", url="https://t.me/OlkaVip_bot")]
-        ])
+    if len(wallet_raw) > 10:
+        masked_wallet = wallet_raw[:4] + "..." + wallet_raw[-4:]
+    else:
+        masked_wallet = wallet_raw
 
-        # إرسال الصورة مع الكابشن المباشر
+    user_tag = f"@{uname}" if uname else f"{fname}"
+    now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    proof_caption = (
+        "✅ <b>إثبات دفع وسحب جديد | NEW PAYOUT</b>\n\n"
+        f"👤 <b>المستلم:</b> {html.escape(user_tag)}\n"
+        f"💰 <b>المبلغ:</b> <code>{amount:.4f} TON</code> 💎\n"
+        f"📫 <b>المحفظة:</b> <code>{masked_wallet}</code>\n"
+        f"⚡ <b>الحالة:</b> مكتمل ومدفوع (Paid)\n"
+        f"🕒 <b>التاريخ:</b> <code>{now_time}</code>\n\n"
+        "💎 <i>استمر في التعدين واكسب TON و OLK يومياً!</i>\n"
+        "🤖 <b>البوت الرسمي:</b> @OlkaVip_bot"
+    )
+
+    proof_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⚡ ابدأ التعدين الآن", url="https://t.me/OlkaVip_bot")]
+    ])
+
+    try:
+        await bot.send_photo(
+            chat_id=PROOFS_CHANNEL,
+            photo=PAYOUT_PROOF_IMAGE_URL,
+            caption=proof_caption,
+            parse_mode="HTML",
+            reply_markup=proof_kb
+        )
+    except Exception as e:
+        print(f"Error posting photo proof: {e}")
         try:
-            await bot.send_photo(
-                chat_id=PROOFS_CHANNEL,
-                photo=PAYOUT_PROOF_IMAGE_URL,
-                caption=proof_caption,
-                parse_mode="HTML",
-                reply_markup=proof_kb
-            )
-        except Exception as e:
-            print(f"Error posting photo proof: {e}")
+            await bot.send_message(chat_id=PROOFS_CHANNEL, text=proof_caption, parse_mode="HTML", reply_markup=proof_kb)
+        except Exception: pass
+
+    admin_done_by = f"@{callback.from_user.username}" if callback.from_user.username else f"ID: {callback.from_user.id}"
+    updated_notice = (
+        f"📄 <b>طلب سحب #{w_id}</b>\n"
+        f"👤 المستخدم: <code>{uid}</code>\n"
+        f"💎 المبلغ: <code>{amount:.4f} TON</code>\n"
+        f"📫 المحفظة:\n<code>{wallet_raw}</code>\n\n"
+        f"✅ <b>تمت الموافقة والدفع ونشر الإثبات!</b>\n"
+        f"🛡️ <b>بواسطة:</b> {admin_done_by}"
+    )
+
+    if w_id in admin_withdrawal_messages:
+        for c_id, m_id in admin_withdrawal_messages[w_id]:
             try:
-                await bot.send_message(
-                    chat_id=PROOFS_CHANNEL,
-                    text=proof_caption,
-                    parse_mode="HTML",
-                    reply_markup=proof_kb
-                )
-            except Exception as e2:
-                print(f"Error posting fallback text: {e2}")
+                await bot.edit_message_text(chat_id=c_id, message_id=m_id, text=updated_notice, parse_mode="HTML")
+            except Exception:
+                pass
+        del admin_withdrawal_messages[w_id]
+    else:
+        try:
+            await callback.message.edit_text(updated_notice, parse_mode="HTML")
+        except Exception: pass
 
-    await callback.message.edit_text(callback.message.text + "\n\n✅ <b>تمت الموافقة والدفع ونشر الإثبات والصورة في القناة بنجاح.</b>", parse_mode="HTML")
-
+# رفض السحب نهائياً بدون إعادة الرصيد وتحديث الحالة عند الجميع
 @dp.callback_query(F.data.startswith("adm_rej_"))
 async def reject_withdraw(callback: CallbackQuery):
     perms = await get_admin_permissions(callback.from_user.id)
     if not perms or not perms.get("can_manage_withdrawals"): return
-    await callback.answer()
     w_id = int(callback.data.split("_")[2])
+
     async with db_pool.acquire() as conn:
-        row = await conn.fetchrow("SELECT user_id, amount_ton FROM withdrawals WHERE id = $1", w_id)
-        if row:
-            uid, amount = row["user_id"], row["amount_ton"]
-            await conn.execute("UPDATE users SET ton_balance = ton_balance + $1 WHERE user_id = $2", amount, uid)
-            await conn.execute("UPDATE withdrawals SET status = 'REJECTED' WHERE id = $1", w_id)
+        row = await conn.fetchrow("SELECT user_id, amount_ton, wallet_address, status FROM withdrawals WHERE id = $1", w_id)
+        if not row:
+            await callback.answer("⚠️ الطلب غير موجود.", show_alert=True)
+            return
+
+        if row["status"] != 'PENDING':
+            await callback.answer("⚠️ تم اتخاذ إجراء على هذا الطلب مسبقاً!", show_alert=True)
             try:
-                await bot.send_message(chat_id=uid, text=f"❌ <b>تم رفض طلب السحب وإعادة {amount:.4f} TON لرصيدك.</b>", parse_mode="HTML")
+                await callback.message.edit_text(callback.message.text + f"\n\n🔒 <b>هذا الطلب منفذ بالفعل بحالة: {row['status']}</b>", parse_mode="HTML")
             except Exception: pass
-    await callback.message.edit_text(callback.message.text + "\n\n❌ <b>تم رفض الطلب وإعادة الرصيد.</b>", parse_mode="HTML")
+            return
+
+        uid, amount, wallet_raw = row["user_id"], row["amount_ton"], row["wallet_address"]
+        await conn.execute("UPDATE withdrawals SET status = 'REJECTED' WHERE id = $1", w_id)
+
+    await callback.answer("❌ تم رفض الطلب (دون إعادة الرصيد)", show_alert=False)
+
+    try:
+        await bot.send_message(
+            chat_id=uid,
+            text=f"❌ <b>تم رفض طلب السحب الخاص بك بمبلغ {amount:.4f} TON.</b>\nسبب الرفض: مخالفة شروط وسياسات المنظومة.",
+            parse_mode="HTML"
+        )
+    except Exception:
+        pass
+
+    admin_done_by = f"@{callback.from_user.username}" if callback.from_user.username else f"ID: {callback.from_user.id}"
+    rejected_notice = (
+        f"📄 <b>طلب سحب #{w_id}</b>\n"
+        f"👤 المستخدم: <code>{uid}</code>\n"
+        f"💎 المبلغ: <code>{amount:.4f} TON</code>\n"
+        f"📫 المحفظة:\n<code>{wallet_raw}</code>\n\n"
+        f"❌ <b>تم رفض هذا الطلب نهائياً (لم يتم إرجاع الرصيد).</b>\n"
+        f"🛡️ <b>بواسطة:</b> {admin_done_by}"
+    )
+
+    if w_id in admin_withdrawal_messages:
+        for c_id, m_id in admin_withdrawal_messages[w_id]:
+            try:
+                await bot.edit_message_text(chat_id=c_id, message_id=m_id, text=rejected_notice, parse_mode="HTML")
+            except Exception:
+                pass
+        del admin_withdrawal_messages[w_id]
+    else:
+        try:
+            await callback.message.edit_text(rejected_notice, parse_mode="HTML")
+        except Exception: pass
 
 async def web_handler(request):
     return web.Response(text=MINI_APP_HTML, content_type="text/html")
 
 async def main():
     await init_db()
-    print("OLK Cyber Session, Proof Channel Auto-Photo, Multi-Admin Withdrawal Alerts & Promo Engine is LIVE...")
+    print("OLK Cyber Session, Proof Image Fixed, Multi-Admin Payout Sync & Promo Engine is LIVE...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
