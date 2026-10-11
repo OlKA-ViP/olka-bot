@@ -33,22 +33,18 @@ PROJECT_TON_WALLET = "UQCPP2tjnAodTy0eCS-LDGzeG6ss5fTmpMICSk1fiQ_peYKi"
 CONVERSION_RATE = 10000
 MIN_WITHDRAW_TON = 0.05
 
-# مكافأة الإحالة 60 OLK
 REFERRAL_REWARD = 60.0
 SIGNUP_BONUS = 50.0
 DEFAULT_SPEED = 0.21
 
 ADMIN_MAX_TASK_REWARD = 70.0
 
-# روابط الصور الرسمية المباشرة المعتمدة
 WELCOME_IMAGE_URL = "https://i.ibb.co/vzR0j4m/olk-bot-logo.jpg"
 PAYOUT_PROOF_IMAGE_URL = "https://images2.imgbox.com/71/6a/G9371QkQ_o.jpg"
 
 WEBAPP_URL = "https://olka-bot-service.onrender.com"
 
 db_pool = None
-
-# تتبع رسائل السحب لتحديثها فوراً عند الجميع لمنع الدفع المزدوج
 admin_withdrawal_messages = {}
 
 def raw_to_user_friendly(raw_addr: str) -> str:
@@ -115,6 +111,10 @@ class CreatePromoStates(StatesGroup):
     waiting_for_code = State()
     waiting_for_reward = State()
     waiting_for_max_uses = State()
+
+class EditTaskStates(StatesGroup):
+    waiting_for_reward = State()
+    waiting_for_max_users = State()
 
 MINI_APP_HTML = """<!DOCTYPE html>
 <html lang="ar" dir="rtl" id="html-root">
@@ -662,24 +662,48 @@ MINI_APP_HTML = """<!DOCTYPE html>
     const urlParams = new URLSearchParams(window.location.search);
     let userId = tg?.initDataUnsafe?.user?.id || urlParams.get('user_id') || 1932161126;
 
-    function getDeviceFingerprint() {
+    // خوارزمية البصمة العتادية العميقة المضادة للاستنساخ وتغيير الـ IP
+    function getDeepHardwareFingerprint() {
       const nav = window.navigator;
       const screen = window.screen;
-      let str = [
-        nav.userAgent,
-        nav.language,
-        screen.colorDepth,
-        screen.width + 'x' + screen.height,
-        new Date().getTimezoneOffset()
-      ].join('###');
-      let hash = 0;
-      for (let i = 0; i < str.length; i++) {
-        hash = ((hash << 5) - hash) + str.charCodeAt(i);
-        hash |= 0;
+      let hardwareParts = [];
+
+      // 1. أبعاد ودقة الشاشة
+      hardwareParts.push(screen.width + 'x' + screen.height + 'x' + screen.colorDepth + 'x' + (screen.pixelDepth || 0));
+
+      // 2. عدد أنوية المعالج وذاكرة الجهاز وعدد نقاط اللمس
+      hardwareParts.push((nav.hardwareConcurrency || 'unk') + '_' + (nav.deviceMemory || 'unk') + '_' + (nav.maxTouchPoints || 0));
+
+      // 3. بصمة معالج الرسوميات الحقيقي (WebGL GPU Unmasked Renderer)
+      try {
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        if (gl) {
+          const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+          if (debugInfo) {
+            hardwareParts.push(gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL));
+            hardwareParts.push(gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL));
+          }
+          // رندرة بكسل خفية
+          gl.clearColor(0.2, 0.4, 0.6, 0.8);
+          gl.clear(gl.COLOR_BUFFER_BIT);
+          hardwareParts.push(canvas.toDataURL().slice(-30));
+        }
+      } catch (e) {
+        hardwareParts.push('no_gl');
       }
-      return 'FP_' + Math.abs(hash);
+
+      // 4. دمج المواصفات وحساب الهاش الثابت للجهاز
+      const rawString = hardwareParts.join('###');
+      let h = 0;
+      for (let i = 0; i < rawString.length; i++) {
+        h = ((h << 5) - h) + rawString.charCodeAt(i);
+        h |= 0;
+      }
+      return 'HW_' + Math.abs(h);
     }
-    const currentFingerprint = getDeviceFingerprint();
+
+    const currentFingerprint = getDeepHardwareFingerprint();
 
     let currentLang = localStorage.getItem("olk_lang") || "ar";
     const i18n = {
@@ -864,11 +888,9 @@ MINI_APP_HTML = """<!DOCTYPE html>
       manifestUrl: window.location.origin + '/tonconnect-manifest.json'
     });
 
-    // إغلاق ثغرة Testnet نهائياً: فحص الشبكة ورفض المحافظ التجريبية
     tonConnectUI.onStatusChange(async (wallet) => {
       const t = i18n[currentLang];
       if (wallet) {
-        // التحقق من معرف شبكة TON الحقيقية (Mainnet == -239)
         if (wallet.account.chain && String(wallet.account.chain) !== "-239") {
           alert(currentLang === "ar" 
             ? "⚠️ تحذير: شبكة Testnet التجريبية غير مقبولة نهائياً! يرجى تحويل المحفظة إلى شبكة TON الرئيسية (Mainnet)." 
@@ -1686,6 +1708,7 @@ async def get_admin_permissions(user_id: int):
             }
     return None
 
+# دالة فحص التعدد المتقدمة: تكشف الاستنساخ وتعدد الحسابات عبر مواصفات العتاد الثابتة
 async def check_multi_account_fraud(conn, user_id: int, fp: str, ip: str, wallet: str = None) -> tuple[bool, str]:
     u_row = await conn.fetchrow("SELECT is_whitelisted FROM users WHERE user_id = $1", user_id)
     if u_row and u_row["is_whitelisted"] == 1:
@@ -1697,7 +1720,7 @@ async def check_multi_account_fraud(conn, user_id: int, fp: str, ip: str, wallet
             fp, user_id
         )
         if multi_fp:
-            return True, "كشف حسابات متعددة على نفس الجهاز (Anti-Multi Device)"
+            return True, "كشف استنساخ أو تعدد حسابات من نفس الجهاز (Anti-Hardware Clone)"
 
     if wallet:
         multi_wallet = await conn.fetchval(
@@ -1705,7 +1728,7 @@ async def check_multi_account_fraud(conn, user_id: int, fp: str, ip: str, wallet
             wallet, user_id
         )
         if multi_wallet:
-            return True, "كشف محفظة مستخدمة في أكثر من حساب (Anti-Multi Wallet)"
+            return True, "كشف ربط نفس المحفظة في أكثر من حساب (Anti-Multi Wallet)"
 
     return False, ""
 
@@ -1726,21 +1749,18 @@ async def check_user_channel_subscribed(user_id: int) -> bool:
 
     return True
 
-# معالج أحداث مغادرة القنوات أو المجموعات لخصم النقاط تلقائياً
 @dp.chat_member()
 async def on_user_leave_chat(event: ChatMemberUpdated):
     try:
         old_status = event.old_chat_member.status
         new_status = event.new_chat_member.status
 
-        # التحقق مما إذا كان العضو قد غادر القناة أو المجموعة
         if old_status in ["member", "administrator", "creator"] and new_status in ["left", "kicked"]:
             user_id = event.from_user.id
             chat_id_str = str(event.chat.id)
             chat_username = f"@{event.chat.username}" if event.chat.username else ""
 
             async with db_pool.acquire() as conn:
-                # 1. البحث في مهام القنوات
                 c_task = await conn.fetchrow(
                     "SELECT id, reward, title FROM dynamic_tasks WHERE channel_id = $1 OR (channel_id = $2 AND $2 != '')",
                     chat_id_str, chat_username
@@ -1752,7 +1772,7 @@ async def on_user_leave_chat(event: ChatMemberUpdated):
                         if c_task["id"] in completed:
                             completed.remove(c_task["id"])
                             deduct_amount = c_task["reward"]
-                            new_balance = max(0.0, u_row["打击_balance" if False else "olk_balance"] - deduct_amount)
+                            new_balance = max(0.0, u_row["olk_balance"] - deduct_amount)
 
                             await conn.execute(
                                 "UPDATE users SET olk_balance = $1, tasks_completed = $2 WHERE user_id = $3",
@@ -1778,7 +1798,6 @@ async def on_user_leave_chat(event: ChatMemberUpdated):
                                 pass
                             return
 
-                # 2. البحث في مهام المجموعات
                 g_task = await conn.fetchrow(
                     "SELECT id, reward, title FROM dynamic_group_tasks WHERE group_id = $1 OR (group_id = $2 AND $2 != '')",
                     chat_id_str, chat_username
@@ -1827,7 +1846,6 @@ async def api_save_wallet(request):
         address = str(data.get("address", "")).strip()
         chain = str(data.get("chain", "-239"))
         
-        # حماية السيرفر: رفض أي محفظة Testnet
         if chain != "-239":
             return web.json_response({"ok": False, "msg": "Testnet is blocked! Mainnet only."})
 
@@ -2049,9 +2067,18 @@ async def api_start_mining_session(request):
                 UPDATE users SET session_start_timestamp = $1, session_active = 1, device_fingerprint = $2, ip_address = $3 WHERE user_id = $4
             """, now, fp, client_ip, user_id)
 
+            # كشف إحالة النفس: التأكد من أن صاحب الإحالة لا يحمل نفس بصمة العتاد
             row = await conn.fetchrow("SELECT referred_by, ref_reward_claimed FROM users WHERE user_id = $1", user_id)
             if row and row["referred_by"] and row["ref_reward_claimed"] == 0:
                 ref_by = row["referred_by"]
+                
+                # فحص بصمة الداعي
+                referrer_fp = await conn.fetchval("SELECT device_fingerprint FROM users WHERE user_id = $1", ref_by)
+                if referrer_fp and referrer_fp == fp:
+                    # محاولة إحالة ذاتية من نفس الهاتف عبر تطبيق مستنسخ
+                    await conn.execute("UPDATE users SET is_banned = 1, ban_reason = $1 WHERE user_id = $2", "محاولة إحالة وهمية من نفس الهاتف (Self-Referral Clone)", user_id)
+                    return web.json_response({"ok": False, "msg": "تم كشف محاولة إحالة غير مشروعة من نفس الهاتف"})
+
                 await conn.execute("UPDATE users SET olk_balance = olk_balance + $1 WHERE user_id = $2", REFERRAL_REWARD, ref_by)
                 await conn.execute("UPDATE users SET ref_reward_claimed = 1 WHERE user_id = $1", user_id)
                 try:
@@ -2349,9 +2376,9 @@ def build_main_admin_keyboard(perms):
     if perms.get("can_manage_withdrawals"):
         buttons.append([InlineKeyboardButton(text="⏳ طلبات السحب المعلقة", callback_data="adm_view_withdraws")])
     if perms.get("can_manage_tasks"):
-        buttons.append([InlineKeyboardButton(text="📢 إدارة مهام القنوات (إضافة/حذف)", callback_data="adm_tasks_menu")])
-        buttons.append([InlineKeyboardButton(text="👥 إدارة مهام المجموعات (إضافة/حذف)", callback_data="adm_groups_menu")])
-        buttons.append([InlineKeyboardButton(text="🤖 إدارة مهام البوتات (إضافة/حذف)", callback_data="adm_bot_tasks_menu")])
+        buttons.append([InlineKeyboardButton(text="📢 إدارة مهام القنوات (إضافة/تعديل/حذف)", callback_data="adm_tasks_menu")])
+        buttons.append([InlineKeyboardButton(text="👥 إدارة مهام المجموعات (إضافة/تعديل/حذف)", callback_data="adm_groups_menu")])
+        buttons.append([InlineKeyboardButton(text="🤖 إدارة مهام البوتات (إضافة/تعديل/حذف)", callback_data="adm_bot_tasks_menu")])
     if perms.get("can_ban_users"):
         buttons.append([
             InlineKeyboardButton(text="🚫 حظر مستخدم (Ban)", callback_data="adm_ban_start"),
@@ -2814,7 +2841,7 @@ async def cb_view_withdraws(callback: CallbackQuery):
             reply_markup=kb
         )
 
-# مهام القنوات
+# تعديل المهام
 @dp.callback_query(F.data == "adm_tasks_menu")
 async def cb_tasks_menu(callback: CallbackQuery):
     perms = await get_admin_permissions(callback.from_user.id)
@@ -2829,10 +2856,161 @@ async def cb_tasks_menu(callback: CallbackQuery):
     buttons = [[InlineKeyboardButton(text="➕ إضافة مهمة قناة جديدة", callback_data="adm_add_task_start")]]
     for r in rows:
         lim_str = f"({r['current_completions']}/{r['max_users']})" if r['max_users'] > 0 else "(غير محدود)"
-        buttons.append([InlineKeyboardButton(text=f"🗑️ حذف: {r['title']} {lim_str}", callback_data=f"adm_del_task_{r['id']}")])
+        buttons.append([
+            InlineKeyboardButton(text=f"⚙️ {r['title']} (+{r['reward']:.0f} OLK) {lim_str}", callback_data=f"adm_manage_task_c_{r['id']}")
+        ])
     buttons.append([InlineKeyboardButton(text="🔙 العودة للرئيسية", callback_data="adm_home")])
 
-    await callback.message.edit_text("📢 <b>إدارة مهام القنوات:</b>", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+    await callback.message.edit_text("📢 <b>إدارة مهام القنوات (اضغط على المهمة لتعديلها أو حذفها):</b>", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+
+@dp.callback_query(F.data.startswith("adm_manage_task_"))
+async def cb_manage_single_task(callback: CallbackQuery):
+    perms = await get_admin_permissions(callback.from_user.id)
+    if not perms or not perms.get("can_manage_tasks"): return
+    await callback.answer()
+
+    parts = callback.data.split("_")
+    task_type = parts[3]
+    t_id = int(parts[4])
+
+    table_map = {"c": "dynamic_tasks", "g": "dynamic_group_tasks", "b": "dynamic_bot_tasks"}
+    tbl = table_map.get(task_type, "dynamic_tasks")
+
+    async with db_pool.acquire() as conn:
+        task = await conn.fetchrow(f"SELECT * FROM {tbl} WHERE id = $1", t_id)
+
+    if not task:
+        await callback.answer("⚠️ المهمة غير موجودة!", show_alert=True)
+        return
+
+    lim_str = f"{task['max_users']} عضو" if task['max_users'] > 0 else "غير محدود"
+    text = (
+        f"⚙️ <b>إدارة المهمة:</b> {html.escape(task['title'])}\n\n"
+        f"💰 <b>المكافأة الحالية:</b> {task['reward']:.0f} OLK\n"
+        f"👥 <b>الحد الأقصى:</b> {lim_str}\n"
+        f"📈 <b>المشتركون الحاليون:</b> {task['current_completions']}\n\n"
+        f"اختر الإجراء المطلوب أدناه:"
+    )
+
+    back_cb = "adm_tasks_menu" if task_type == "c" else ("adm_groups_menu" if task_type == "g" else "adm_bot_tasks_menu")
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✏️ تعديل قيمة المكافأة", callback_data=f"adm_edrew_{task_type}_{t_id}")],
+        [InlineKeyboardButton(text="👥 تعديل الحد الأقصى للمشتركين", callback_data=f"adm_edlim_{task_type}_{t_id}")],
+        [InlineKeyboardButton(text="🗑️ حذف المهمة نهائياً", callback_data=f"adm_deltask_{task_type}_{t_id}")],
+        [InlineKeyboardButton(text="🔙 رجوع للقائمة", callback_data=back_cb)]
+    ])
+    await callback.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
+
+@dp.callback_query(F.data.startswith("adm_edrew_"))
+async def cb_start_edit_reward(callback: CallbackQuery, state: FSMContext):
+    perms = await get_admin_permissions(callback.from_user.id)
+    if not perms or not perms.get("can_manage_tasks"): return
+    await callback.answer()
+
+    parts = callback.data.split("_")
+    task_type = parts[2]
+    t_id = int(parts[3])
+
+    await state.update_data(edit_task_type=task_type, edit_task_id=t_id)
+
+    is_super = (callback.from_user.id == SUPER_ADMIN_ID)
+    hint = "أي قيمة تريدها (صلاحية الرئيس)" if is_super else f"الحد الأقصى المسموح لك هو {ADMIN_MAX_TASK_REWARD:.0f} OLK"
+    await callback.message.answer(f"💰 أرسل الآن **قيمة المكافأة الجديدة** بعملة OLK ({hint}):", parse_mode="Markdown")
+    await state.set_state(EditTaskStates.waiting_for_reward)
+
+@dp.message(EditTaskStates.waiting_for_reward)
+async def state_save_edited_reward(message: Message, state: FSMContext):
+    try:
+        new_reward = float(message.text.strip())
+        if new_reward <= 0:
+            await message.answer("❌ يجب أن تكون المكافأة أكبر من 0:")
+            return
+    except ValueError:
+        await message.answer("❌ يرجى إدخال رقم صحيح:")
+        return
+
+    if message.from_user.id != SUPER_ADMIN_ID and new_reward > ADMIN_MAX_TASK_REWARD:
+        await message.answer(f"⚠️ عذراً، لا يمكنك وضع مكافأة تتعدى {ADMIN_MAX_TASK_REWARD:.0f} نقطة!\nيرجى كتابة قيمة صالحة (70 أو أقل):")
+        return
+
+    data = await state.get_data()
+    await state.clear()
+    task_type = data.get("edit_task_type")
+    t_id = data.get("edit_task_id")
+
+    table_map = {"c": "dynamic_tasks", "g": "dynamic_group_tasks", "b": "dynamic_bot_tasks"}
+    tbl = table_map.get(task_type, "dynamic_tasks")
+
+    async with db_pool.acquire() as conn:
+        await conn.execute(f"UPDATE {tbl} SET reward = $1 WHERE id = $2", new_reward, t_id)
+
+    back_cb = "adm_tasks_menu" if task_type == "c" else ("adm_groups_menu" if task_type == "g" else "adm_bot_tasks_menu")
+    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 العودة لقائمة المهام", callback_data=back_cb)]])
+    await message.answer(f"✅ تم تحديث مكافأة المهمة بنجاح إلى: <b>+{new_reward:.0f} OLK</b> دون حذفها!", parse_mode="HTML", reply_markup=kb)
+
+@dp.callback_query(F.data.startswith("adm_edlim_"))
+async def cb_start_edit_limit(callback: CallbackQuery, state: FSMContext):
+    perms = await get_admin_permissions(callback.from_user.id)
+    if not perms or not perms.get("can_manage_tasks"): return
+    await callback.answer()
+
+    parts = callback.data.split("_")
+    task_type = parts[2]
+    t_id = int(parts[3])
+
+    await state.update_data(edit_task_type=task_type, edit_task_id=t_id)
+    await callback.message.answer("👥 أرسل الآن **الحد الأقصى الجديد لعدد المشتركين** (اكتب `0` لجعله غير محدود):", parse_mode="Markdown")
+    await state.set_state(EditTaskStates.waiting_for_max_users)
+
+@dp.message(EditTaskStates.waiting_for_max_users)
+async def state_save_edited_limit(message: Message, state: FSMContext):
+    try:
+        new_limit = int(message.text.strip())
+        if new_limit < 0:
+            await message.answer("❌ يرجى إدخال رقم 0 أو أكبر:")
+            return
+    except ValueError:
+        await message.answer("❌ يرجى إدخال رقم صحيح:")
+        return
+
+    data = await state.get_data()
+    await state.clear()
+    task_type = data.get("edit_task_type")
+    t_id = data.get("edit_task_id")
+
+    table_map = {"c": "dynamic_tasks", "g": "dynamic_group_tasks", "b": "dynamic_bot_tasks"}
+    tbl = table_map.get(task_type, "dynamic_tasks")
+
+    async with db_pool.acquire() as conn:
+        await conn.execute(f"UPDATE {tbl} SET max_users = $1 WHERE id = $2", new_limit, t_id)
+
+    back_cb = "adm_tasks_menu" if task_type == "c" else ("adm_groups_menu" if task_type == "g" else "adm_bot_tasks_menu")
+    limit_txt = f"{new_limit} عضو" if new_limit > 0 else "غير محدود"
+    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 العودة لقائمة المهام", callback_data=back_cb)]])
+    await message.answer(f"✅ تم تحديث الحد الأقصى للمهمة بنجاح إلى: <b>{limit_txt}</b>!", parse_mode="HTML", reply_markup=kb)
+
+@dp.callback_query(F.data.startswith("adm_deltask_"))
+async def cb_delete_specific_task(callback: CallbackQuery):
+    perms = await get_admin_permissions(callback.from_user.id)
+    if not perms or not perms.get("can_manage_tasks"): return
+    parts = callback.data.split("_")
+    task_type = parts[2]
+    t_id = int(parts[3])
+
+    table_map = {"c": "dynamic_tasks", "g": "dynamic_group_tasks", "b": "dynamic_bot_tasks"}
+    tbl = table_map.get(task_type, "dynamic_tasks")
+
+    async with db_pool.acquire() as conn:
+        await conn.execute(f"UPDATE {tbl} SET is_active = 0 WHERE id = $1", t_id)
+
+    await callback.answer("🗑️ تم حذف المهمة بنجاح!", show_alert=True)
+    if task_type == "c":
+        await cb_tasks_menu(callback)
+    elif task_type == "g":
+        await cb_groups_menu(callback)
+    else:
+        await cb_bot_tasks_menu(callback)
 
 @dp.callback_query(F.data == "adm_add_task_start")
 async def cb_add_task_start(callback: CallbackQuery, state: FSMContext):
@@ -2901,17 +3079,6 @@ async def state_task_max_users(message: Message, state: FSMContext):
     limit_text = f"الحد الأقصى: {max_users} عضو" if max_users > 0 else "غير محدود"
     await message.answer(f"🎉 تمت إضافة مهمة القناة: {data['title']}\nالمكافأة: +{data['reward']} OLK ({limit_text})", reply_markup=kb)
 
-@dp.callback_query(F.data.startswith("adm_del_task_"))
-async def cb_del_task(callback: CallbackQuery):
-    perms = await get_admin_permissions(callback.from_user.id)
-    if not perms or not perms.get("can_manage_tasks"): return
-    t_id = int(callback.data.split("_")[3])
-    async with db_pool.acquire() as conn:
-        await conn.execute("UPDATE dynamic_tasks SET is_active = 0 WHERE id = $1", t_id)
-    await callback.answer("🗑️ تم حذف المهمة!", show_alert=True)
-    await cb_tasks_menu(callback)
-
-# مهام المجموعات
 @dp.callback_query(F.data == "adm_groups_menu")
 async def cb_groups_menu(callback: CallbackQuery):
     perms = await get_admin_permissions(callback.from_user.id)
@@ -2926,10 +3093,12 @@ async def cb_groups_menu(callback: CallbackQuery):
     buttons = [[InlineKeyboardButton(text="➕ إضافة مهمة مجموعة جديدة", callback_data="adm_add_group_start")]]
     for r in rows:
         lim_str = f"({r['current_completions']}/{r['max_users']})" if r['max_users'] > 0 else "(غير محدود)"
-        buttons.append([InlineKeyboardButton(text=f"🗑️ حذف: {r['title']} {lim_str}", callback_data=f"adm_del_group_{r['id']}")])
+        buttons.append([
+            InlineKeyboardButton(text=f"⚙️ {r['title']} (+{r['reward']:.0f} OLK) {lim_str}", callback_data=f"adm_manage_task_g_{r['id']}")
+        ])
     buttons.append([InlineKeyboardButton(text="🔙 العودة للرئيسية", callback_data="adm_home")])
 
-    await callback.message.edit_text("👥 <b>إدارة مهام المجموعات:</b>", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+    await callback.message.edit_text("👥 <b>إدارة مهام المجموعات (اضغط على المهمة لتعديلها أو حذفها):</b>", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
 
 @dp.callback_query(F.data == "adm_add_group_start")
 async def cb_add_group_start(callback: CallbackQuery, state: FSMContext):
@@ -2998,17 +3167,6 @@ async def state_group_max_users(message: Message, state: FSMContext):
     limit_text = f"الحد الأقصى: {max_users} عضو" if max_users > 0 else "غير محدود"
     await message.answer(f"🎉 تمت إضافة مهمة المجموعة: {data['title']}\nالمكافأة: +{data['reward']} OLK ({limit_text})", reply_markup=kb)
 
-@dp.callback_query(F.data.startswith("adm_del_group_"))
-async def cb_del_group(callback: CallbackQuery):
-    perms = await get_admin_permissions(callback.from_user.id)
-    if not perms or not perms.get("can_manage_tasks"): return
-    t_id = int(callback.data.split("_")[3])
-    async with db_pool.acquire() as conn:
-        await conn.execute("UPDATE dynamic_group_tasks SET is_active = 0 WHERE id = $1", t_id)
-    await callback.answer("🗑️ تم حذف مهمة المجموعة!", show_alert=True)
-    await cb_groups_menu(callback)
-
-# مهام البوتات
 @dp.callback_query(F.data == "adm_bot_tasks_menu")
 async def cb_bot_tasks_menu(callback: CallbackQuery):
     perms = await get_admin_permissions(callback.from_user.id)
@@ -3023,10 +3181,12 @@ async def cb_bot_tasks_menu(callback: CallbackQuery):
     buttons = [[InlineKeyboardButton(text="➕ إضافة مهمة بوت جديدة", callback_data="adm_add_bot_task_start")]]
     for r in rows:
         lim_str = f"({r['current_completions']}/{r['max_users']})" if r['max_users'] > 0 else "(غير محدود)"
-        buttons.append([InlineKeyboardButton(text=f"🗑️ حذف: {r['title']} (+{r['reward']} OLK) {lim_str}", callback_data=f"adm_del_bottask_{r['id']}")])
+        buttons.append([
+            InlineKeyboardButton(text=f"⚙️ {r['title']} (+{r['reward']:.0f} OLK) {lim_str}", callback_data=f"adm_manage_task_b_{r['id']}")
+        ])
     buttons.append([InlineKeyboardButton(text="🔙 العودة للرئيسية", callback_data="adm_home")])
 
-    await callback.message.edit_text("🤖 <b>إدارة مهام البوتات:</b>", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+    await callback.message.edit_text("🤖 <b>إدارة مهام البوتات (اضغط على المهمة لتعديلها أو حذفها):</b>", parse_mode="HTML", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
 
 @dp.callback_query(F.data == "adm_add_bot_task_start")
 async def cb_add_bot_task_start(callback: CallbackQuery, state: FSMContext):
@@ -3088,16 +3248,6 @@ async def state_bot_task_max_users(message: Message, state: FSMContext):
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 العودة لقائمة البوتات", callback_data="adm_bot_tasks_menu")]])
     limit_text = f"الحد الأقصى: {max_users} عضو" if max_users > 0 else "غير محدود"
     await message.answer(f"🎉 تمت إضافة مهمة البوت: {data['title']}\nالمكافأة: +{data['reward']} OLK ({limit_text})", reply_markup=kb)
-
-@dp.callback_query(F.data.startswith("adm_del_bottask_"))
-async def cb_del_bot_task(callback: CallbackQuery):
-    perms = await get_admin_permissions(callback.from_user.id)
-    if not perms or not perms.get("can_manage_tasks"): return
-    t_id = int(callback.data.split("_")[3])
-    async with db_pool.acquire() as conn:
-        await conn.execute("UPDATE dynamic_bot_tasks SET is_active = 0 WHERE id = $1", t_id)
-    await callback.answer("🗑️ تم حذف مهمة البوت!", show_alert=True)
-    await cb_bot_tasks_menu(callback)
 
 # إدارة المشرفين
 @dp.callback_query(F.data == "adm_manage_admins")
@@ -3206,7 +3356,7 @@ async def process_broadcast(message: Message, state: FSMContext):
 
     await message.answer(f"✅ اكتملت الإذاعة!\nالناجحة: {success} | الفاشلة: {fail}")
 
-# الموافقة على السحب مع قفل فوري وتحديث لجميع الإداريين
+# الموافقة على السحب
 @dp.callback_query(F.data.startswith("adm_app_"))
 async def approve_withdraw(callback: CallbackQuery):
     perms = await get_admin_permissions(callback.from_user.id)
@@ -3310,7 +3460,7 @@ async def approve_withdraw(callback: CallbackQuery):
             await callback.message.edit_text(updated_notice, parse_mode="HTML")
         except Exception: pass
 
-# رفض السحب نهائياً بدون إعادة الرصيد وتحديث الحالة عند الجميع
+# رفض السحب
 @dp.callback_query(F.data.startswith("adm_rej_"))
 async def reject_withdraw(callback: CallbackQuery):
     perms = await get_admin_permissions(callback.from_user.id)
@@ -3371,7 +3521,7 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("OLK Cyber Session, Proof Image Direct, Testnet Shield & Full Engine is LIVE...")
+    print("OLK Cyber Session, Deep Hardware Fingerprint Shield & Full Engine is LIVE...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
