@@ -350,6 +350,76 @@ MINI_APP_HTML = """<!DOCTYPE html>
     }
     .btn-main-action.claim-state { background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; }
     .btn-main-action:disabled { background: #1e293b; color: #64748b; cursor: not-allowed; }
+
+    /* التصميم الجديد المتطور لكبسولة الـ PROMO CODE */
+    .cyber-promo-capsule {
+      width: 100%;
+      margin-top: 14px;
+      background: linear-gradient(135deg, rgba(13, 30, 54, 0.9) 0%, rgba(7, 20, 38, 0.95) 100%);
+      border: 1px solid rgba(0, 229, 255, 0.25);
+      border-radius: 18px;
+      padding: 12px 14px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .cyber-promo-label {
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+      color: var(--cyan-neon);
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .cyber-promo-input-group {
+      display: flex;
+      align-items: center;
+      background: #040913;
+      border: 1.2px solid #1a3557;
+      border-radius: 14px;
+      padding: 3px 4px 3px 12px;
+      transition: all 0.25s ease;
+    }
+    .cyber-promo-input-group:focus-within {
+      border-color: var(--cyan-neon);
+      box-shadow: 0 0 12px rgba(0, 229, 255, 0.35);
+    }
+    .cyber-promo-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      direction: ltr;
+      text-align: left;
+    }
+    .cyber-promo-btn {
+      background: linear-gradient(135deg, #0284c7, #00e5ff);
+      color: #031022;
+      border: none;
+      outline: none;
+      padding: 10px 18px;
+      border-radius: 11px;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.8px;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+      white-space: nowrap;
+    }
+    .cyber-promo-btn:active {
+      transform: scale(0.96);
+      opacity: 0.9;
+    }
+
     .page-tab { display: none; width: 100%; flex-direction: column; align-items: center; }
     .page-tab.active { display: flex; }
     .card-panel {
@@ -491,7 +561,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب التعدين والبرومو كود -->
+    <!-- تبويب التعدين والكبسولة المطورة للبرومو كود -->
     <div class="page-tab active" id="tab-mining">
       <div class="mining-stage-card">
         <div class="status-pill">
@@ -524,13 +594,15 @@ MINI_APP_HTML = """<!DOCTYPE html>
         </button>
       </div>
 
-      <div class="card-panel" style="margin-top: 14px;">
-        <div style="font-weight:900; color:var(--gold-neon); font-size:13px; display:flex; align-items:center; gap:6px;">
-          <i class="fa-solid fa-gift"></i> <span id="t-promo-title">رمز الهدية الترويجي (Promo Code)</span>
+      <!-- كبسولة البرومو كود العصرية والمتطورة -->
+      <div class="cyber-promo-capsule">
+        <div class="cyber-promo-label">
+          <span>PROMO CODE</span>
+          <span style="font-size:9px; color:var(--text-muted); letter-spacing:0.5px;">CYBER REWARD</span>
         </div>
-        <div style="display:flex; gap:8px;">
-          <input type="text" id="promo-code-input" class="convert-input" placeholder="ادخل الرمز هنا..." style="background:#081324; border:1px solid var(--card-border); border-radius:12px; padding:10px; font-size:13px;">
-          <button class="btn-main-action claim-state" style="width:110px; margin-top:0; font-size:12px;" onclick="redeemPromoCode()" id="t-promo-btn">تفعيل ⚡</button>
+        <div class="cyber-promo-input-group">
+          <input type="text" id="promo-code-input" class="cyber-promo-input" placeholder="CODE..." spellcheck="false" autocomplete="off">
+          <button class="cyber-promo-btn" onclick="redeemPromoCode()" id="t-promo-btn">APPLY</button>
         </div>
       </div>
     </div>
@@ -632,7 +704,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
 
         <div style="display:flex; flex-direction:column; gap:4px;">
           <div style="font-size:11px; color:var(--text-muted);" id="t-memo-lbl">
-            Memo / Tag <span style="color:var(--gold-neon); font-size:10px;">(إختياري)</span>:
+            Memo / Tag <span style='color:var(--gold-neon); font-size:10px;'>(إختياري)</span>:
           </div>
           <div class="convert-input-box">
             <input type="text" id="custom-memo-input" class="convert-input" placeholder="ادخل الـ Memo إن وجد...">
@@ -802,8 +874,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         totalInvitesLbl: "إجمالي الإحالات",
         totalRefEarningsLbl: "أرباح الإحالات",
         invitedFriendsLbl: "الأصدقاء المدعوون",
-        promoTitle: "رمز الهدية الترويجي (Promo Code)",
-        promoBtn: "تفعيل ⚡",
+        promoBtn: "تفعيل",
         subtabChannels: "القنوات",
         subtabGroups: "المجموعات",
         subtabBots: "البوتات",
@@ -858,8 +929,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         totalInvitesLbl: "Total Invites",
         totalRefEarningsLbl: "Referral Earnings",
         invitedFriendsLbl: "Invited Friends",
-        promoTitle: "Promo Code Gift",
-        promoBtn: "Redeem ⚡",
+        promoBtn: "APPLY",
         subtabChannels: "Channels",
         subtabGroups: "Groups",
         subtabBots: "Bots",
@@ -914,7 +984,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       document.getElementById("t-total-invites-lbl").innerText = t.totalInvitesLbl;
       document.getElementById("t-total-ref-earnings-lbl").innerText = t.totalRefEarningsLbl;
       document.getElementById("t-invited-friends-lbl").innerText = t.invitedFriendsLbl;
-      document.getElementById("t-promo-title").innerText = t.promoTitle;
       document.getElementById("t-promo-btn").innerText = t.promoBtn;
       document.getElementById("t-subtab-channels").innerText = t.subtabChannels;
       document.getElementById("t-subtab-groups").innerText = t.subtabGroups;
@@ -1015,7 +1084,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
     async function redeemPromoCode() {
       const code = document.getElementById("promo-code-input").value.trim();
       if (!code) {
-        alert(currentLang === "ar" ? "⚠️ يرجى كتابة الرمز الترويجي أولاً!" : "⚠️ Please enter the promo code!");
+        alert(currentLang === "ar" ? "يرجى كتابة رمز الكود أولاً" : "Please enter code first");
         return;
       }
       try {
@@ -1228,7 +1297,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       }
     }
 
-    // تقييم حالة الجلسة وزر التعدين: إتاحة زر الجمع في أي وقت بعد البدء
     function evaluateSessionState() {
       const t = i18n[currentLang];
       const now = Math.floor(Date.now() / 1000);
@@ -1290,7 +1358,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       }
     }, 1000);
 
-    // جمع الأرباح في أي وقت أو تشغيل جلسة تعدين جديدة
     async function handleMiningAction() {
       const btn = document.getElementById("btn-session-control");
       btn.disabled = true;
@@ -1906,14 +1973,15 @@ async def api_redeem_promo(request):
         async with db_pool.acquire() as conn:
             promo = await conn.fetchrow("SELECT * FROM promo_codes WHERE code = $1 AND is_active = 1", code)
             if not promo:
-                return web.json_response({"ok": False, "msg": "❌ الكود غير صحيح أو منتهي الصلاحية!"})
+                return web.json_response({"ok": False, "msg": "الرمز الترويجي غير صحيح أو ملغى"})
 
+            # فحص الحد الأقصى للمستفيدين
             if promo["max_uses"] > 0 and promo["current_uses"] >= promo["max_uses"]:
-                return web.json_response({"ok": False, "msg": "❌ عذراً، اكتمل الحد الأقصى للمستفيدين من هذا الكود!"})
+                return web.json_response({"ok": False, "msg": "عذراً، وصل هذا الكود للحد الأقصى من المستفيدين وأصبح غير متاح"})
 
             already_claimed = await conn.fetchval("SELECT 1 FROM promo_claims WHERE user_id = $1 AND code_id = $2", user_id, promo["id"])
             if already_claimed:
-                return web.json_response({"ok": False, "msg": "⚠️ لقد قمت باستخدام هذا الكود الترويجي مسبقاً!"})
+                return web.json_response({"ok": False, "msg": "لقد قمت باستخدام هذا الرمز مسبقاً"})
 
             await conn.execute("INSERT INTO promo_claims (user_id, code_id, claimed_at) VALUES ($1, $2, $3)", user_id, promo["id"], now)
             await conn.execute("UPDATE promo_codes SET current_uses = current_uses + 1 WHERE id = $1", promo["id"])
@@ -1921,7 +1989,7 @@ async def api_redeem_promo(request):
             
             new_bal = await conn.fetchval("SELECT olk_balance FROM users WHERE user_id = $1", user_id)
 
-        return web.json_response({"ok": True, "olk_balance": new_bal, "msg": f"🎉 مبروك! تم تفعيل الكود بنجاح وإضافة +{promo['reward']:.0f} OLK!"})
+        return web.json_response({"ok": True, "olk_balance": new_bal, "msg": f"تم تفعيل الرمز بنجاح! +{promo['reward']:.0f} OLK"})
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
@@ -2137,7 +2205,6 @@ async def api_start_mining_session(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
-# جمع رصيد التعدين في أي وقت (بدون اشتراط اكتمال 8 ساعات)
 async def api_claim_session_rewards(request):
     try:
         data = await request.json()
@@ -2157,19 +2224,15 @@ async def api_claim_session_rewards(request):
                 if not row or not row["session_active"]:
                     return web.json_response({"ok": False, "msg": "لا توجد جلسة تعدين نشطة للمطالبة بها"})
 
-                # حساب الثواني المنقضية بحد أقصى 8 ساعات (28,800 ثانية)
                 elapsed = max(0, now - (row["session_start_timestamp"] or 0))
                 if elapsed <= 0:
                     return web.json_response({"ok": False, "msg": "لم يتم تعدين أي رصيد بعد"})
 
                 capped_elapsed = min(elapsed, 8 * 3600)
-
-                # احتساب المكافأة المستحقة بدقة حسب الوقت وسرعة الجهاز
                 actual_speed = row["mining_speed"] or DEFAULT_SPEED
                 calculated_reward = capped_elapsed * (actual_speed * 0.000030 * 10)
                 new_bal = row["olk_balance"] + calculated_reward
 
-                # تصفير الجلسة لإتاحة تشغيل جلسة جديدة
                 await conn.execute("""
                     UPDATE users SET olk_balance = $1, session_active = 0, session_start_timestamp = 0 WHERE user_id = $2
                 """, new_bal, user_id)
@@ -2471,7 +2534,10 @@ def build_main_admin_keyboard(perms):
         [InlineKeyboardButton(text="🏆 توب 20 الأكثر إحالة (Top 20 Referrers)", callback_data="adm_top_refs")]
     ]
     if perms.get("is_super"):
-        buttons.append([InlineKeyboardButton(text="🎁 إنشاء كود برومو (خاص بالرئيس)", callback_data="adm_create_promo_start")])
+        buttons.append([
+            InlineKeyboardButton(text="🎁 إنشاء كود برومو", callback_data="adm_create_promo_start"),
+            InlineKeyboardButton(text="📋 قائمة واستخدام الأكواد", callback_data="adm_view_promos")
+        ])
     if perms.get("can_manage_withdrawals"):
         buttons.append([InlineKeyboardButton(text="⏳ طلبات السحب المعلقة", callback_data="adm_view_withdraws")])
     if perms.get("can_manage_tasks"):
@@ -2661,6 +2727,40 @@ async def state_promo_max_uses(message: Message, state: FSMContext):
         parse_mode="HTML",
         reply_markup=kb
     )
+
+# استعراض الأكواد الترويجية وإحصائيات استخدامها
+@dp.callback_query(F.data == "adm_view_promos")
+async def cb_view_promos(callback: CallbackQuery):
+    if callback.from_user.id != SUPER_ADMIN_ID:
+        await callback.answer("⛔ مخصص للرئيس فقط", show_alert=True)
+        return
+    await callback.answer()
+
+    async with db_pool.acquire() as conn:
+        rows = await conn.fetch("SELECT * FROM promo_codes ORDER BY id DESC")
+
+    if not rows:
+        kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 العودة", callback_data="adm_home")]])
+        await callback.message.edit_text("ℹ️ لم يتم إنشاء أي أكواد برومو حتى الآن.", reply_markup=kb)
+        return
+
+    text = "📋 <b>قائمة الأكواد الترويجية ونسبة الاستخدام:</b>\n──────────────────────\n"
+    for r in rows:
+        max_str = f"{r['max_uses']}" if r['max_uses'] > 0 else "غير محدود"
+        status_str = "✅ متاح" if (r['max_uses'] == 0 or r['current_uses'] < r['max_uses']) else "⛔ مكتمل ومنتهي"
+        text += (
+            f"🏷️ <b>الكود:</b> <code>{r['code']}</code>\n"
+            f"🎁 <b>المكافأة:</b> +{r['reward']:.0f} OLK\n"
+            f"👥 <b>المستفيدون:</b> <code>{r['current_uses']} / {max_str}</code>\n"
+            f"⚡ <b>الحالة:</b> {status_str}\n"
+            "──────────────────────\n"
+        )
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="➕ إنشاء كود جديد", callback_data="adm_create_promo_start")],
+        [InlineKeyboardButton(text="🔙 العودة للوحة التحكم", callback_data="adm_home")]
+    ])
+    await callback.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
 
 @dp.callback_query(F.data == "adm_top_refs")
 async def cb_admin_top_refs(callback: CallbackQuery):
@@ -3625,7 +3725,7 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("OLK Cyber Session, Instant Claim Anytime & Maximum Security Engine is LIVE...")
+    print("OLK Cyber Session, Modern Promo Capsule & Promo Usage Tracker is LIVE...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
