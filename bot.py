@@ -38,9 +38,9 @@ DEFAULT_SPEED = 0.21
 
 ADMIN_MAX_TASK_REWARD = 70.0
 
-# روابط الصور الرسمية
+# روابط الصور الرسمية المباشرة المعتمدة
 WELCOME_IMAGE_URL = "https://i.ibb.co/vzR0j4m/olk-bot-logo.jpg"
-PAYOUT_PROOF_IMAGE_URL = "https://i.ibb.co/qF4jP8K/olk-deposit-withdraw.jpg"
+PAYOUT_PROOF_IMAGE_URL = "https://images2.imgbox.com/71/6a/G9371QkQ_o.jpg"
 
 WEBAPP_URL = "https://olka-bot-service.onrender.com"
 
@@ -105,6 +105,11 @@ class UnbanStates(StatesGroup):
 class BanStates(StatesGroup):
     waiting_for_target = State()
     waiting_for_reason = State()
+
+class CreatePromoStates(StatesGroup):
+    waiting_for_code = State()
+    waiting_for_reward = State()
+    waiting_for_max_uses = State()
 
 MINI_APP_HTML = """<!DOCTYPE html>
 <html lang="ar" dir="rtl" id="html-root">
@@ -430,6 +435,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
+    <!-- تبويب التعدين (يحتوي على خانة البرومو كود في الصفحة الرئيسية) -->
     <div class="page-tab active" id="tab-mining">
       <div class="mining-stage-card">
         <div class="status-pill">
@@ -461,8 +467,20 @@ MINI_APP_HTML = """<!DOCTYPE html>
           <i class="fa-solid fa-power-off"></i> <span id="t-btn-mine-text">تشغيل جلسة التعدين</span>
         </button>
       </div>
+
+      <!-- بطاقة إدخال كود الهدية (Promo Code) -->
+      <div class="card-panel" style="margin-top: 14px;">
+        <div style="font-weight:900; color:var(--gold-neon); font-size:13px; display:flex; align-items:center; gap:6px;">
+          <i class="fa-solid fa-gift"></i> <span id="t-promo-title">رمز الهدية الترويجي (Promo Code)</span>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="promo-code-input" class="convert-input" placeholder="ادخل الرمز هنا..." style="background:#081324; border:1px solid var(--card-border); border-radius:12px; padding:10px; font-size:13px;">
+          <button class="btn-main-action claim-state" style="width:110px; margin-top:0; font-size:12px;" onclick="redeemPromoCode()" id="t-promo-btn">تفعيل ⚡</button>
+        </div>
+      </div>
     </div>
 
+    <!-- تبويب الباقات -->
     <div class="page-tab" id="tab-miners">
       <div class="card-panel">
         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -519,7 +537,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب المحفظة المحدث -->
+    <!-- تبويب المحفظة -->
     <div class="page-tab" id="tab-wallet">
       <div class="card-panel">
         <div style="font-weight:bold; color:var(--gold-neon); font-size:14px; display:flex; justify-content:space-between;">
@@ -564,6 +582,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
+    <!-- تبويب الإحالات -->
     <div class="page-tab" id="tab-frens">
       <div class="card-panel">
         <div style="font-weight:bold; color:var(--cyan-neon); font-size:14px;"><i class="fa-solid fa-users"></i> <span id="t-frens-title">شبكة التعدين التشاركية</span></div>
@@ -597,6 +616,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
+    <!-- تبويب المهام -->
     <div class="page-tab" id="tab-tasks">
       <div class="tasks-horizontal-nav">
         <button class="tasks-subtab-btn active" onclick="switchTasksSubtab('channels', this)"><i class="fa-solid fa-bullhorn"></i> <span id="t-subtab-channels">القنوات</span></button>
@@ -687,6 +707,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
         totalInvitesLbl: "إجمالي الإحالات",
         totalRefEarningsLbl: "أرباح الإحالات",
         invitedFriendsLbl: "الأصدقاء المدعوون",
+        promoTitle: "رمز الهدية الترويجي (Promo Code)",
+        promoBtn: "تفعيل ⚡",
         subtabChannels: "القنوات",
         subtabGroups: "المجموعات",
         subtabBots: "البوتات",
@@ -740,6 +762,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
         totalInvitesLbl: "Total Invites",
         totalRefEarningsLbl: "Referral Earnings",
         invitedFriendsLbl: "Invited Friends",
+        promoTitle: "Promo Code Gift",
+        promoBtn: "Redeem ⚡",
         subtabChannels: "Channels",
         subtabGroups: "Groups",
         subtabBots: "Bots",
@@ -793,6 +817,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
       document.getElementById("t-total-invites-lbl").innerText = t.totalInvitesLbl;
       document.getElementById("t-total-ref-earnings-lbl").innerText = t.totalRefEarningsLbl;
       document.getElementById("t-invited-friends-lbl").innerText = t.invitedFriendsLbl;
+      document.getElementById("t-promo-title").innerText = t.promoTitle;
+      document.getElementById("t-promo-btn").innerText = t.promoBtn;
       document.getElementById("t-subtab-channels").innerText = t.subtabChannels;
       document.getElementById("t-subtab-groups").innerText = t.subtabGroups;
       document.getElementById("t-subtab-bots").innerText = t.subtabBots;
@@ -875,6 +901,30 @@ MINI_APP_HTML = """<!DOCTYPE html>
         return;
       }
       document.getElementById("custom-wallet-input").value = connectedWallet;
+    }
+
+    async function redeemPromoCode() {
+      const code = document.getElementById("promo-code-input").value.trim();
+      if (!code) {
+        alert(currentLang === "ar" ? "⚠️ يرجى كتابة الرمز الترويجي أولاً!" : "⚠️ Please enter the promo code!");
+        return;
+      }
+      try {
+        const res = await fetch("/api/redeem_promo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: userId, code: code, fingerprint: currentFingerprint })
+        });
+        const data = await res.json();
+        alert(data.msg);
+        if (data.ok) {
+          appOlk = data.olk_balance;
+          document.getElementById("olk-bal-val").innerText = appOlk.toFixed(2) + " OLK";
+          document.getElementById("promo-code-input").value = "";
+        }
+      } catch (e) {
+        alert("Server error");
+      }
     }
 
     async function loadData() {
@@ -983,7 +1033,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
         const res = await fetch(`/api/get_tasks?user_id=${userId}`);
         const data = await res.json();
         
-        // 1. قنوات
         const container = document.getElementById("dynamic-tasks-list");
         container.innerHTML = "";
         if (!data.tasks || data.tasks.length === 0) {
@@ -1011,7 +1060,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
           });
         }
 
-        // 2. مجموعات
         const groupContainer = document.getElementById("dynamic-groups-list");
         groupContainer.innerHTML = "";
         if (!data.group_tasks || data.group_tasks.length === 0) {
@@ -1039,7 +1087,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
           });
         }
 
-        // 3. بوتات
         const botContainer = document.getElementById("dynamic-bot-tasks-list");
         botContainer.innerHTML = "";
         if (!data.bot_tasks || data.bot_tasks.length === 0) {
@@ -1529,6 +1576,28 @@ async def init_db():
         );
         """)
 
+        # جدول أكواد البرومو والمستفيدين منها
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS promo_codes (
+            id SERIAL PRIMARY KEY,
+            code TEXT UNIQUE,
+            reward DOUBLE PRECISION DEFAULT 100.0,
+            max_uses INTEGER DEFAULT 0,
+            current_uses INTEGER DEFAULT 0,
+            created_at BIGINT DEFAULT 0,
+            is_active INTEGER DEFAULT 1
+        );
+        """)
+
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS promo_claims (
+            user_id BIGINT,
+            code_id INTEGER,
+            claimed_at BIGINT,
+            PRIMARY KEY (user_id, code_id)
+        );
+        """)
+
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS dynamic_tasks (
             id SERIAL PRIMARY KEY,
@@ -1565,24 +1634,6 @@ async def init_db():
             current_completions INTEGER DEFAULT 0,
             is_active INTEGER DEFAULT 1
         );
-        """)
-
-        await conn.execute("""
-        DO $$
-        BEGIN
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='dynamic_tasks' AND column_name='max_users') THEN
-                ALTER TABLE dynamic_tasks ADD COLUMN max_users INTEGER DEFAULT 0;
-                ALTER TABLE dynamic_tasks ADD COLUMN current_completions INTEGER DEFAULT 0;
-            END IF;
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='dynamic_group_tasks' AND column_name='max_users') THEN
-                ALTER TABLE dynamic_group_tasks ADD COLUMN max_users INTEGER DEFAULT 0;
-                ALTER TABLE dynamic_group_tasks ADD COLUMN current_completions INTEGER DEFAULT 0;
-            END IF;
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='dynamic_bot_tasks' AND column_name='max_users') THEN
-                ALTER TABLE dynamic_bot_tasks ADD COLUMN max_users INTEGER DEFAULT 0;
-                ALTER TABLE dynamic_bot_tasks ADD COLUMN current_completions INTEGER DEFAULT 0;
-            END IF;
-        END $$;
         """)
 
         await conn.execute("""
@@ -1679,6 +1730,39 @@ async def api_save_wallet(request):
                                friendly_address, fp, client_ip, user_id)
 
         return web.json_response({"ok": True, "address": friendly_address})
+    except Exception as e:
+        return web.json_response({"ok": False, "msg": str(e)})
+
+# API تفعيل كود البرومو
+async def api_redeem_promo(request):
+    try:
+        data = await request.json()
+        user_id = int(data.get("user_id"))
+        code = str(data.get("code", "")).strip().upper()
+        now = int(time.time())
+
+        if not code:
+            return web.json_response({"ok": False, "msg": "يرجى إدخال الرمز"})
+
+        async with db_pool.acquire() as conn:
+            promo = await conn.fetchrow("SELECT * FROM promo_codes WHERE code = $1 AND is_active = 1", code)
+            if not promo:
+                return web.json_response({"ok": False, "msg": "❌ الكود غير صحيح أو منتهي الصلاحية!"})
+
+            if promo["max_uses"] > 0 and promo["current_uses"] >= promo["max_uses"]:
+                return web.json_response({"ok": False, "msg": "❌ عذراً، اكتمل الحد الأقصى للمستفيدين من هذا الكود!"})
+
+            already_claimed = await conn.fetchval("SELECT 1 FROM promo_claims WHERE user_id = $1 AND code_id = $2", user_id, promo["id"])
+            if already_claimed:
+                return web.json_response({"ok": False, "msg": "⚠️ لقد قمت باستخدام هذا الكود الترويجي مسبقاً!"})
+
+            await conn.execute("INSERT INTO promo_claims (user_id, code_id, claimed_at) VALUES ($1, $2, $3)", user_id, promo["id"], now)
+            await conn.execute("UPDATE promo_codes SET current_uses = current_uses + 1 WHERE id = $1", promo["id"])
+            await conn.execute("UPDATE users SET olk_balance = olk_balance + $1 WHERE user_id = $2", promo["reward"], user_id)
+            
+            new_bal = await conn.fetchval("SELECT olk_balance FROM users WHERE user_id = $1", user_id)
+
+        return web.json_response({"ok": True, "olk_balance": new_bal, "msg": f"🎉 مبروك! تم تفعيل الكود بنجاح وإضافة +{promo['reward']:.0f} OLK!"})
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
@@ -1971,6 +2055,7 @@ async def api_convert(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
+# API السحب مع إشعار فوري لجميع الأدمنز المؤهلين
 async def api_withdraw(request):
     try:
         data = await request.json()
@@ -1998,6 +2083,12 @@ async def api_withdraw(request):
             )
             await conn.execute("UPDATE users SET ton_balance = $1 WHERE user_id = $2", remaining, user_id)
 
+            # استخراج قائمة كل الأدمنز المؤهلين لإدارة السحب
+            admin_rows = await conn.fetch("SELECT user_id FROM bot_admins WHERE can_manage_withdrawals = 1")
+            admin_ids = {SUPER_ADMIN_ID}
+            for ar in admin_rows:
+                admin_ids.add(ar["user_id"])
+
         admin_kb = InlineKeyboardMarkup(inline_keyboard=[
             [
                 InlineKeyboardButton(text="✅ موافقة ودفع", callback_data=f"adm_app_{w_id}"),
@@ -2010,10 +2101,13 @@ async def api_withdraw(request):
             f"💎 المبلغ: <code>{withdraw_amount:.4f} TON</code>\n"
             f"📫 المحفظة:\n<code>{friendly_address}</code>"
         )
-        try:
-            await bot.send_message(chat_id=SUPER_ADMIN_ID, text=admin_notification, reply_markup=admin_kb, parse_mode="HTML")
-        except Exception:
-            pass
+        
+        # إرسال الإشعار الفوري التلقائي للرئيس ولكل الأدمنز المعينين
+        for adm_id in admin_ids:
+            try:
+                await bot.send_message(chat_id=adm_id, text=admin_notification, reply_markup=admin_kb, parse_mode="HTML")
+            except Exception:
+                pass
 
         return web.json_response({"ok": True, "remaining_ton": remaining})
     except Exception as e:
@@ -2137,6 +2231,9 @@ def build_main_admin_keyboard(perms):
         [InlineKeyboardButton(text="📊 إحصائيات المنظومة والمستخدمين", callback_data="adm_stats")],
         [InlineKeyboardButton(text="🏆 توب 20 الأكثر إحالة (Top 20 Referrers)", callback_data="adm_top_refs")]
     ]
+    if perms.get("is_super"):
+        # خيار إنشاء أكواد برومو مخصص للرئيس الأعلى فقط
+        buttons.append([InlineKeyboardButton(text="🎁 إنشاء كود برومو (خاص بالرئيس)", callback_data="adm_create_promo_start")])
     if perms.get("can_manage_withdrawals"):
         buttons.append([InlineKeyboardButton(text="⏳ طلبات السحب المعلقة", callback_data="adm_view_withdraws")])
     if perms.get("can_manage_tasks"):
@@ -2261,6 +2358,73 @@ async def admin_panel(message: Message, state: FSMContext):
         parse_mode="HTML"
     )
 
+# تدفق إنشاء كود برومو بواسطة الرئيس فقط
+@dp.callback_query(F.data == "adm_create_promo_start")
+async def cb_create_promo_start(callback: CallbackQuery, state: FSMContext):
+    if callback.from_user.id != SUPER_ADMIN_ID:
+        await callback.answer("⛔ هذا الخيار مخصص للرئيس الأعلى فقط!", show_alert=True)
+        return
+    await callback.answer()
+    await callback.message.answer("🎁 أرسل الآن **رمز البرومو كود** الذي تريده (مثال: `VIP2026` أو `FREE50`):")
+    await state.set_state(CreatePromoStates.waiting_for_code)
+
+@dp.message(CreatePromoStates.waiting_for_code)
+async def state_promo_code(message: Message, state: FSMContext):
+    code = message.text.strip().upper()
+    await state.update_data(code=code)
+    await message.answer(f"💰 كم **عدد نقاط OLK** التي سيكسبها المستخدم عند إدخال كود `{code}`؟ (مثال: `100`):", parse_mode="Markdown")
+    await state.set_state(CreatePromoStates.waiting_for_reward)
+
+@dp.message(CreatePromoStates.waiting_for_reward)
+async def state_promo_reward(message: Message, state: FSMContext):
+    try:
+        reward = float(message.text.strip())
+        if reward <= 0:
+            await message.answer("❌ القيمة يجب أن تكون أكبر من 0:")
+            return
+    except ValueError:
+        await message.answer("❌ يرجى إدخال رقم صحيح:")
+        return
+
+    await state.update_data(reward=reward)
+    await message.answer("👥 أرسل الآن **الحد الأقصى لعدد المستفيدين** من هذا الكود (مثال: `50`، أو اكتب `0` لجعله غير محدود):")
+    await state.set_state(CreatePromoStates.waiting_for_max_uses)
+
+@dp.message(CreatePromoStates.waiting_for_max_uses)
+async def state_promo_max_uses(message: Message, state: FSMContext):
+    try:
+        max_uses = int(message.text.strip())
+    except ValueError:
+        await message.answer("❌ يرجى إدخال رقم صحيح:")
+        return
+
+    data = await state.get_data()
+    await state.clear()
+    now = int(time.time())
+
+    async with db_pool.acquire() as conn:
+        await conn.execute("""
+            INSERT INTO promo_codes (code, reward, max_uses, current_uses, created_at, is_active)
+            VALUES ($1, $2, $3, 0, $4, 1)
+            ON CONFLICT (code) DO UPDATE SET 
+                reward = EXCLUDED.reward,
+                max_uses = EXCLUDED.max_uses,
+                current_uses = 0,
+                is_active = 1
+        """, data["code"], data["reward"], max_uses, now)
+
+    limit_text = f"{max_uses} مستخدم" if max_uses > 0 else "غير محدود"
+    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 العودة للوحة التحكم", callback_data="adm_home")]])
+    await message.answer(
+        f"🎉 <b>تم إنشاء كود البرومو بنجاح!</b>\n\n"
+        f"🏷️ الكود: <code>{data['code']}</code>\n"
+        f"🎁 المكافأة: <b>+{data['reward']:.0f} OLK</b>\n"
+        f"👥 الحد الأقصى: <b>{limit_text}</b>\n\n"
+        f"يمكن للمستخدمين كتابته وتفعيله الآن مباشرة من الصفحة الرئيسية!",
+        parse_mode="HTML",
+        reply_markup=kb
+    )
+
 @dp.callback_query(F.data == "adm_top_refs")
 async def cb_admin_top_refs(callback: CallbackQuery):
     perms = await get_admin_permissions(callback.from_user.id)
@@ -2363,9 +2527,9 @@ async def state_execute_unban(message: Message, state: FSMContext):
 
     async with db_pool.acquire() as conn:
         if raw.isdigit():
-            user = await conn.fetchrow("SELECT user_id, username, first_name FROM users WHERE user_id = $1", int(raw))
+            user = await conn.fetchrow("SELECT user_id FROM users WHERE user_id = $1", int(raw))
         else:
-            user = await conn.fetchrow("SELECT user_id, username, first_name FROM users WHERE LOWER(username) = $1", target_clean)
+            user = await conn.fetchrow("SELECT user_id FROM users WHERE LOWER(username) = $1", target_clean)
 
         if not user:
             await message.answer("❌ لم يتم العثور على هذا المستخدم في قاعدة البيانات! تأكد من صحة الـ ID أو اليوزر:")
@@ -2389,9 +2553,9 @@ async def unban_user_direct(message: Message, command: CommandObject):
     target_clean = raw.lower().replace("@", "")
     async with db_pool.acquire() as conn:
         if raw.isdigit():
-            user = await conn.fetchrow("SELECT user_id, username, first_name FROM users WHERE user_id = $1", int(raw))
+            user = await conn.fetchrow("SELECT user_id FROM users WHERE user_id = $1", int(raw))
         else:
-            user = await conn.fetchrow("SELECT user_id, username, first_name FROM users WHERE LOWER(username) = $1", target_clean)
+            user = await conn.fetchrow("SELECT user_id FROM users WHERE LOWER(username) = $1", target_clean)
 
         if not user:
             await message.answer("❌ المستخدم غير موجود.")
@@ -2414,9 +2578,9 @@ async def ban_user_direct(message: Message, command: CommandObject):
 
     async with db_pool.acquire() as conn:
         if raw.isdigit():
-            user = await conn.fetchrow("SELECT user_id, username, first_name FROM users WHERE user_id = $1", int(raw))
+            user = await conn.fetchrow("SELECT user_id FROM users WHERE user_id = $1", int(raw))
         else:
-            user = await conn.fetchrow("SELECT user_id, username, first_name FROM users WHERE LOWER(username) = $1", target_clean)
+            user = await conn.fetchrow("SELECT user_id FROM users WHERE LOWER(username) = $1", target_clean)
 
         if not user:
             await message.answer("❌ المستخدم غير موجود.")
@@ -2931,7 +3095,7 @@ async def process_broadcast(message: Message, state: FSMContext):
 
     await message.answer(f"✅ اكتملت الإذاعة!\nالناجحة: {success} | الفاشلة: {fail}")
 
-# الموافقة على السحب ونشر إثبات الدفع تلقائياً مع الصورة في قناة الإثباتات
+# الموافقة على السحب ونشر إثبات الدفع تلقائياً مع الصورة المضمونة في قناة الإثباتات
 @dp.callback_query(F.data.startswith("adm_app_"))
 async def approve_withdraw(callback: CallbackQuery):
     perms = await get_admin_permissions(callback.from_user.id)
@@ -2959,7 +3123,6 @@ async def approve_withdraw(callback: CallbackQuery):
 
         await conn.execute("UPDATE withdrawals SET status = 'APPROVED' WHERE id = $1", w_id)
 
-        # 1. إشعار المستخدم
         try:
             await bot.send_message(
                 chat_id=uid,
@@ -2969,7 +3132,6 @@ async def approve_withdraw(callback: CallbackQuery):
         except Exception:
             pass
 
-        # 2. إخفاء جزء من عنوان المحفظة للخصوصية
         if len(wallet_raw) > 10:
             masked_wallet = wallet_raw[:4] + "..." + wallet_raw[-4:]
         else:
@@ -2978,7 +3140,6 @@ async def approve_withdraw(callback: CallbackQuery):
         user_tag = f"@{uname}" if uname else f"{fname}"
         now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # 3. إعداد نص الإثبات ومطابقته لرسائل القناة
         proof_caption = (
             "✅ <b>إثبات دفع وسحب جديد | NEW PAYOUT</b>\n\n"
             f"👤 <b>المستلم:</b> {html.escape(user_tag)}\n"
@@ -2994,7 +3155,7 @@ async def approve_withdraw(callback: CallbackQuery):
             [InlineKeyboardButton(text="⚡ ابدأ التعدين الآن", url="https://t.me/OlkaVip_bot")]
         ])
 
-        # 4. إرسال الصورة مع الكابشن إلى قناة الإثباتات
+        # إرسال الصورة مع الكابشن المباشر
         try:
             await bot.send_photo(
                 chat_id=PROOFS_CHANNEL,
@@ -3004,7 +3165,6 @@ async def approve_withdraw(callback: CallbackQuery):
                 reply_markup=proof_kb
             )
         except Exception as e:
-            # في حال تعذر إرسال الصورة لأي سبب، يتم إرسال النص تفادياً للتعطيل
             print(f"Error posting photo proof: {e}")
             try:
                 await bot.send_message(
@@ -3014,9 +3174,9 @@ async def approve_withdraw(callback: CallbackQuery):
                     reply_markup=proof_kb
                 )
             except Exception as e2:
-                print(f"Error posting text fallback proof: {e2}")
+                print(f"Error posting fallback text: {e2}")
 
-    await callback.message.edit_text(callback.message.text + "\n\n✅ <b>تمت الموافقة والدفع ونشر الصورة والإثبات في القناة بنجاح.</b>", parse_mode="HTML")
+    await callback.message.edit_text(callback.message.text + "\n\n✅ <b>تمت الموافقة والدفع ونشر الإثبات والصورة في القناة بنجاح.</b>", parse_mode="HTML")
 
 @dp.callback_query(F.data.startswith("adm_rej_"))
 async def reject_withdraw(callback: CallbackQuery):
@@ -3040,7 +3200,7 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("OLK Cyber Session, Proof Channel Auto-Post With Image & Full Engine is LIVE...")
+    print("OLK Cyber Session, Proof Channel Auto-Photo, Multi-Admin Withdrawal Alerts & Promo Engine is LIVE...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
@@ -3049,6 +3209,7 @@ async def main():
     app.router.add_get("/api/get_tasks", api_get_tasks)
     app.router.add_get("/api/get_referrals", api_get_referrals)
     app.router.add_post("/api/save_wallet", api_save_wallet)
+    app.router.add_post("/api/redeem_promo", api_redeem_promo)
     app.router.add_post("/api/start_mining_session", api_start_mining_session)
     app.router.add_post("/api/claim_session_rewards", api_claim_session_rewards)
     app.router.add_post("/api/upgrade_rig_ton_direct", api_upgrade_rig_ton_direct)
