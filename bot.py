@@ -25,14 +25,9 @@ SPONSOR_CHANNEL_LINK = "https://t.me/OLKVIP"
 PROJECT_TON_WALLET = "UQB3Xs8jkbebkVumWJlnEmDkjN4YXsZuHPrXSpZT1RtmZrCB"
 
 CONVERSION_RATE = 10000
-
-# الحد الأدنى للسحب 0.05 TON (Gram)
 MIN_WITHDRAW_TON = 0.05
-
 REFERRAL_REWARD = 70.0
 SIGNUP_BONUS = 50.0
-
-# سرعة التعدين للمستخدمين غير الدافعين 0.21 TH/s
 DEFAULT_SPEED = 0.21
 
 WEBAPP_URL = "https://olka-bot-service.onrender.com"
@@ -74,17 +69,20 @@ class AddTaskStates(StatesGroup):
     waiting_for_channel_id = State()
     waiting_for_link = State()
     waiting_for_reward = State()
+    waiting_for_max_users = State()
 
 class AddGroupTaskStates(StatesGroup):
     waiting_for_title = State()
     waiting_for_group_id = State()
     waiting_for_link = State()
     waiting_for_reward = State()
+    waiting_for_max_users = State()
 
 class AddBotTaskStates(StatesGroup):
     waiting_for_title = State()
     waiting_for_link = State()
     waiting_for_reward = State()
+    waiting_for_max_users = State()
 
 class AddAdminStates(StatesGroup):
     waiting_for_id = State()
@@ -439,7 +437,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب الباقات (بدون أقواس) -->
+    <!-- تبويب الباقات -->
     <div class="page-tab" id="tab-miners">
       <div class="card-panel">
         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -504,7 +502,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب الإحالات المطور (مع عرض الإحصائيات وأسماء المدعوين) -->
+    <!-- تبويب الإحالات المطور -->
     <div class="page-tab" id="tab-frens">
       <div class="card-panel">
         <div style="font-weight:bold; color:var(--cyan-neon); font-size:14px;"><i class="fa-solid fa-users"></i> <span id="t-frens-title">شبكة التعدين التشاركية</span></div>
@@ -917,12 +915,13 @@ MINI_APP_HTML = """<!DOCTYPE html>
         } else {
           data.tasks.forEach(task => {
             const isDone = data.completed_ids.includes(task.id);
+            const countText = task.max_users > 0 ? ` (${task.current_completions || 0}/${task.max_users})` : '';
             const div = document.createElement("div");
             div.className = "plan-card";
             div.innerHTML = `
               <div>
                 <div class="plan-info-title">${task.title}</div>
-                <div class="plan-info-sub" style="color:var(--gold-neon);">+${task.reward} OLK</div>
+                <div class="plan-info-sub" style="color:var(--gold-neon);">+${task.reward} OLK <span style="color:#94a3b8; font-size:10px;">${countText}</span></div>
               </div>
               <div style="display:flex; gap:6px;">
                 <button class="btn-buy-plan" onclick="window.open('${task.link}', '_blank')">${t.btnJoin}</button>
@@ -944,12 +943,13 @@ MINI_APP_HTML = """<!DOCTYPE html>
         } else {
           data.group_tasks.forEach(task => {
             const isDone = (data.completed_group_ids || []).includes(task.id);
+            const countText = task.max_users > 0 ? ` (${task.current_completions || 0}/${task.max_users})` : '';
             const div = document.createElement("div");
             div.className = "plan-card";
             div.innerHTML = `
               <div>
                 <div class="plan-info-title">${task.title}</div>
-                <div class="plan-info-sub" style="color:var(--green-neon);">+${task.reward} OLK</div>
+                <div class="plan-info-sub" style="color:var(--green-neon);">+${task.reward} OLK <span style="color:#94a3b8; font-size:10px;">${countText}</span></div>
               </div>
               <div style="display:flex; gap:6px;">
                 <button class="btn-buy-plan" onclick="window.open('${task.link}', '_blank')">${t.btnJoin}</button>
@@ -971,12 +971,13 @@ MINI_APP_HTML = """<!DOCTYPE html>
         } else {
           data.bot_tasks.forEach(task => {
             const isDone = (data.completed_bot_ids || []).includes(task.id);
+            const countText = task.max_users > 0 ? ` (${task.current_completions || 0}/${task.max_users})` : '';
             const div = document.createElement("div");
             div.className = "plan-card";
             div.innerHTML = `
               <div>
                 <div class="plan-info-title">${task.title}</div>
-                <div class="plan-info-sub" style="color:var(--cyan-neon);">+${task.reward} OLK</div>
+                <div class="plan-info-sub" style="color:var(--cyan-neon);">+${task.reward} OLK <span style="color:#94a3b8; font-size:10px;">${countText}</span></div>
               </div>
               <div style="display:flex; gap:6px;">
                 <button class="btn-buy-plan" onclick="window.open('${task.link}', '_blank')">${t.btnStartBot}</button>
@@ -1389,7 +1390,6 @@ async def init_db():
         END $$;
         """)
 
-        # ضبط سرعة المستخدمين غير الدافعين في قاعدة البيانات إلى 0.21
         await conn.execute("""
             UPDATE users SET mining_speed = 0.21 WHERE miner_level = 1;
         """)
@@ -1412,6 +1412,8 @@ async def init_db():
             channel_id TEXT,
             link TEXT,
             reward DOUBLE PRECISION DEFAULT 10.0,
+            max_users INTEGER DEFAULT 0,
+            current_completions INTEGER DEFAULT 0,
             is_active INTEGER DEFAULT 1
         );
         """)
@@ -1423,6 +1425,8 @@ async def init_db():
             group_id TEXT,
             link TEXT,
             reward DOUBLE PRECISION DEFAULT 10.0,
+            max_users INTEGER DEFAULT 0,
+            current_completions INTEGER DEFAULT 0,
             is_active INTEGER DEFAULT 1
         );
         """)
@@ -1433,16 +1437,29 @@ async def init_db():
             title TEXT,
             link TEXT,
             reward DOUBLE PRECISION DEFAULT 10.0,
+            max_users INTEGER DEFAULT 0,
+            current_completions INTEGER DEFAULT 0,
             is_active INTEGER DEFAULT 1
         );
         """)
 
-        task_exists = await conn.fetchval("SELECT COUNT(*) FROM dynamic_tasks")
-        if task_exists == 0:
-            await conn.execute("""
-                INSERT INTO dynamic_tasks (title, channel_id, link, reward)
-                VALUES ('قناة OLKA AD الإعلانية', '@olka_ad', 'https://t.me/olka_ad', 10.0)
-            """)
+        await conn.execute("""
+        DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='dynamic_tasks' AND column_name='max_users') THEN
+                ALTER TABLE dynamic_tasks ADD COLUMN max_users INTEGER DEFAULT 0;
+                ALTER TABLE dynamic_tasks ADD COLUMN current_completions INTEGER DEFAULT 0;
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='dynamic_group_tasks' AND column_name='max_users') THEN
+                ALTER TABLE dynamic_group_tasks ADD COLUMN max_users INTEGER DEFAULT 0;
+                ALTER TABLE dynamic_group_tasks ADD COLUMN current_completions INTEGER DEFAULT 0;
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='dynamic_bot_tasks' AND column_name='max_users') THEN
+                ALTER TABLE dynamic_bot_tasks ADD COLUMN max_users INTEGER DEFAULT 0;
+                ALTER TABLE dynamic_bot_tasks ADD COLUMN current_completions INTEGER DEFAULT 0;
+            END IF;
+        END $$;
+        """)
 
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS withdrawals (
@@ -1531,7 +1548,6 @@ async def api_save_wallet(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
-# API لجلب إحصائيات الإحالة وقائمة الأشخاص المحالين
 async def api_get_referrals(request):
     try:
         user_id = int(request.query.get("user_id", 0))
@@ -1572,13 +1588,28 @@ async def api_get_tasks(request):
     try:
         user_id = int(request.query.get("user_id", 0))
         async with db_pool.acquire() as conn:
-            rows = await conn.fetch("SELECT id, title, channel_id, link, reward FROM dynamic_tasks WHERE is_active = 1 ORDER BY id DESC")
+            rows = await conn.fetch("""
+                SELECT id, title, channel_id, link, reward, max_users, current_completions 
+                FROM dynamic_tasks 
+                WHERE is_active = 1 AND (max_users = 0 OR current_completions < max_users)
+                ORDER BY id DESC
+            """)
             tasks = [dict(r) for r in rows]
 
-            group_rows = await conn.fetch("SELECT id, title, group_id, link, reward FROM dynamic_group_tasks WHERE is_active = 1 ORDER BY id DESC")
+            group_rows = await conn.fetch("""
+                SELECT id, title, group_id, link, reward, max_users, current_completions 
+                FROM dynamic_group_tasks 
+                WHERE is_active = 1 AND (max_users = 0 OR current_completions < max_users)
+                ORDER BY id DESC
+            """)
             group_tasks = [dict(r) for r in group_rows]
 
-            bot_rows = await conn.fetch("SELECT id, title, link, reward FROM dynamic_bot_tasks WHERE is_active = 1 ORDER BY id DESC")
+            bot_rows = await conn.fetch("""
+                SELECT id, title, link, reward, max_users, current_completions 
+                FROM dynamic_bot_tasks 
+                WHERE is_active = 1 AND (max_users = 0 OR current_completions < max_users)
+                ORDER BY id DESC
+            """)
             bot_tasks = [dict(r) for r in bot_rows]
 
             u_row = await conn.fetchrow("SELECT tasks_completed, group_tasks_completed, bot_tasks_completed FROM users WHERE user_id = $1", user_id)
@@ -1834,6 +1865,9 @@ async def api_verify_channel_task(request):
             if not task:
                 return web.json_response({"ok": False, "msg": "المهمة غير متوفرة"})
 
+            if task["max_users"] > 0 and task["current_completions"] >= task["max_users"]:
+                return web.json_response({"ok": False, "msg": "عذراً! انتهت هذه المهمة واكتمل الحد الأقصى للمشتركين."})
+
             row = await conn.fetchrow("SELECT tasks_completed FROM users WHERE user_id = $1", user_id)
             tasks = json.loads(row["tasks_completed"]) if row and row["tasks_completed"] else []
 
@@ -1851,6 +1885,7 @@ async def api_verify_channel_task(request):
             reward = task["reward"]
             await conn.execute("UPDATE users SET olk_balance = olk_balance + $1, tasks_completed = $2 WHERE user_id = $3",
                                reward, json.dumps(tasks), user_id)
+            await conn.execute("UPDATE dynamic_tasks SET current_completions = current_completions + 1 WHERE id = $1", task_id)
 
             return web.json_response({"ok": True, "reward": reward, "msg": f"✅ مبروك! تمت إضافة +{reward:.0f} OLK"})
     except Exception as e:
@@ -1866,6 +1901,9 @@ async def api_verify_group_task(request):
             task = await conn.fetchrow("SELECT * FROM dynamic_group_tasks WHERE id = $1 AND is_active = 1", task_id)
             if not task:
                 return web.json_response({"ok": False, "msg": "المجموعة غير متوفرة"})
+
+            if task["max_users"] > 0 and task["current_completions"] >= task["max_users"]:
+                return web.json_response({"ok": False, "msg": "عذراً! اكتمل الحد الأقصى للمشتركين في هذه المهمة."})
 
             row = await conn.fetchrow("SELECT group_tasks_completed FROM users WHERE user_id = $1", user_id)
             tasks = json.loads(row["group_tasks_completed"]) if row and row["group_tasks_completed"] else []
@@ -1884,6 +1922,7 @@ async def api_verify_group_task(request):
             reward = task["reward"]
             await conn.execute("UPDATE users SET olk_balance = olk_balance + $1, group_tasks_completed = $2 WHERE user_id = $3",
                                reward, json.dumps(tasks), user_id)
+            await conn.execute("UPDATE dynamic_group_tasks SET current_completions = current_completions + 1 WHERE id = $1", task_id)
 
             return web.json_response({"ok": True, "reward": reward, "msg": f"✅ مبروك! تمت إضافة +{reward:.0f} OLK"})
     except Exception as e:
@@ -1900,6 +1939,9 @@ async def api_verify_bot_task(request):
             if not task:
                 return web.json_response({"ok": False, "msg": "مهمة البوت غير متوفرة"})
 
+            if task["max_users"] > 0 and task["current_completions"] >= task["max_users"]:
+                return web.json_response({"ok": False, "msg": "عذراً! اكتمل العدد المطلوب لهذه المهمة."})
+
             row = await conn.fetchrow("SELECT bot_tasks_completed FROM users WHERE user_id = $1", user_id)
             tasks = json.loads(row["bot_tasks_completed"]) if row and row["bot_tasks_completed"] else []
 
@@ -1910,6 +1952,7 @@ async def api_verify_bot_task(request):
             reward = task["reward"]
             await conn.execute("UPDATE users SET olk_balance = olk_balance + $1, bot_tasks_completed = $2 WHERE user_id = $3",
                                reward, json.dumps(tasks), user_id)
+            await conn.execute("UPDATE dynamic_bot_tasks SET current_completions = current_completions + 1 WHERE id = $1", task_id)
 
             return web.json_response({"ok": True, "reward": reward, "msg": f"✅ مبروك! تمت إضافة +{reward:.0f} OLK"})
     except Exception as e:
@@ -2007,16 +2050,19 @@ async def start_handler(message: Message, command: CommandObject, state: FSMCont
             """, username, first_name, user_id)
 
     perms = await get_admin_permissions(user_id)
+    
+    # رسالة الترحيب المحددة من الصورة
     welcome_text = (
-        "⚡ **مرحباً بك في منظومة OLKA VIP Cyber Mining**\n"
-        "──────────────────────\n"
-        "⛏️ **جلسات تعدين يدوية:** اضغط على زر التشغيل لبدء الإنتاج السحابي.\n"
-        "💰 **أرباح فورية ومضمونة:** أرباحك تذهب مباشرة لمحفظتك داخل التطبيق.\n"
-        "🎁 **مكافأة البدء:** احصل على **+50 OLK** فور تشغيل الجلسة الأولى!\n"
-        "👥 **نظام الإحالة:** احصل على **+70 OLK** لكل صديق ينضم وينفذ الشروط!\n"
-        "🌐 **اللغات:** يدعم التطبيق العربية والإنجليزية بزر واحد داخل الواجهة.\n"
-        "──────────────────────\n"
-        "اختر أحد الخيارات للبدء:"
+        "🐐⚡ أهلاً بك في عالم **OLK VIP CYBER MINING** ⚡\n\n"
+        "━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "⛏️ ابدأ التعدين واجمع العملات بكل سهولة!\n\n"
+        "💰 تابع أرباحك ومكافآتك من داخل البوت.\n\n"
+        "🎁 اكتشف مكافآت البداية وانطلق بقوة!\n\n"
+        "👥 ادعُ أصدقاءك واكسب مكافأة 70 Olk على الإحالة.\n\n"
+        "📋 أنجز المهام اليومية واجمع المزيد من المكافآت.\n\n"
+        "━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "🚀 رحلتك تبدأ الآن... كن جزءاً من عالم OLK! 👾\n\n"
+        "👇 اضغط هنا في الأسفل للبدء معنا وتحقيق الأرباح."
     )
     await message.answer(welcome_text, parse_mode="Markdown", reply_markup=build_combined_start_keyboard(user_id, perms))
 
@@ -2034,7 +2080,6 @@ async def admin_panel(message: Message, state: FSMContext):
         parse_mode="Markdown"
     )
 
-# عرض توب 20 الأكثر إحالة
 @dp.callback_query(F.data == "adm_top_refs")
 async def cb_admin_top_refs(callback: CallbackQuery):
     perms = await get_admin_permissions(callback.from_user.id)
@@ -2044,19 +2089,31 @@ async def cb_admin_top_refs(callback: CallbackQuery):
 
     async with db_pool.acquire() as conn:
         rows = await conn.fetch("""
-            SELECT u.user_id, u.username, u.first_name, COUNT(r.user_id) AS ref_count
-            FROM users u
-            JOIN users r ON r.referred_by = u.user_id
-            GROUP BY u.user_id, u.username, u.first_name
-            ORDER BY ref_count DESC
+            SELECT referred_by, COUNT(*) as ref_count 
+            FROM users 
+            WHERE referred_by IS NOT NULL 
+            GROUP BY referred_by 
+            ORDER BY ref_count DESC 
             LIMIT 20;
         """)
 
-    if not rows:
-        text = "🏆 **قائمة أفضل 20 مستخدم في الإحالات:**\n\nلا توجد إحالات مسجلة بعد."
+        user_details = []
+        for r in rows:
+            u_info = await conn.fetchrow("SELECT username, first_name FROM users WHERE user_id = $1", r["referred_by"])
+            uname = u_info["username"] if u_info and u_info["username"] else None
+            fname = u_info["first_name"] if u_info and u_info["first_name"] else None
+            user_details.append({
+                "user_id": r["referred_by"],
+                "username": uname,
+                "first_name": fname,
+                "ref_count": r["ref_count"]
+            })
+
+    if not user_details:
+        text = "🏆 **قائمة أفضل 20 مستخدم في الإحالات:**\n\nلا توجد إحالات مسجلة حتى الآن."
     else:
         text = "🏆 **ترتيب أفضل 20 مستخدم من ناحية الإحالات:**\n──────────────────────\n"
-        for idx, r in enumerate(rows, 1):
+        for idx, r in enumerate(user_details, 1):
             name_display = f"@{r['username']}" if r['username'] else (r['first_name'] or f"ID: {r['user_id']}")
             text += f"**{idx}.** {name_display} — 👥 `{r['ref_count']}` إحالة\n"
         text += "──────────────────────"
@@ -2071,9 +2128,16 @@ async def cb_back_to_start(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     perms = await get_admin_permissions(user_id)
     welcome_text = (
-        "⚡ **منظومة OLKA VIP Cyber Mining**\n"
-        "──────────────────────\n"
-        "اختر أحد الخيارات للبدء:"
+        "🐐⚡ أهلاً بك في عالم **OLK VIP CYBER MINING** ⚡\n\n"
+        "━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "⛏️ ابدأ التعدين واجمع العملات بكل سهولة!\n\n"
+        "💰 تابع أرباحك ومكافآتك من داخل البوت.\n\n"
+        "🎁 اكتشف مكافآت البداية وانطلق بقوة!\n\n"
+        "👥 ادعُ أصدقاءك واكسب مكافأة 70 Olk على الإحالة.\n\n"
+        "📋 أنجز المهام اليومية واجمع المزيد من المكافآت.\n\n"
+        "━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "🚀 رحلتك تبدأ الآن... كن جزءاً من عالم OLK! 👾\n\n"
+        "👇 اضغط هنا في الأسفل للبدء معنا وتحقيق الأرباح."
     )
     await callback.message.edit_text(welcome_text, parse_mode="Markdown", reply_markup=build_combined_start_keyboard(user_id, perms))
 
@@ -2223,11 +2287,12 @@ async def cb_tasks_menu(callback: CallbackQuery):
     await callback.answer()
 
     async with db_pool.acquire() as conn:
-        rows = await conn.fetch("SELECT id, title, reward FROM dynamic_tasks WHERE is_active = 1 ORDER BY id DESC")
+        rows = await conn.fetch("SELECT id, title, reward, max_users, current_completions FROM dynamic_tasks WHERE is_active = 1 ORDER BY id DESC")
 
     buttons = [[InlineKeyboardButton(text="➕ إضافة مهمة قناة جديدة", callback_data="adm_add_task_start")]]
     for r in rows:
-        buttons.append([InlineKeyboardButton(text=f"🗑️ حذف: {r['title']} (+{r['reward']} OLK)", callback_data=f"adm_del_task_{r['id']}")])
+        lim_str = f"({r['current_completions']}/{r['max_users']})" if r['max_users'] > 0 else "(غير محدود)"
+        buttons.append([InlineKeyboardButton(text=f"🗑️ حذف: {r['title']} {lim_str}", callback_data=f"adm_del_task_{r['id']}")])
     buttons.append([InlineKeyboardButton(text="🔙 العودة للرئيسية", callback_data="adm_home")])
 
     await callback.message.edit_text("📢 **إدارة مهام القنوات:**", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
@@ -2260,19 +2325,35 @@ async def state_task_link(message: Message, state: FSMContext):
 
 @dp.message(AddTaskStates.waiting_for_reward)
 async def state_task_reward(message: Message, state: FSMContext):
-    try: reward = float(message.text.strip())
+    try: 
+        reward = float(message.text.strip())
     except ValueError:
         await message.answer("❌ يرجى إدخال رقم صحيح للمكافأة:")
+        return
+
+    await state.update_data(reward=reward)
+    await message.answer("👥 أرسل الآن **الحد الأقصى لعدد المشتركين** (مثال: `100`، أو اكتب `0` لجعلها غير محدودة):")
+    await state.set_state(AddTaskStates.waiting_for_max_users)
+
+@dp.message(AddTaskStates.waiting_for_max_users)
+async def state_task_max_users(message: Message, state: FSMContext):
+    try:
+        max_users = int(message.text.strip())
+    except ValueError:
+        await message.answer("❌ يرجى إدخال رقم صحيح:")
         return
 
     data = await state.get_data()
     await state.clear()
     async with db_pool.acquire() as conn:
-        await conn.execute("INSERT INTO dynamic_tasks (title, channel_id, link, reward) VALUES ($1, $2, $3, $4)",
-                           data["title"], data["channel_id"], data["link"], reward)
+        await conn.execute("""
+            INSERT INTO dynamic_tasks (title, channel_id, link, reward, max_users, current_completions) 
+            VALUES ($1, $2, $3, $4, $5, 0)
+        """, data["title"], data["channel_id"], data["link"], data["reward"], max_users)
 
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 العودة لقائمة القنوات", callback_data="adm_tasks_menu")]])
-    await message.answer(f"🎉 تمت إضافة مهمة القناة: {data['title']}", reply_markup=kb)
+    limit_text = f"الحد الأقصى: {max_users} عضو" if max_users > 0 else "غير محدود"
+    await message.answer(f"🎉 تمت إضافة مهمة القناة: {data['title']}\nالمكافأة: +{data['reward']} OLK ({limit_text})", reply_markup=kb)
 
 @dp.callback_query(F.data.startswith("adm_del_task_"))
 async def cb_del_task(callback: CallbackQuery):
@@ -2294,11 +2375,12 @@ async def cb_groups_menu(callback: CallbackQuery):
     await callback.answer()
 
     async with db_pool.acquire() as conn:
-        rows = await conn.fetch("SELECT id, title, reward FROM dynamic_group_tasks WHERE is_active = 1 ORDER BY id DESC")
+        rows = await conn.fetch("SELECT id, title, reward, max_users, current_completions FROM dynamic_group_tasks WHERE is_active = 1 ORDER BY id DESC")
 
     buttons = [[InlineKeyboardButton(text="➕ إضافة مهمة مجموعة جديدة", callback_data="adm_add_group_start")]]
     for r in rows:
-        buttons.append([InlineKeyboardButton(text=f"🗑️ حذف: {r['title']} (+{r['reward']} OLK)", callback_data=f"adm_del_group_{r['id']}")])
+        lim_str = f"({r['current_completions']}/{r['max_users']})" if r['max_users'] > 0 else "(غير محدود)"
+        buttons.append([InlineKeyboardButton(text=f"🗑️ حذف: {r['title']} {lim_str}", callback_data=f"adm_del_group_{r['id']}")])
     buttons.append([InlineKeyboardButton(text="🔙 العودة للرئيسية", callback_data="adm_home")])
 
     await callback.message.edit_text("👥 **إدارة مهام المجموعات:**", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
@@ -2331,19 +2413,35 @@ async def state_group_link(message: Message, state: FSMContext):
 
 @dp.message(AddGroupTaskStates.waiting_for_reward)
 async def state_group_reward(message: Message, state: FSMContext):
-    try: reward = float(message.text.strip())
+    try: 
+        reward = float(message.text.strip())
     except ValueError:
         await message.answer("❌ يرجى إدخال رقم صحيح للمكافأة:")
+        return
+
+    await state.update_data(reward=reward)
+    await message.answer("👥 أرسل الآن **الحد الأقصى لعدد المشتركين** (مثال: `100`، أو اكتب `0` لجعلها غير محدودة):")
+    await state.set_state(AddGroupTaskStates.waiting_for_max_users)
+
+@dp.message(AddGroupTaskStates.waiting_for_max_users)
+async def state_group_max_users(message: Message, state: FSMContext):
+    try:
+        max_users = int(message.text.strip())
+    except ValueError:
+        await message.answer("❌ يرجى إدخال رقم صحيح:")
         return
 
     data = await state.get_data()
     await state.clear()
     async with db_pool.acquire() as conn:
-        await conn.execute("INSERT INTO dynamic_group_tasks (title, group_id, link, reward) VALUES ($1, $2, $3, $4)",
-                           data["title"], data["group_id"], data["link"], reward)
+        await conn.execute("""
+            INSERT INTO dynamic_group_tasks (title, group_id, link, reward, max_users, current_completions) 
+            VALUES ($1, $2, $3, $4, $5, 0)
+        """, data["title"], data["group_id"], data["link"], data["reward"], max_users)
 
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 العودة لقائمة المجموعات", callback_data="adm_groups_menu")]])
-    await message.answer(f"🎉 تمت إضافة مهمة المجموعة: {data['title']}", reply_markup=kb)
+    limit_text = f"الحد الأقصى: {max_users} عضو" if max_users > 0 else "غير محدود"
+    await message.answer(f"🎉 تمت إضافة مهمة المجموعة: {data['title']}\nالمكافأة: +{data['reward']} OLK ({limit_text})", reply_markup=kb)
 
 @dp.callback_query(F.data.startswith("adm_del_group_"))
 async def cb_del_group(callback: CallbackQuery):
@@ -2365,11 +2463,12 @@ async def cb_bot_tasks_menu(callback: CallbackQuery):
     await callback.answer()
 
     async with db_pool.acquire() as conn:
-        rows = await conn.fetch("SELECT id, title, reward FROM dynamic_bot_tasks WHERE is_active = 1 ORDER BY id DESC")
+        rows = await conn.fetch("SELECT id, title, reward, max_users, current_completions FROM dynamic_bot_tasks WHERE is_active = 1 ORDER BY id DESC")
 
     buttons = [[InlineKeyboardButton(text="➕ إضافة مهمة بوت جديدة", callback_data="adm_add_bot_task_start")]]
     for r in rows:
-        buttons.append([InlineKeyboardButton(text=f"🗑️ حذف: {r['title']} (+{r['reward']} OLK)", callback_data=f"adm_del_bottask_{r['id']}")])
+        lim_str = f"({r['current_completions']}/{r['max_users']})" if r['max_users'] > 0 else "(غير محدود)"
+        buttons.append([InlineKeyboardButton(text=f"🗑️ حذف: {r['title']} (+{r['reward']} OLK) {lim_str}", callback_data=f"adm_del_bottask_{r['id']}")])
     buttons.append([InlineKeyboardButton(text="🔙 العودة للرئيسية", callback_data="adm_home")])
 
     await callback.message.edit_text("🤖 **إدارة مهام البوتات:**", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
@@ -2396,19 +2495,35 @@ async def state_bot_task_link(message: Message, state: FSMContext):
 
 @dp.message(AddBotTaskStates.waiting_for_reward)
 async def state_bot_task_reward(message: Message, state: FSMContext):
-    try: reward = float(message.text.strip())
+    try: 
+        reward = float(message.text.strip())
     except ValueError:
         await message.answer("❌ يرجى إدخال رقم صحيح للمكافأة:")
+        return
+
+    await state.update_data(reward=reward)
+    await message.answer("👥 أرسل الآن **الحد الأقصى لعدد المشتركين** (مثال: `100`، أو اكتب `0` لجعلها غير محدودة):")
+    await state.set_state(AddBotTaskStates.waiting_for_max_users)
+
+@dp.message(AddBotTaskStates.waiting_for_max_users)
+async def state_bot_task_max_users(message: Message, state: FSMContext):
+    try:
+        max_users = int(message.text.strip())
+    except ValueError:
+        await message.answer("❌ يرجى إدخال رقم صحيح:")
         return
 
     data = await state.get_data()
     await state.clear()
     async with db_pool.acquire() as conn:
-        await conn.execute("INSERT INTO dynamic_bot_tasks (title, link, reward) VALUES ($1, $2, $3)",
-                           data["title"], data["link"], reward)
+        await conn.execute("""
+            INSERT INTO dynamic_bot_tasks (title, link, reward, max_users, current_completions) 
+            VALUES ($1, $2, $3, $4, 0)
+        """, data["title"], data["link"], data["reward"], max_users)
 
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 العودة لقائمة البوتات", callback_data="adm_bot_tasks_menu")]])
-    await message.answer(f"🎉 تمت إضافة مهمة البوت: {data['title']}", reply_markup=kb)
+    limit_text = f"الحد الأقصى: {max_users} عضو" if max_users > 0 else "غير محدود"
+    await message.answer(f"🎉 تمت إضافة مهمة البوت: {data['title']}\nالمكافأة: +{data['reward']} OLK ({limit_text})", reply_markup=kb)
 
 @dp.callback_query(F.data.startswith("adm_del_bottask_"))
 async def cb_del_bot_task(callback: CallbackQuery):
@@ -2565,7 +2680,7 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("OLK Cyber Session, Anti-Multi, Top 20 & Ref Tracking Engine is LIVE...")
+    print("OLK Cyber Session, Anti-Multi, Top 20, Limits & Admin Engine is LIVE...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
