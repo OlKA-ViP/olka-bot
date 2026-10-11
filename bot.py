@@ -40,7 +40,6 @@ SIGNUP_BONUS = 50.0
 DEFAULT_SPEED = 0.21
 ADMIN_MAX_TASK_REWARD = 70.0
 
-# باقات التعدين الرسمية المعتمدة للتحقق الصارم في الباك إند
 VALID_PLANS_TON = {
     0.1: 0.18,
     0.5: 0.89,
@@ -66,7 +65,7 @@ WEBAPP_URL = "https://olka-bot-service.onrender.com"
 db_pool = None
 admin_withdrawal_messages = {}
 
-# فحص التوقيع المشفر لتيليجرام
+# فحص التوقيع الرقمي لتيليجرام
 def validate_telegram_data(init_data: str) -> dict | None:
     if not init_data:
         return None
@@ -431,15 +430,18 @@ MINI_APP_HTML = """<!DOCTYPE html>
 </head>
 <body>
 
+  <!-- شاشة حظر المتصفحات وتيليجرام ويب -->
   <div id="browser-block-overlay">
-    <i class="fa-solid fa-shield-halved" style="font-size:65px; color:#ef4444; margin-bottom:16px;"></i>
-    <h2 style="color:#ef4444; margin-bottom:8px;">⛔ الدخول غير مصرح به!</h2>
+    <i class="fa-solid fa-mobile-screen-button" style="font-size:65px; color:#ef4444; margin-bottom:16px;"></i>
+    <h2 style="color:#ef4444; margin-bottom:8px;">📱 الهواتف فقط!</h2>
     <p style="font-size:13px; color:#cbd5e1; line-height:1.6; max-width:320px;">
-      يمنع فتح المنصة عبر المتصفحات الخارجية أو شبكات VPN.
+      محطة التعدين مخصصة للهواتف الذكية فقط للحماية من التعدد.
       <br><br>
-      يرجى فتح التطبيق مباشرة من داخل <strong>تطبيق تيليجرام الرسمي</strong>.
+      <strong>يمنع استخدام Telegram Web أو المتصفح.</strong>
+      <br>
+      يرجى فتح البوت من تطبيق Telegram الرسمي على هاتفك (Android / iOS).
     </p>
-    <button class="btn-main-action" style="max-width:240px; margin-top:16px;" onclick="window.location.href='https://t.me/OlkaVip_bot'">العودة للبوت الرسمي</button>
+    <button class="btn-main-action" style="max-width:240px; margin-top:16px;" onclick="window.location.href='https://t.me/OlkaVip_bot'">العودة لتطبيق تيليجرام</button>
   </div>
 
   <div id="banned-overlay">
@@ -491,6 +493,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
+    <!-- تبويب التعدين والبرومو كود -->
     <div class="page-tab active" id="tab-mining">
       <div class="mining-stage-card">
         <div class="status-pill">
@@ -534,6 +537,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
+    <!-- تبويب الباقات -->
     <div class="page-tab" id="tab-miners">
       <div class="card-panel">
         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -590,6 +594,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
+    <!-- تبويب المحفظة -->
     <div class="page-tab" id="tab-wallet">
       <div class="card-panel">
         <div style="font-weight:bold; color:var(--gold-neon); font-size:14px; display:flex; justify-content:space-between;">
@@ -627,10 +632,20 @@ MINI_APP_HTML = """<!DOCTYPE html>
           </div>
         </div>
 
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <div style="font-size:11px; color:var(--text-muted);" id="t-memo-lbl">
+            Memo / Tag <span style="color:var(--gold-neon); font-size:10px;">(إختياري)</span>:
+          </div>
+          <div class="convert-input-box">
+            <input type="text" id="custom-memo-input" class="convert-input" placeholder="ادخل الـ Memo إن وجد...">
+          </div>
+        </div>
+
         <button class="btn-main-action" onclick="submitWithdraw()"><i class="fa-solid fa-arrow-up"></i> <span id="t-btn-withdraw">سحب TON</span></button>
       </div>
     </div>
 
+    <!-- تبويب الإحالات -->
     <div class="page-tab" id="tab-frens">
       <div class="card-panel">
         <div style="font-weight:bold; color:var(--cyan-neon); font-size:14px;"><i class="fa-solid fa-users"></i> <span id="t-frens-title">شبكة التعدين التشاركية</span></div>
@@ -664,6 +679,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
+    <!-- تبويب المهام -->
     <div class="page-tab" id="tab-tasks">
       <div class="tasks-horizontal-nav">
         <button class="tasks-subtab-btn active" onclick="switchTasksSubtab('channels', this)"><i class="fa-solid fa-bullhorn"></i> <span id="t-subtab-channels">القنوات</span></button>
@@ -703,17 +719,31 @@ MINI_APP_HTML = """<!DOCTYPE html>
     if (tg) { tg.ready(); tg.expand(); }
 
     const rawInitData = tg?.initData || "";
-    if (!rawInitData || !tg?.initDataUnsafe?.user) {
+    const platform = (tg?.platform || "").toLowerCase();
+
+    // 1. حظر Telegram Web والمتصفحات (حصر التطبيق على تطبيقات الهواتف أندرويد وآيفون الرسمية فقط)
+    const blockedPlatforms = ["weba", "webk", "web", "tdesktop", "macos", "unknown"];
+    const isMobileClient = (platform === "android" || platform === "ios");
+
+    if (!rawInitData || !tg?.initDataUnsafe?.user || blockedPlatforms.includes(platform) || !isMobileClient) {
       document.getElementById("browser-block-overlay").style.display = "flex";
-      throw new Error("External browser blocked");
+      throw new Error("Telegram Web / Desktop / External browser blocked");
     }
 
     let userId = tg.initDataUnsafe.user.id;
 
+    // 2. نظام البصمة الدائمة على مستوى ذاكرة الجهاز (مضاد لتغيير الحسابات والـ VPN)
     function getDeepHardwareFingerprint() {
+      // فحص التوكن الثابت في ذاكرة الهاتف
+      let persistentToken = localStorage.getItem("olk_device_uuid");
+      if (!persistentToken) {
+        persistentToken = 'DEV_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        localStorage.setItem("olk_device_uuid", persistentToken);
+      }
+
       const nav = window.navigator;
       const screen = window.screen;
-      let hardwareParts = [];
+      let hardwareParts = [persistentToken];
 
       hardwareParts.push(screen.width + 'x' + screen.height + 'x' + screen.colorDepth + 'x' + (screen.pixelDepth || 0));
       hardwareParts.push((nav.hardwareConcurrency || 'unk') + '_' + (nav.deviceMemory || 'unk') + '_' + (nav.maxTouchPoints || 0));
@@ -766,6 +796,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
         btnSwap: "تحويل الآن إلى رصيد TON",
         withdrawTitle: "سحب TON إلى محفظتك",
         destWalletLbl: "عنوان محفظة السحب (TON / Gram):",
+        memoLbl: "Memo / Tag <span style='color:var(--gold-neon); font-size:10px;'>(إختياري)</span>:",
+        memoPlaceholder: "ادخل الـ Memo إن وجد...",
         btnUseConnected: "استخدام المربوطة ⚡",
         minWithdraw: "الحد الأدنى: 0.05 TON",
         btnWithdraw: "سحب TON",
@@ -820,6 +852,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
         btnSwap: "Convert to TON Balance",
         withdrawTitle: "Withdraw TON to Wallet",
         destWalletLbl: "Destination Wallet (TON / Gram):",
+        memoLbl: "Memo / Tag <span style='color:var(--gold-neon); font-size:10px;'>(Optional)</span>:",
+        memoPlaceholder: "Enter Memo if required...",
         btnUseConnected: "Use Connected ⚡",
         minWithdraw: "Minimum: 0.05 TON",
         btnWithdraw: "Withdraw TON",
@@ -874,6 +908,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
       document.getElementById("t-btn-swap").innerText = t.btnSwap;
       document.getElementById("t-withdraw-title").innerText = t.withdrawTitle;
       document.getElementById("t-dest-wallet-lbl").innerText = t.destWalletLbl;
+      document.getElementById("t-memo-lbl").innerHTML = t.memoLbl;
+      document.getElementById("custom-memo-input").placeholder = t.memoPlaceholder;
       document.getElementById("t-btn-use-connected").innerText = t.btnUseConnected;
       document.getElementById("t-min-withdraw").innerText = t.minWithdraw;
       document.getElementById("t-btn-withdraw").innerText = t.btnWithdraw;
@@ -1343,7 +1379,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
             body: JSON.stringify({
               initData: rawInitData,
               cost_ton: costTon,
-              speed_gain: speedGain,
               fingerprint: currentFingerprint
             })
           });
@@ -1384,7 +1419,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
           body: JSON.stringify({
             initData: rawInitData,
             cost_olk: costOlk,
-            speed_gain: speedGain,
             fingerprint: currentFingerprint
           })
         });
@@ -1457,16 +1491,25 @@ MINI_APP_HTML = """<!DOCTYPE html>
         return;
       }
 
+      const memoVal = document.getElementById("custom-memo-input").value.trim();
+
       const res = await fetch("/api/withdraw", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ initData: rawInitData, address: destWallet, amount_ton: amt, fingerprint: currentFingerprint })
+        body: JSON.stringify({ 
+          initData: rawInitData, 
+          address: destWallet, 
+          memo: memoVal,
+          amount_ton: amt, 
+          fingerprint: currentFingerprint 
+        })
       });
       const data = await res.json();
       if (data.ok) {
         appTon = data.remaining_ton;
         document.getElementById("ton-bal-val").innerText = appTon.toFixed(4) + " TON";
         document.getElementById("withdraw-amt-input").value = "";
+        document.getElementById("custom-memo-input").value = "";
         alert(currentLang === "ar" ? `✅ تم إرسال طلب السحب بنجاح إلى المحفظة:\n${destWallet}` : `✅ Withdrawal request submitted to:\n${destWallet}`);
       } else {
         alert(data.msg);
@@ -1660,9 +1703,19 @@ async def init_db():
             user_id BIGINT,
             amount_ton DOUBLE PRECISION,
             wallet_address TEXT,
+            memo TEXT DEFAULT NULL,
             status TEXT DEFAULT 'PENDING',
             created_at BIGINT DEFAULT 0
         );
+        """)
+
+        await conn.execute("""
+        DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='withdrawals' AND column_name='memo') THEN
+                ALTER TABLE withdrawals ADD COLUMN memo TEXT DEFAULT NULL;
+            END IF;
+        END $$;
         """)
 
 async def get_admin_permissions(user_id: int):
@@ -2103,7 +2156,6 @@ async def api_claim_session_rewards(request):
             return web.json_response({"ok": False, "msg": "Unauthorized"})
 
         user_id = tg_user["id"]
-        amount = float(data.get("amount", 0))
         now = int(time.time())
 
         async with db_pool.acquire() as conn:
@@ -2119,7 +2171,6 @@ async def api_claim_session_rewards(request):
                 if elapsed < 8 * 3600:
                     return web.json_response({"ok": False, "msg": "الجلسة لم تكتمل بعد (يلزم مرور 8 ساعات)"})
 
-                # حساب الأرباح الحقيقية من السيرفر حصراً لمنع التلاعب بالقيمة من المتصفح
                 actual_speed = row["mining_speed"] or DEFAULT_SPEED
                 calculated_reward = (8 * 3600) * (actual_speed * 0.000030 * 10)
                 new_bal = row["olk_balance"] + calculated_reward
@@ -2132,7 +2183,6 @@ async def api_claim_session_rewards(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
-# تحصين ترقية الأجهزة بـ TON
 async def api_upgrade_rig_ton_direct(request):
     try:
         data = await request.json()
@@ -2143,7 +2193,6 @@ async def api_upgrade_rig_ton_direct(request):
         user_id = tg_user["id"]
         cost_ton = float(data.get("cost_ton", 0))
 
-        # التحقق من أن السعر يطابق باقة حقيقية معتمدة
         if cost_ton not in VALID_PLANS_TON:
             return web.json_response({"ok": False, "msg": "باقة غير صالحة"})
 
@@ -2166,7 +2215,6 @@ async def api_upgrade_rig_ton_direct(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
-# تحصين ترقية الأجهزة بـ OLK
 async def api_upgrade_rig_olk(request):
     try:
         data = await request.json()
@@ -2200,7 +2248,6 @@ async def api_upgrade_rig_olk(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
-# تحصين تحويل العملات مع قفل لمنع التكرار المتزامن
 async def api_convert(request):
     try:
         data = await request.json()
@@ -2229,7 +2276,6 @@ async def api_convert(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
-# تحصين السحب ومعالجة طلبات السحب ضد هجمات السباق (Race Condition Double-Spend)
 async def api_withdraw(request):
     try:
         data = await request.json()
@@ -2239,6 +2285,7 @@ async def api_withdraw(request):
 
         user_id = tg_user["id"]
         address = str(data.get("address", "")).strip()
+        memo = str(data.get("memo", "")).strip()
         withdraw_amount = float(data.get("amount_ton", 0))
         friendly_address = raw_to_user_friendly(address)
         now = int(time.time())
@@ -2251,15 +2298,14 @@ async def api_withdraw(request):
 
         async with db_pool.acquire() as conn:
             async with conn.transaction():
-                # قفل صف المستخدم في قاعدة البيانات حتى انتهاء العملية لمنع السحب المزدوج السريع
                 row = await conn.fetchrow("SELECT ton_balance FROM users WHERE user_id = $1 FOR UPDATE", user_id)
                 if not row or row["ton_balance"] < withdraw_amount:
                     return web.json_response({"ok": False, "msg": "رصيدك غير كافٍ"})
 
                 remaining = row["ton_balance"] - withdraw_amount
                 w_id = await conn.fetchval(
-                    "INSERT INTO withdrawals (user_id, amount_ton, wallet_address, created_at) VALUES ($1, $2, $3, $4) RETURNING id",
-                    user_id, withdraw_amount, friendly_address, now
+                    "INSERT INTO withdrawals (user_id, amount_ton, wallet_address, memo, created_at) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+                    user_id, withdraw_amount, friendly_address, memo if memo else None, now
                 )
                 await conn.execute("UPDATE users SET ton_balance = $1 WHERE user_id = $2", remaining, user_id)
 
@@ -2274,11 +2320,14 @@ async def api_withdraw(request):
                 InlineKeyboardButton(text="❌ رفض", callback_data=f"adm_rej_{w_id}")
             ]
         ])
+        
+        memo_display = f"\n🏷️ <b>الـ Memo:</b> <code>{html.escape(memo)}</code>" if memo else ""
         admin_notification = (
             f"🚨 <b>طلب سحب TON جديد #{w_id}</b>\n\n"
             f"👤 المستخدم: <code>{user_id}</code>\n"
             f"💎 المبلغ: <code>{withdraw_amount:.4f} TON</code>\n"
             f"📫 المحفظة:\n<code>{friendly_address}</code>"
+            f"{memo_display}"
         )
         
         admin_withdrawal_messages[w_id] = []
@@ -2871,7 +2920,7 @@ async def cb_view_withdraws(callback: CallbackQuery):
     await callback.answer()
 
     async with db_pool.acquire() as conn:
-        rows = await conn.fetch("SELECT id, user_id, amount_ton, wallet_address FROM withdrawals WHERE status = 'PENDING' ORDER BY id ASC LIMIT 5")
+        rows = await conn.fetch("SELECT id, user_id, amount_ton, wallet_address, memo FROM withdrawals WHERE status = 'PENDING' ORDER BY id ASC LIMIT 5")
 
     if not rows:
         kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 العودة", callback_data="adm_home")]])
@@ -2883,6 +2932,7 @@ async def cb_view_withdraws(callback: CallbackQuery):
         uid = r["user_id"]
         amt = r["amount_ton"]
         w_addr = r["wallet_address"]
+        w_memo = r["memo"]
 
         kb = InlineKeyboardMarkup(inline_keyboard=[
             [
@@ -2890,8 +2940,9 @@ async def cb_view_withdraws(callback: CallbackQuery):
                 InlineKeyboardButton(text="❌ رفض", callback_data=f"adm_rej_{w_id}")
             ]
         ])
+        memo_str = f"\n🏷️ <b>الـ Memo:</b> <code>{html.escape(w_memo)}</code>" if w_memo else ""
         await callback.message.answer(
-            f"📄 <b>طلب سحب #{w_id}</b>\n👤 المستخدم: <code>{uid}</code>\n💎 المبلغ: <code>{amt:.4f} TON</code>\n📫 المحفظة:\n<code>{w_addr}</code>",
+            f"📄 <b>طلب سحب #{w_id}</b>\n👤 المستخدم: <code>{uid}</code>\n💎 المبلغ: <code>{amt:.4f} TON</code>\n📫 المحفظة:\n<code>{w_addr}</code>{memo_str}",
             parse_mode="HTML",
             reply_markup=kb
         )
@@ -3420,7 +3471,7 @@ async def approve_withdraw(callback: CallbackQuery):
 
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow("""
-            SELECT w.id, w.user_id, w.amount_ton, w.wallet_address, w.status, u.username, u.first_name 
+            SELECT w.id, w.user_id, w.amount_ton, w.wallet_address, w.memo, w.status, u.username, u.first_name 
             FROM withdrawals w
             LEFT JOIN users u ON u.user_id = w.user_id
             WHERE w.id = $1
@@ -3440,6 +3491,7 @@ async def approve_withdraw(callback: CallbackQuery):
         uid = row["user_id"]
         amount = row["amount_ton"]
         wallet_raw = row["wallet_address"]
+        w_memo = row["memo"]
         uname = row["username"]
         fname = row["first_name"] or "مستخدم"
 
@@ -3494,11 +3546,12 @@ async def approve_withdraw(callback: CallbackQuery):
         except Exception: pass
 
     admin_done_by = f"@{callback.from_user.username}" if callback.from_user.username else f"ID: {callback.from_user.id}"
+    memo_str = f"\n🏷️ <b>الـ Memo:</b> <code>{html.escape(w_memo)}</code>" if w_memo else ""
     updated_notice = (
         f"📄 <b>طلب سحب #{w_id}</b>\n"
         f"👤 المستخدم: <code>{uid}</code>\n"
         f"💎 المبلغ: <code>{amount:.4f} TON</code>\n"
-        f"📫 المحفظة:\n<code>{wallet_raw}</code>\n\n"
+        f"📫 المحفظة:\n<code>{wallet_raw}</code>{memo_str}\n\n"
         f"✅ <b>تمت الموافقة والدفع ونشر الإثبات!</b>\n"
         f"🛡️ <b>بواسطة:</b> {admin_done_by}"
     )
@@ -3523,7 +3576,7 @@ async def reject_withdraw(callback: CallbackQuery):
     w_id = int(callback.data.split("_")[2])
 
     async with db_pool.acquire() as conn:
-        row = await conn.fetchrow("SELECT user_id, amount_ton, wallet_address, status FROM withdrawals WHERE id = $1", w_id)
+        row = await conn.fetchrow("SELECT user_id, amount_ton, wallet_address, memo, status FROM withdrawals WHERE id = $1", w_id)
         if not row:
             await callback.answer("⚠️ الطلب غير موجود.", show_alert=True)
             return
@@ -3535,7 +3588,7 @@ async def reject_withdraw(callback: CallbackQuery):
             except Exception: pass
             return
 
-        uid, amount, wallet_raw = row["user_id"], row["amount_ton"], row["wallet_address"]
+        uid, amount, wallet_raw, w_memo = row["user_id"], row["amount_ton"], row["wallet_address"], row["memo"]
         await conn.execute("UPDATE withdrawals SET status = 'REJECTED' WHERE id = $1", w_id)
 
     await callback.answer("❌ تم رفض الطلب (دون إعادة الرصيد)", show_alert=False)
@@ -3550,11 +3603,12 @@ async def reject_withdraw(callback: CallbackQuery):
         pass
 
     admin_done_by = f"@{callback.from_user.username}" if callback.from_user.username else f"ID: {callback.from_user.id}"
+    memo_str = f"\n🏷️ <b>الـ Memo:</b> <code>{html.escape(w_memo)}</code>" if w_memo else ""
     rejected_notice = (
         f"📄 <b>طلب سحب #{w_id}</b>\n"
         f"👤 المستخدم: <code>{uid}</code>\n"
         f"💎 المبلغ: <code>{amount:.4f} TON</code>\n"
-        f"📫 المحفظة:\n<code>{wallet_raw}</code>\n\n"
+        f"📫 المحفظة:\n<code>{wallet_raw}</code>{memo_str}\n\n"
         f"❌ <b>تم رفض هذا الطلب نهائياً (لم يتم إرجاع الرصيد).</b>\n"
         f"🛡️ <b>بواسطة:</b> {admin_done_by}"
     )
@@ -3576,7 +3630,7 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("OLK Cyber Session, Maximum Anti-Fraud Engine & Full Security is LIVE...")
+    print("OLK Cyber Session, Telegram Web Block & Multi-Layer Anti-Fraud is LIVE...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
