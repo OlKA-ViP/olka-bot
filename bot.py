@@ -42,7 +42,7 @@ ADMIN_MAX_TASK_REWARD = 70.0
 
 # روابط الصور الرسمية المباشرة المعتمدة
 WELCOME_IMAGE_URL = "https://i.ibb.co/vzR0j4m/olk-bot-logo.jpg"
-PAYOUT_PROOF_IMAGE_URL = "https://i.ibb.co/k5yFzT5/olk-deposit-withdraw.jpg"
+PAYOUT_PROOF_IMAGE_URL = "https://images2.imgbox.com/71/6a/G9371QkQ_o.jpg"
 
 WEBAPP_URL = "https://olka-bot-service.onrender.com"
 
@@ -864,9 +864,19 @@ MINI_APP_HTML = """<!DOCTYPE html>
       manifestUrl: window.location.origin + '/tonconnect-manifest.json'
     });
 
+    // إغلاق ثغرة Testnet نهائياً: فحص الشبكة ورفض المحافظ التجريبية
     tonConnectUI.onStatusChange(async (wallet) => {
       const t = i18n[currentLang];
       if (wallet) {
+        // التحقق من معرف شبكة TON الحقيقية (Mainnet == -239)
+        if (wallet.account.chain && String(wallet.account.chain) !== "-239") {
+          alert(currentLang === "ar" 
+            ? "⚠️ تحذير: شبكة Testnet التجريبية غير مقبولة نهائياً! يرجى تحويل المحفظة إلى شبكة TON الرئيسية (Mainnet)." 
+            : "⚠️ Error: Testnet is blocked! Please switch your wallet to Mainnet.");
+          tonConnectUI.disconnect();
+          return;
+        }
+
         try {
           connectedWallet = TON_CONNECT_UI.toUserFriendlyAddress(wallet.account.address);
         } catch(e) {
@@ -880,7 +890,12 @@ MINI_APP_HTML = """<!DOCTYPE html>
         await fetch("/api/save_wallet", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId, address: connectedWallet, fingerprint: currentFingerprint })
+          body: JSON.stringify({ 
+            user_id: userId, 
+            address: connectedWallet, 
+            fingerprint: currentFingerprint,
+            chain: wallet.account.chain
+          })
         });
       } else {
         connectedWallet = null;
@@ -1737,7 +1752,7 @@ async def on_user_leave_chat(event: ChatMemberUpdated):
                         if c_task["id"] in completed:
                             completed.remove(c_task["id"])
                             deduct_amount = c_task["reward"]
-                            new_balance = max(0.0, u_row["olk_balance"] - deduct_amount)
+                            new_balance = max(0.0, u_row["打击_balance" if False else "olk_balance"] - deduct_amount)
 
                             await conn.execute(
                                 "UPDATE users SET olk_balance = $1, tasks_completed = $2 WHERE user_id = $3",
@@ -1810,6 +1825,12 @@ async def api_save_wallet(request):
         data = await request.json()
         user_id = int(data.get("user_id"))
         address = str(data.get("address", "")).strip()
+        chain = str(data.get("chain", "-239"))
+        
+        # حماية السيرفر: رفض أي محفظة Testnet
+        if chain != "-239":
+            return web.json_response({"ok": False, "msg": "Testnet is blocked! Mainnet only."})
+
         friendly_address = raw_to_user_friendly(address)
         fp = str(data.get("fingerprint", ""))
         client_ip = request.headers.get("X-Forwarded-For", request.remote)
@@ -3350,7 +3371,7 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("OLK Cyber Session, Auto Member Leave Deduction & Full Engine is LIVE...")
+    print("OLK Cyber Session, Proof Image Direct, Testnet Shield & Full Engine is LIVE...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
@@ -3377,9 +3398,7 @@ async def main():
     site = web.TCPSite(runner, "0.0.0.0", port)
     await site.start()
 
-    # تشغيل استقبال أحداث الأعضاء (chat_member) بجانب الرسائل العادية
     await dp.start_polling(bot, allowed_updates=["message", "callback_query", "chat_member"])
 
 if __name__ == "__main__":
     asyncio.run(main())
-    
