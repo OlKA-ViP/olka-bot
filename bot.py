@@ -65,7 +65,6 @@ WEBAPP_URL = "https://olka-bot-service.onrender.com"
 db_pool = None
 admin_withdrawal_messages = {}
 
-# فحص التوقيع الرقمي لتيليجرام
 def validate_telegram_data(init_data: str) -> dict | None:
     if not init_data:
         return None
@@ -430,7 +429,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
 </head>
 <body>
 
-  <!-- شاشة حظر المتصفحات وتيليجرام ويب -->
   <div id="browser-block-overlay">
     <i class="fa-solid fa-mobile-screen-button" style="font-size:65px; color:#ef4444; margin-bottom:16px;"></i>
     <h2 style="color:#ef4444; margin-bottom:8px;">📱 الهواتف فقط!</h2>
@@ -721,7 +719,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
     const rawInitData = tg?.initData || "";
     const platform = (tg?.platform || "").toLowerCase();
 
-    // 1. حظر Telegram Web والمتصفحات (حصر التطبيق على تطبيقات الهواتف أندرويد وآيفون الرسمية فقط)
     const blockedPlatforms = ["weba", "webk", "web", "tdesktop", "macos", "unknown"];
     const isMobileClient = (platform === "android" || platform === "ios");
 
@@ -732,9 +729,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
 
     let userId = tg.initDataUnsafe.user.id;
 
-    // 2. نظام البصمة الدائمة على مستوى ذاكرة الجهاز (مضاد لتغيير الحسابات والـ VPN)
     function getDeepHardwareFingerprint() {
-      // فحص التوكن الثابت في ذاكرة الهاتف
       let persistentToken = localStorage.getItem("olk_device_uuid");
       if (!persistentToken) {
         persistentToken = 'DEV_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
@@ -785,8 +780,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
         tonBal: "رصيد TON (Gram):",
         miningEarnings: "أرباح جلسة التعدين الحالية:",
         btnMine: "تشغيل جلسة التعدين",
-        btnMineActive: "التعدين يعمل الآن تلقائياً...",
-        btnClaim: "المطالبة بأرباح الجلسة وتحديث المحفظة",
+        btnClaimAnytime: "المطالبة بالأرباح الآن",
+        btnClaimReady: "اكتملت 8 ساعات! طالب بالأرباح",
         statusReady: "متوقف (جاهز لبدء جلسة جديدة)",
         statusActive: "جلسة التعدين نشطة الآن",
         statusClaim: "اكتملت الجلسة! طالب بأرباحك الآن",
@@ -841,8 +836,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
         tonBal: "TON (Gram) Balance:",
         miningEarnings: "Current Session Rewards:",
         btnMine: "Start Mining Session",
-        btnMineActive: "Mining in progress...",
-        btnClaim: "Claim Mining Rewards",
+        btnClaimAnytime: "Claim Rewards Now",
+        btnClaimReady: "Completed! Claim Rewards",
         statusReady: "Idle (Ready to Start)",
         statusActive: "Mining Session Active",
         statusClaim: "Completed! Claim your rewards",
@@ -953,7 +948,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
 
     let sessionActive = false;
     let sessionStartTs = 0;
-    let sessionClaimReady = false;
     let currentUnclaimed = 0.0;
 
     const EIGHT_HOURS_SEC = 8 * 3600;
@@ -1234,36 +1228,31 @@ MINI_APP_HTML = """<!DOCTYPE html>
       }
     }
 
+    // تقييم حالة الجلسة وزر التعدين: إتاحة زر الجمع في أي وقت بعد البدء
     function evaluateSessionState() {
       const t = i18n[currentLang];
       const now = Math.floor(Date.now() / 1000);
-      const elapsed = Math.max(0, now - sessionStartTs);
+      const elapsed = sessionActive ? Math.max(0, now - sessionStartTs) : 0;
 
       const btn = document.getElementById("btn-session-control");
       const dot = document.getElementById("mining-status-dot");
       const statusText = document.getElementById("mining-status-text");
 
-      if (sessionActive && elapsed < EIGHT_HOURS_SEC) {
-        sessionClaimReady = false;
+      if (sessionActive) {
         dot.classList.add("active");
-        statusText.innerText = t.statusActive;
-
-        btn.classList.remove("claim-state");
-        btn.disabled = true;
-        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${t.btnMineActive}`;
-      } else if (sessionActive && elapsed >= EIGHT_HOURS_SEC) {
-        sessionClaimReady = true;
-        dot.classList.remove("active");
-        statusText.innerText = t.statusClaim;
-
         btn.classList.add("claim-state");
         btn.disabled = false;
-        btn.innerHTML = `<i class="fa-solid fa-hand-holding-dollar"></i> ${t.btnClaim}`;
+
+        if (elapsed >= EIGHT_HOURS_SEC) {
+          statusText.innerText = t.statusClaim;
+          btn.innerHTML = `<i class="fa-solid fa-hand-holding-dollar"></i> ${t.btnClaimReady}`;
+        } else {
+          statusText.innerText = t.statusActive;
+          btn.innerHTML = `<i class="fa-solid fa-hand-holding-dollar"></i> ${t.btnClaimAnytime}`;
+        }
       } else {
-        sessionClaimReady = false;
         dot.classList.remove("active");
         statusText.innerText = t.statusReady;
-
         btn.classList.remove("claim-state");
         btn.disabled = false;
         btn.innerHTML = `<i class="fa-solid fa-power-off"></i> <span>${t.btnMine}</span>`;
@@ -1301,16 +1290,17 @@ MINI_APP_HTML = """<!DOCTYPE html>
       }
     }, 1000);
 
+    // جمع الأرباح في أي وقت أو تشغيل جلسة تعدين جديدة
     async function handleMiningAction() {
       const btn = document.getElementById("btn-session-control");
       btn.disabled = true;
 
-      if (sessionClaimReady) {
+      if (sessionActive) {
         try {
           const res = await fetch("/api/claim_session_rewards", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ initData: rawInitData, amount: currentUnclaimed, fingerprint: currentFingerprint })
+            body: JSON.stringify({ initData: rawInitData, fingerprint: currentFingerprint })
           });
           const data = await res.json();
           if (data.ok) {
@@ -1318,10 +1308,9 @@ MINI_APP_HTML = """<!DOCTYPE html>
             document.getElementById("olk-bal-val").innerText = appOlk.toFixed(2) + " OLK";
             sessionActive = false;
             sessionStartTs = 0;
-            sessionClaimReady = false;
             currentUnclaimed = 0;
             evaluateSessionState();
-            alert(`🎉 +${data.claimed.toFixed(2)} OLK!`);
+            alert(`🎉 +${data.claimed.toFixed(4)} OLK! تم جمع الأرباح بنجاح.`);
           } else {
             alert(data.msg || "Error");
             btn.disabled = false;
@@ -1342,7 +1331,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
             sessionActive = true;
             sessionStartTs = data.session_start_timestamp;
             evaluateSessionState();
-            alert(currentLang === "ar" ? "🚀 تم تشغيل جهاز التعدين بنجاح!" : "🚀 Mining started successfully!");
+            alert(currentLang === "ar" ? "🚀 تم تشغيل جهاز التعدين بنجاح! يمكنك جمع الأرباح متى أردت." : "🚀 Mining started successfully! You can claim anytime.");
           } else {
             alert(data.msg || "Error starting session");
             btn.disabled = false;
@@ -2148,6 +2137,7 @@ async def api_start_mining_session(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
+# جمع رصيد التعدين في أي وقت (بدون اشتراط اكتمال 8 ساعات)
 async def api_claim_session_rewards(request):
     try:
         data = await request.json()
@@ -2167,14 +2157,19 @@ async def api_claim_session_rewards(request):
                 if not row or not row["session_active"]:
                     return web.json_response({"ok": False, "msg": "لا توجد جلسة تعدين نشطة للمطالبة بها"})
 
+                # حساب الثواني المنقضية بحد أقصى 8 ساعات (28,800 ثانية)
                 elapsed = max(0, now - (row["session_start_timestamp"] or 0))
-                if elapsed < 8 * 3600:
-                    return web.json_response({"ok": False, "msg": "الجلسة لم تكتمل بعد (يلزم مرور 8 ساعات)"})
+                if elapsed <= 0:
+                    return web.json_response({"ok": False, "msg": "لم يتم تعدين أي رصيد بعد"})
 
+                capped_elapsed = min(elapsed, 8 * 3600)
+
+                # احتساب المكافأة المستحقة بدقة حسب الوقت وسرعة الجهاز
                 actual_speed = row["mining_speed"] or DEFAULT_SPEED
-                calculated_reward = (8 * 3600) * (actual_speed * 0.000030 * 10)
+                calculated_reward = capped_elapsed * (actual_speed * 0.000030 * 10)
                 new_bal = row["olk_balance"] + calculated_reward
 
+                # تصفير الجلسة لإتاحة تشغيل جلسة جديدة
                 await conn.execute("""
                     UPDATE users SET olk_balance = $1, session_active = 0, session_start_timestamp = 0 WHERE user_id = $2
                 """, new_bal, user_id)
@@ -2377,7 +2372,7 @@ async def api_verify_channel_task(request):
                 tasks.append(task_id)
                 reward = task["reward"]
                 await conn.execute("UPDATE users SET olk_balance = olk_balance + $1, tasks_completed = $2 WHERE user_id = $3",
-                                   reward, json.dumps(tasks), user_id)
+                               reward, json.dumps(tasks), user_id)
                 await conn.execute("UPDATE dynamic_tasks SET current_completions = current_completions + 1 WHERE id = $1", task_id)
 
                 return web.json_response({"ok": True, "reward": reward, "msg": f"✅ مبروك! تمت إضافة +{reward:.0f} OLK"})
@@ -2419,7 +2414,7 @@ async def api_verify_group_task(request):
                 tasks.append(task_id)
                 reward = task["reward"]
                 await conn.execute("UPDATE users SET olk_balance = olk_balance + $1, group_tasks_completed = $2 WHERE user_id = $3",
-                                   reward, json.dumps(tasks), user_id)
+                               reward, json.dumps(tasks), user_id)
                 await conn.execute("UPDATE dynamic_group_tasks SET current_completions = current_completions + 1 WHERE id = $1", task_id)
 
                 return web.json_response({"ok": True, "reward": reward, "msg": f"✅ مبروك! تمت إضافة +{reward:.0f} OLK"})
@@ -2454,7 +2449,7 @@ async def api_verify_bot_task(request):
                 tasks.append(task_id)
                 reward = task["reward"]
                 await conn.execute("UPDATE users SET olk_balance = olk_balance + $1, bot_tasks_completed = $2 WHERE user_id = $3",
-                                   reward, json.dumps(tasks), user_id)
+                               reward, json.dumps(tasks), user_id)
                 await conn.execute("UPDATE dynamic_bot_tasks SET current_completions = current_completions + 1 WHERE id = $1", task_id)
 
                 return web.json_response({"ok": True, "reward": reward, "msg": f"✅ مبروك! تمت إضافة +{reward:.0f} OLK"})
@@ -3630,7 +3625,7 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("OLK Cyber Session, Telegram Web Block & Multi-Layer Anti-Fraud is LIVE...")
+    print("OLK Cyber Session, Instant Claim Anytime & Maximum Security Engine is LIVE...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
