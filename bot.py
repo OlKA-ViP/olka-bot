@@ -10,7 +10,7 @@ from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart, Command, CommandObject
 from aiogram.types import (
     Message, InlineKeyboardMarkup, InlineKeyboardButton,
-    CallbackQuery, WebAppInfo
+    CallbackQuery, WebAppInfo, LinkPreviewOptions
 )
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -20,8 +20,12 @@ SUPER_ADMIN_ID = 1932161126
 
 DATABASE_URL = "postgresql://neondb_owner:npg_jXBYdNn58Kqc@ep-summer-cloud-b4hfhejx-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require"
 
+# قنوات الاشتراك الإجباري
 SPONSOR_CHANNEL = "@OLKVIP"
 SPONSOR_CHANNEL_LINK = "https://t.me/OLKVIP"
+
+PROOFS_CHANNEL = "@LOK_DI"
+PROOFS_CHANNEL_LINK = "https://t.me/LOK_DI"
 
 PROJECT_TON_WALLET = "UQB3Xs8jkbebkVumWJlnEmDkjN4YXsZuHPrXSpZT1RtmZrCB"
 
@@ -31,6 +35,7 @@ REFERRAL_REWARD = 70.0
 SIGNUP_BONUS = 50.0
 DEFAULT_SPEED = 0.21
 
+WELCOME_IMAGE_URL = "https://i.ibb.co/vzR0j4m/olk-bot-logo.jpg"
 WEBAPP_URL = "https://olka-bot-service.onrender.com"
 
 db_pool = None
@@ -376,15 +381,20 @@ MINI_APP_HTML = """<!DOCTYPE html>
     <p id="ban-reason-text" style="font-size:13px; color:#cbd5e1; line-height:1.6;">تم اكتشاف مخالفة لقوانين المنظومة.</p>
   </div>
 
+  <!-- شاشة الاشتراك الإجباري للقناتين -->
   <div id="channel-lock-overlay">
     <i class="fa-brands fa-telegram" style="font-size:65px; color:var(--cyan-neon); margin-bottom:16px;"></i>
     <h2 style="color:#ffffff; margin-bottom:8px;" id="t-lock-title">📢 خطوة أخيرة للتفعيل!</h2>
-    <p style="font-size:13px; color:#cbd5e1; line-height:1.6; margin-bottom:20px;" id="t-lock-desc">
-      لتفعيل محطة التعدين السحابية، يجب الانضمام إلى القناة الرسمية:
-      <br><strong style="color:var(--gold-neon);">@OLKVIP</strong>
+    <p style="font-size:13px; color:#cbd5e1; line-height:1.6; margin-bottom:16px;" id="t-lock-desc">
+      لتفعيل محطة التعدين السحابية، يجب الانضمام إلى القناتين التاليتين:
+      <br><strong style="color:var(--gold-neon);">@OLKVIP</strong> (القناة الرسمية)
+      <br><strong style="color:var(--cyan-neon);">@LOK_DI</strong> (قناة الإثباتات)
     </p>
-    <button class="btn-main-action" style="width:260px;" onclick="window.open('https://t.me/OLKVIP', '_blank')" id="t-lock-join">انضم إلى القناة الآن</button>
-    <button class="btn-main-action claim-state" style="width:260px; margin-top:8px;" onclick="loadData()" id="t-lock-verify">تحقق وتفعيل الآن</button>
+    <div style="display:flex; flex-direction:column; gap:8px; width:100%; max-width:280px;">
+      <button class="btn-main-action" style="margin-top:0;" onclick="window.open('https://t.me/OLKVIP', '_blank')" id="t-lock-join-1">📢 انضم للقناة الرسمية</button>
+      <button class="btn-main-action" style="margin-top:0; background:linear-gradient(135deg, #0369a1, #0284c7);" onclick="window.open('https://t.me/LOK_DI', '_blank')" id="t-lock-join-2">🧾 انضم لقناة الإثباتات</button>
+      <button class="btn-main-action claim-state" style="margin-top:6px;" onclick="loadData()" id="t-lock-verify">تحقق وتفعيل الآن</button>
+    </div>
   </div>
 
   <div class="main-scroll-view">
@@ -542,7 +552,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       <div class="card-panel">
         <div style="font-weight:bold; color:var(--cyan-neon); font-size:14px;"><i class="fa-solid fa-users"></i> <span id="t-frens-title">شبكة التعدين التشاركية</span></div>
         <div style="font-size:12px; color:#cbd5e1; line-height:1.6;" id="t-frens-desc">
-          شارك رابط جهازك واحصل على <strong>70 OLK</strong> فور قيام صديقك بالاشتراك في القناة وتشغيل أول جلسة تعدين!
+          شارك رابط جهازك واحصل على <strong>70 OLK</strong> فور قيام صديقك بالاشتراك في القنوات وتشغيل أول جلسة تعدين!
         </div>
 
         <button class="btn-main-action" onclick="copyInvite()"><i class="fa-solid fa-copy"></i> <span id="t-btn-copy-invite">نسخ رابط الدعوة الخاص بي</span></button>
@@ -655,7 +665,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         btnDeposit: "إيداع TON",
         btnWithdraw: "سحب TON",
         frensTitle: "شبكة التعدين التشاركية",
-        frensDesc: "شارك رابط جهازك واحصل على 70 OLK فور قيام صديقك بالاشتراك في القناة وتشغيل أول جلسة تعدين!",
+        frensDesc: "شارك رابط جهازك واحصل على 70 OLK فور قيام صديقك بالاشتراك في القنوات وتشغيل أول جلسة تعدين!",
         btnCopyInvite: "نسخ رابط الدعوة الخاص بي",
         totalInvitesLbl: "إجمالي الإحالات",
         totalRefEarningsLbl: "أرباح الإحالات",
@@ -679,8 +689,9 @@ MINI_APP_HTML = """<!DOCTYPE html>
         btnStartBot: "دخول البوت",
         btnDone: "مكتملة ✅",
         lockTitle: "📢 خطوة أخيرة للتفعيل!",
-        lockDesc: "لتفعيل محطة التعدين السحابية، يجب الانضمام إلى القناة الرسمية: @OLKVIP",
-        lockJoin: "انضم إلى القناة الآن",
+        lockDesc: "لتفعيل محطة التعدين السحابية، يجب الانضمام إلى القناتين الرسمية والإثباتات:",
+        lockJoin1: "📢 انضم للقناة الرسمية",
+        lockJoin2: "🧾 انضم لقناة الإثباتات",
         lockVerify: "تحقق وتفعيل الآن",
         bannedTitle: "⛔ تم حظر هذا الحساب!"
       },
@@ -705,7 +716,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         btnDeposit: "Deposit TON",
         btnWithdraw: "Withdraw TON",
         frensTitle: "Collaborative Mining Network",
-        frensDesc: "Share your referral link and get 70 OLK once your invited friend joins the official channel and runs their first session!",
+        frensDesc: "Share your referral link and get 70 OLK once your invited friend joins the channels and runs their first session!",
         btnCopyInvite: "Copy My Invite Link",
         totalInvitesLbl: "Total Invites",
         totalRefEarningsLbl: "Referral Earnings",
@@ -729,8 +740,9 @@ MINI_APP_HTML = """<!DOCTYPE html>
         btnStartBot: "Open Bot",
         btnDone: "Completed ✅",
         lockTitle: "📢 One Last Step!",
-        lockDesc: "To activate the mining node, you must join the official channel: @OLKVIP",
-        lockJoin: "Join Channel Now",
+        lockDesc: "To activate the mining node, you must join both the official and proofs channels:",
+        lockJoin1: "📢 Join Official Channel",
+        lockJoin2: "🧾 Join Proofs Channel",
         lockVerify: "Verify & Activate",
         bannedTitle: "⛔ Account Suspended!"
       }
@@ -772,8 +784,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
       document.getElementById("t-nav-frens").innerText = t.navFrens;
       document.getElementById("t-nav-tasks").innerText = t.navTasks;
       document.getElementById("t-lock-title").innerText = t.lockTitle;
-      document.getElementById("t-lock-desc").innerHTML = t.lockDesc;
-      document.getElementById("t-lock-join").innerText = t.lockJoin;
+      document.getElementById("t-lock-join-1").innerText = t.lockJoin1;
+      document.getElementById("t-lock-join-2").innerText = t.lockJoin2;
       document.getElementById("t-lock-verify").innerText = t.lockVerify;
       document.getElementById("t-banned-title").innerText = t.bannedTitle;
 
@@ -1593,12 +1605,23 @@ async def check_multi_account_fraud(conn, user_id: int, fp: str, ip: str, wallet
 
     return False, ""
 
+# التحقق من الاشتراك الإجباري في القناتين
 async def check_user_channel_subscribed(user_id: int) -> bool:
     try:
-        member = await bot.get_chat_member(chat_id=SPONSOR_CHANNEL, user_id=user_id)
-        return member.status not in ["left", "kicked"]
+        member1 = await bot.get_chat_member(chat_id=SPONSOR_CHANNEL, user_id=user_id)
+        if member1.status in ["left", "kicked"]:
+            return False
     except Exception:
-        return True
+        pass
+
+    try:
+        member2 = await bot.get_chat_member(chat_id=PROOFS_CHANNEL, user_id=user_id)
+        if member2.status in ["left", "kicked"]:
+            return False
+    except Exception:
+        pass
+
+    return True
 
 async def api_manifest(request):
     return web.json_response(TON_MANIFEST)
@@ -1782,7 +1805,7 @@ async def api_start_mining_session(request):
 
         is_sub = await check_user_channel_subscribed(user_id)
         if not is_sub:
-            return web.json_response({"ok": False, "msg": "يجب الاشتراك بالقناة الرسمية أولاً لتفعيل التعدين"})
+            return web.json_response({"ok": False, "msg": "يجب الاشتراك بالقناة الرسمية وقناة الإثباتات لتفعيل التعدين"})
 
         async with db_pool.acquire() as conn:
             is_fraud, reason = await check_multi_account_fraud(conn, user_id, fp, client_ip)
@@ -1802,7 +1825,8 @@ async def api_start_mining_session(request):
                 try:
                     await bot.send_message(
                         chat_id=ref_by,
-                        text=f"🎉 **إحالة مؤكدة!** قام صديقك بالاشتراك بالقناة وتشغيل جلسة التعدين.\n💰 تمت إضافة **+{REFERRAL_REWARD:.0f} OLK** إلى محفظتك بنجاح!"
+                        text=f"🎉 <b>إحالة مؤكدة!</b> قام صديقك بالاشتراك بالقنوات وتشغيل جلسة التعدين.\n💰 تمت إضافة <b>+{REFERRAL_REWARD:.0f} OLK</b> إلى محفظتك بنجاح!",
+                        parse_mode="HTML"
                     )
                 except Exception:
                     pass
@@ -1944,13 +1968,13 @@ async def api_withdraw(request):
             ]
         ])
         admin_notification = (
-            f"🚨 **طلب سحب TON جديد #{w_id}**\n\n"
-            f"👤 المستخدم: `{user_id}`\n"
-            f"💎 المبلغ: `{withdraw_amount:.4f} TON`\n"
-            f"📫 المحفظة:\n`{friendly_address}`"
+            f"🚨 <b>طلب سحب TON جديد #{w_id}</b>\n\n"
+            f"👤 المستخدم: <code>{user_id}</code>\n"
+            f"💎 المبلغ: <code>{withdraw_amount:.4f} TON</code>\n"
+            f"📫 المحفظة:\n<code>{friendly_address}</code>"
         )
         try:
-            await bot.send_message(chat_id=SUPER_ADMIN_ID, text=admin_notification, reply_markup=admin_kb, parse_mode="Markdown")
+            await bot.send_message(chat_id=SUPER_ADMIN_ID, text=admin_notification, reply_markup=admin_kb, parse_mode="HTML")
         except Exception:
             pass
 
@@ -2083,7 +2107,6 @@ def build_main_admin_keyboard(perms):
         buttons.append([InlineKeyboardButton(text="👥 إدارة مهام المجموعات (إضافة/حذف)", callback_data="adm_groups_menu")])
         buttons.append([InlineKeyboardButton(text="🤖 إدارة مهام البوتات (إضافة/حذف)", callback_data="adm_bot_tasks_menu")])
     if perms.get("can_ban_users"):
-        # خيارا الحظر وفك الحظر جنباً إلى جنب
         buttons.append([
             InlineKeyboardButton(text="🚫 حظر مستخدم (Ban)", callback_data="adm_ban_start"),
             InlineKeyboardButton(text="🔓 فك الحظر (Unban)", callback_data="adm_unban_start")
@@ -2160,6 +2183,7 @@ async def start_handler(message: Message, command: CommandObject, state: FSMCont
     perms = await get_admin_permissions(user_id)
     
     welcome_text = (
+        f'<a href="{WELCOME_IMAGE_URL}">&#8288;</a>'
         "🐐⚡ أهلاً بك في عالم <b>OLK VIP CYBER MINING</b> ⚡\n\n"
         "━━━━━━━━━━━━━━━━━━━━━\n\n"
         "⛏️ ابدأ التعدين واجمع العملات بكل سهولة!\n\n"
@@ -2171,7 +2195,20 @@ async def start_handler(message: Message, command: CommandObject, state: FSMCont
         "🚀 رحلتك تبدأ الآن... كن جزءاً من عالم OLK! 👾\n\n"
         "👇 اضغط هنا في الأسفل للبدء معنا وتحقيق الأرباح."
     )
-    await message.answer(welcome_text, parse_mode="HTML", reply_markup=build_combined_start_keyboard(user_id, perms))
+    
+    preview_opts = LinkPreviewOptions(
+        is_disabled=False,
+        url=WELCOME_IMAGE_URL,
+        prefer_small_media=True,
+        show_above_text=True
+    )
+
+    await message.answer(
+        welcome_text,
+        parse_mode="HTML",
+        reply_markup=build_combined_start_keyboard(user_id, perms),
+        link_preview_options=preview_opts
+    )
 
 @dp.message(Command("admin"))
 async def admin_panel(message: Message, state: FSMContext):
@@ -2187,7 +2224,6 @@ async def admin_panel(message: Message, state: FSMContext):
         parse_mode="HTML"
     )
 
-# توب 20 الأكثر إحالة (استعلام نظيف ومحصن)
 @dp.callback_query(F.data == "adm_top_refs")
 async def cb_admin_top_refs(callback: CallbackQuery):
     perms = await get_admin_permissions(callback.from_user.id)
@@ -2231,7 +2267,6 @@ async def cb_admin_top_refs(callback: CallbackQuery):
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 العودة للرئيسية", callback_data="adm_home")]])
     await callback.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
 
-# حظر مستخدم (عن طريق ID أو يوزر)
 @dp.callback_query(F.data == "adm_ban_start")
 async def cb_ban_start(callback: CallbackQuery, state: FSMContext):
     perms = await get_admin_permissions(callback.from_user.id)
@@ -2274,7 +2309,6 @@ async def state_ban_execute(message: Message, state: FSMContext):
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 العودة للوحة التحكم", callback_data="adm_home")]])
     await message.answer(f"✅ تم حظر المستخدم <code>{target_id}</code> بنجاح!\nالسبب: {html.escape(reason)}", parse_mode="HTML", reply_markup=kb)
 
-# فك الحظر (عن طريق ID أو يوزر)
 @dp.callback_query(F.data == "adm_unban_start")
 async def cb_unban_start(callback: CallbackQuery, state: FSMContext):
     perms = await get_admin_permissions(callback.from_user.id)
@@ -2307,7 +2341,6 @@ async def state_execute_unban(message: Message, state: FSMContext):
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 العودة للوحة التحكم", callback_data="adm_home")]])
     await message.answer(f"✅ تم فك الحظر عن <code>{target_id}</code> بنجاح وإدراجه في القائمة البيضاء لمنع الحظر التلقائي!", parse_mode="HTML", reply_markup=kb)
 
-# أوامر مباشرة
 @dp.message(Command("unban"))
 async def unban_user_direct(message: Message, command: CommandObject):
     perms = await get_admin_permissions(message.from_user.id)
@@ -2362,6 +2395,7 @@ async def cb_back_to_start(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     perms = await get_admin_permissions(user_id)
     welcome_text = (
+        f'<a href="{WELCOME_IMAGE_URL}">&#8288;</a>'
         "🐐⚡ أهلاً بك في عالم <b>OLK VIP CYBER MINING</b> ⚡\n\n"
         "━━━━━━━━━━━━━━━━━━━━━\n\n"
         "⛏️ ابدأ التعدين واجمع العملات بكل سهولة!\n\n"
@@ -2373,7 +2407,18 @@ async def cb_back_to_start(callback: CallbackQuery, state: FSMContext):
         "🚀 رحلتك تبدأ الآن... كن جزءاً من عالم OLK! 👾\n\n"
         "👇 اضغط هنا في الأسفل للبدء معنا وتحقيق الأرباح."
     )
-    await callback.message.edit_text(welcome_text, parse_mode="HTML", reply_markup=build_combined_start_keyboard(user_id, perms))
+    preview_opts = LinkPreviewOptions(
+        is_disabled=False,
+        url=WELCOME_IMAGE_URL,
+        prefer_small_media=True,
+        show_above_text=True
+    )
+    await callback.message.edit_text(
+        welcome_text,
+        parse_mode="HTML",
+        reply_markup=build_combined_start_keyboard(user_id, perms),
+        link_preview_options=preview_opts
+    )
 
 @dp.callback_query(F.data == "adm_home")
 async def cb_admin_home(callback: CallbackQuery, state: FSMContext):
@@ -2397,7 +2442,7 @@ async def cb_admin_stats(callback: CallbackQuery):
         return
 
     async with db_pool.acquire() as conn:
-        row_users = await conn.fetchrow("SELECT COUNT(*), SUM(olk_balance), SUM(ton_balance) FROM users WHERE is_banned = 0")
+        row_users = await conn.fetchrow("SELECT COUNT(*), SUM(打击_balance" if False else "olk_balance), SUM(ton_balance) FROM users WHERE is_banned = 0")
         users_count = row_users[0] or 0
         total_olk = row_users[1] or 0.0
         total_ton = row_users[2] or 0.0
@@ -2860,7 +2905,7 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("OLK Cyber Session, Top 20, Advanced Ban & Task Limits Engine is LIVE...")
+    print("OLK Cyber Session, Double Sponsor Channels & Small Preview Engine is LIVE...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
