@@ -5,6 +5,7 @@ import os
 import json
 import base64
 import html
+from datetime import datetime
 from aiohttp import web
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart, Command, CommandObject
@@ -20,14 +21,14 @@ SUPER_ADMIN_ID = 1932161126
 
 DATABASE_URL = "postgresql://neondb_owner:npg_jXBYdNn58Kqc@ep-summer-cloud-b4hfhejx-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require"
 
-# قنوات الاشتراك الإجباري
+# قنوات المنظومة
 SPONSOR_CHANNEL = "@OLKVIP"
 SPONSOR_CHANNEL_LINK = "https://t.me/OLKVIP"
 
 PROOFS_CHANNEL = "@LOK_DI"
 PROOFS_CHANNEL_LINK = "https://t.me/LOK_DI"
 
-PROJECT_TON_WALLET = "UQB3Xs8jkbebkVumWJlnEmDkjN4YXsZuHPrXSpZT1RtmZrCB"
+PROJECT_TON_WALLET = "UQCPP2tjnAodTy0eCS-LDGzeG6ss5fTmpMICSk1fiQ_peYKi"
 
 CONVERSION_RATE = 10000
 MIN_WITHDRAW_TON = 0.05
@@ -381,7 +382,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
     <p id="ban-reason-text" style="font-size:13px; color:#cbd5e1; line-height:1.6;">تم اكتشاف مخالفة لقوانين المنظومة.</p>
   </div>
 
-  <!-- شاشة الاشتراك الإجباري للقناتين -->
   <div id="channel-lock-overlay">
     <i class="fa-brands fa-telegram" style="font-size:65px; color:var(--cyan-neon); margin-bottom:16px;"></i>
     <h2 style="color:#ffffff; margin-bottom:8px;" id="t-lock-title">📢 خطوة أخيرة للتفعيل!</h2>
@@ -1605,7 +1605,6 @@ async def check_multi_account_fraud(conn, user_id: int, fp: str, ip: str, wallet
 
     return False, ""
 
-# التحقق من الاشتراك الإجباري في القناتين
 async def check_user_channel_subscribed(user_id: int) -> bool:
     try:
         member1 = await bot.get_chat_member(chat_id=SPONSOR_CHANNEL, user_id=user_id)
@@ -2326,9 +2325,9 @@ async def state_execute_unban(message: Message, state: FSMContext):
 
     async with db_pool.acquire() as conn:
         if raw.isdigit():
-            user = await conn.fetchrow("SELECT user_id FROM users WHERE user_id = $1", int(raw))
+            user = await conn.fetchrow("SELECT user_id, username, first_name FROM users WHERE user_id = $1", int(raw))
         else:
-            user = await conn.fetchrow("SELECT user_id FROM users WHERE LOWER(username) = $1", target_clean)
+            user = await conn.fetchrow("SELECT user_id, username, first_name FROM users WHERE LOWER(username) = $1", target_clean)
 
         if not user:
             await message.answer("❌ لم يتم العثور على هذا المستخدم في قاعدة البيانات! تأكد من صحة الـ ID أو اليوزر:")
@@ -2352,9 +2351,9 @@ async def unban_user_direct(message: Message, command: CommandObject):
     target_clean = raw.lower().replace("@", "")
     async with db_pool.acquire() as conn:
         if raw.isdigit():
-            user = await conn.fetchrow("SELECT user_id FROM users WHERE user_id = $1", int(raw))
+            user = await conn.fetchrow("SELECT user_id, username, first_name FROM users WHERE user_id = $1", int(raw))
         else:
-            user = await conn.fetchrow("SELECT user_id FROM users WHERE LOWER(username) = $1", target_clean)
+            user = await conn.fetchrow("SELECT user_id, username, first_name FROM users WHERE LOWER(username) = $1", target_clean)
 
         if not user:
             await message.answer("❌ المستخدم غير موجود.")
@@ -2377,9 +2376,9 @@ async def ban_user_direct(message: Message, command: CommandObject):
 
     async with db_pool.acquire() as conn:
         if raw.isdigit():
-            user = await conn.fetchrow("SELECT user_id FROM users WHERE user_id = $1", int(raw))
+            user = await conn.fetchrow("SELECT user_id, username, first_name FROM users WHERE user_id = $1", int(raw))
         else:
-            user = await conn.fetchrow("SELECT user_id FROM users WHERE LOWER(username) = $1", target_clean)
+            user = await conn.fetchrow("SELECT user_id, username, first_name FROM users WHERE LOWER(username) = $1", target_clean)
 
         if not user:
             await message.answer("❌ المستخدم غير موجود.")
@@ -2442,7 +2441,7 @@ async def cb_admin_stats(callback: CallbackQuery):
         return
 
     async with db_pool.acquire() as conn:
-        row_users = await conn.fetchrow("SELECT COUNT(*), SUM(打击_balance" if False else "olk_balance), SUM(ton_balance) FROM users WHERE is_banned = 0")
+        row_users = await conn.fetchrow("SELECT COUNT(*), SUM(olk_balance), SUM(ton_balance) FROM users WHERE is_banned = 0")
         users_count = row_users[0] or 0
         total_olk = row_users[1] or 0.0
         total_ton = row_users[2] or 0.0
@@ -2867,21 +2866,80 @@ async def process_broadcast(message: Message, state: FSMContext):
 
     await message.answer(f"✅ اكتملت الإذاعة!\nالناجحة: {success} | الفاشلة: {fail}")
 
+# الموافقة على السحب ونشر إثبات الدفع تلقائياً في قناة الإثباتات
 @dp.callback_query(F.data.startswith("adm_app_"))
 async def approve_withdraw(callback: CallbackQuery):
     perms = await get_admin_permissions(callback.from_user.id)
     if not perms or not perms.get("can_manage_withdrawals"): return
     await callback.answer()
     w_id = int(callback.data.split("_")[2])
+
     async with db_pool.acquire() as conn:
-        row = await conn.fetchrow("SELECT user_id, amount_ton FROM withdrawals WHERE id = $1", w_id)
-        if row:
-            uid, amount = row["user_id"], row["amount_ton"]
-            await conn.execute("UPDATE withdrawals SET status = 'APPROVED' WHERE id = $1", w_id)
-            try:
-                await bot.send_message(chat_id=uid, text=f"🎉 <b>تمت الموافقة ودفع سحب {amount:.4f} TON لمحفظتك!</b>", parse_mode="HTML")
-            except Exception: pass
-    await callback.message.edit_text(callback.message.text + "\n\n✅ <b>تمت الموافقة والدفع بنجاح.</b>", parse_mode="HTML")
+        row = await conn.fetchrow("""
+            SELECT w.id, w.user_id, w.amount_ton, w.wallet_address, u.username, u.first_name 
+            FROM withdrawals w
+            LEFT JOIN users u ON u.user_id = w.user_id
+            WHERE w.id = $1 AND w.status = 'PENDING'
+        """, w_id)
+
+        if not row:
+            await callback.message.answer("⚠️ هذا الطلب تمت معالجته بالفعل مسبقاً.")
+            return
+
+        uid = row["user_id"]
+        amount = row["amount_ton"]
+        wallet_raw = row["wallet_address"]
+        uname = row["username"]
+        fname = row["first_name"] or "مستخدم محترم"
+
+        await conn.execute("UPDATE withdrawals SET status = 'APPROVED' WHERE id = $1", w_id)
+
+        # 1. إشعار المستخدم بنجاح السحب
+        try:
+            await bot.send_message(
+                chat_id=uid,
+                text=f"🎉 <b>تمت الموافقة ودفع سحب {amount:.4f} TON لمحفظتك بنجاح!</b>\n\nتأكد من محفظتك الآن، شكراً لثقتكم.",
+                parse_mode="HTML"
+            )
+        except Exception:
+            pass
+
+        # 2. إخفاء جزء من عنوان المحفظة للخصوصية
+        if len(wallet_raw) > 10:
+            masked_wallet = wallet_raw[:4] + "..." + wallet_raw[-4:]
+        else:
+            masked_wallet = wallet_raw
+
+        user_tag = f"@{uname}" if uname else f"{fname}"
+        now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # 3. نشر الإثبات في قناة الإثباتات
+        proof_text = (
+            "✅ <b>إثبات دفع وسحب جديد | NEW PAYOUT</b>\n\n"
+            f"👤 <b>المستلم:</b> {html.escape(user_tag)}\n"
+            f"💰 <b>المبلغ:</b> <code>{amount:.4f} TON</code> 💎\n"
+            f"📫 <b>المحفظة:</b> <code>{masked_wallet}</code>\n"
+            f"⚡ <b>الحالة:</b> مكتمل ومدفوع (Paid)\n"
+            f"🕒 <b>التاريخ:</b> <code>{now_time}</code>\n\n"
+            "💎 <i>استمر في التعدين واكسب TON و OLK يومياً!</i>\n"
+            "🤖 <b>البوت الرسمي:</b> @OlkaVip_bot"
+        )
+
+        proof_kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="⚡ ابدأ التعدين الآن", url="https://t.me/OlkaVip_bot")]
+        ])
+
+        try:
+            await bot.send_message(
+                chat_id=PROOFS_CHANNEL,
+                text=proof_text,
+                parse_mode="HTML",
+                reply_markup=proof_kb
+            )
+        except Exception as e:
+            print(f"Error posting proof to channel: {e}")
+
+    await callback.message.edit_text(callback.message.text + "\n\n✅ <b>تمت الموافقة والدفع ونشر الإثبات في القناة بنجاح.</b>", parse_mode="HTML")
 
 @dp.callback_query(F.data.startswith("adm_rej_"))
 async def reject_withdraw(callback: CallbackQuery):
@@ -2905,7 +2963,7 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("OLK Cyber Session, Double Sponsor Channels & Small Preview Engine is LIVE...")
+    print("OLK Cyber Session, Proof Channel Auto-Post & Full Engine is LIVE...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
