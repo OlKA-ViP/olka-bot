@@ -11,7 +11,7 @@ from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart, Command, CommandObject
 from aiogram.types import (
     Message, InlineKeyboardMarkup, InlineKeyboardButton,
-    CallbackQuery, WebAppInfo, LinkPreviewOptions
+    CallbackQuery, WebAppInfo, LinkPreviewOptions, ChatMemberUpdated
 )
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -32,13 +32,15 @@ PROJECT_TON_WALLET = "UQCPP2tjnAodTy0eCS-LDGzeG6ss5fTmpMICSk1fiQ_peYKi"
 
 CONVERSION_RATE = 10000
 MIN_WITHDRAW_TON = 0.05
+
+# مكافأة الإحالة 60 OLK
 REFERRAL_REWARD = 60.0
 SIGNUP_BONUS = 50.0
 DEFAULT_SPEED = 0.21
 
 ADMIN_MAX_TASK_REWARD = 70.0
 
-# روابط الصور الرسمية المباشرة (رابط مباشر فائق السرعة يدعم تيليجرام بدون حظر imgbox)
+# روابط الصور الرسمية المباشرة المعتمدة
 WELCOME_IMAGE_URL = "https://i.ibb.co/vzR0j4m/olk-bot-logo.jpg"
 PAYOUT_PROOF_IMAGE_URL = "https://i.ibb.co/k5yFzT5/olk-deposit-withdraw.jpg"
 
@@ -46,7 +48,7 @@ WEBAPP_URL = "https://olka-bot-service.onrender.com"
 
 db_pool = None
 
-# قاموس لتتبع رسائل السحب وتحديثها فورياً لدى الجميع لمنع الدفع المكرر
+# تتبع رسائل السحب لتحديثها فوراً عند الجميع لمنع الدفع المزدوج
 admin_withdrawal_messages = {}
 
 def raw_to_user_friendly(raw_addr: str) -> str:
@@ -584,12 +586,12 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب الإحالات -->
+    <!-- تبويب الإحالات المحدث لـ 60 OLK -->
     <div class="page-tab" id="tab-frens">
       <div class="card-panel">
         <div style="font-weight:bold; color:var(--cyan-neon); font-size:14px;"><i class="fa-solid fa-users"></i> <span id="t-frens-title">شبكة التعدين التشاركية</span></div>
         <div style="font-size:12px; color:#cbd5e1; line-height:1.6;" id="t-frens-desc">
-          شارك رابط جهازك واحصل على <strong>70 OLK</strong> فور قيام صديقك بالاشتراك في القنوات وتشغيل أول جلسة تعدين!
+          شارك رابط جهازك واحصل على <strong>60 OLK</strong> فور قيام صديقك بالاشتراك في القنوات وتشغيل أول جلسة تعدين!
         </div>
 
         <button class="btn-main-action" onclick="copyInvite()"><i class="fa-solid fa-copy"></i> <span id="t-btn-copy-invite">نسخ رابط الدعوة الخاص بي</span></button>
@@ -704,7 +706,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         btnDeposit: "إيداع TON",
         btnWithdraw: "سحب TON",
         frensTitle: "شبكة التعدين التشاركية",
-        frensDesc: "شارك رابط جهازك واحصل على 70 OLK فور قيام صديقك بالاشتراك في القنوات وتشغيل أول جلسة تعدين!",
+        frensDesc: "شارك رابط جهازك واحصل على 60 OLK فور قيام صديقك بالاشتراك في القنوات وتشغيل أول جلسة تعدين!",
         btnCopyInvite: "نسخ رابط الدعوة الخاص بي",
         totalInvitesLbl: "إجمالي الإحالات",
         totalRefEarningsLbl: "أرباح الإحالات",
@@ -759,7 +761,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         btnDeposit: "Deposit TON",
         btnWithdraw: "Withdraw TON",
         frensTitle: "Collaborative Mining Network",
-        frensDesc: "Share your referral link and get 70 OLK once your invited friend joins the channels and runs their first session!",
+        frensDesc: "Share your referral link and get 60 OLK once your invited friend joins the channels and runs their first session!",
         btnCopyInvite: "Copy My Invite Link",
         totalInvitesLbl: "Total Invites",
         totalRefEarningsLbl: "Referral Earnings",
@@ -1001,7 +1003,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
             row.style.padding = "8px 12px";
 
             const statusBadge = ref.is_active 
-              ? `<span style="color:var(--green-neon); font-size:11px; font-weight:800;">+70 OLK ✅</span>`
+              ? `<span style="color:var(--green-neon); font-size:11px; font-weight:800;">+60 OLK ✅</span>`
               : `<span style="color:#eab308; font-size:11px; font-weight:700;">${currentLang === "ar" ? "قيد التفعيل" : "Pending"} ⏳</span>`;
 
             row.innerHTML = `
@@ -1709,6 +1711,97 @@ async def check_user_channel_subscribed(user_id: int) -> bool:
 
     return True
 
+# معالج أحداث مغادرة القنوات أو المجموعات لخصم النقاط تلقائياً
+@dp.chat_member()
+async def on_user_leave_chat(event: ChatMemberUpdated):
+    try:
+        old_status = event.old_chat_member.status
+        new_status = event.new_chat_member.status
+
+        # التحقق مما إذا كان العضو قد غادر القناة أو المجموعة
+        if old_status in ["member", "administrator", "creator"] and new_status in ["left", "kicked"]:
+            user_id = event.from_user.id
+            chat_id_str = str(event.chat.id)
+            chat_username = f"@{event.chat.username}" if event.chat.username else ""
+
+            async with db_pool.acquire() as conn:
+                # 1. البحث في مهام القنوات
+                c_task = await conn.fetchrow(
+                    "SELECT id, reward, title FROM dynamic_tasks WHERE channel_id = $1 OR (channel_id = $2 AND $2 != '')",
+                    chat_id_str, chat_username
+                )
+                if c_task:
+                    u_row = await conn.fetchrow("SELECT tasks_completed, olk_balance FROM users WHERE user_id = $1", user_id)
+                    if u_row and u_row["tasks_completed"]:
+                        completed = json.loads(u_row["tasks_completed"])
+                        if c_task["id"] in completed:
+                            completed.remove(c_task["id"])
+                            deduct_amount = c_task["reward"]
+                            new_balance = max(0.0, u_row["olk_balance"] - deduct_amount)
+
+                            await conn.execute(
+                                "UPDATE users SET olk_balance = $1, tasks_completed = $2 WHERE user_id = $3",
+                                new_balance, json.dumps(completed), user_id
+                            )
+                            await conn.execute(
+                                "UPDATE dynamic_tasks SET current_completions = GREATEST(0, current_completions - 1) WHERE id = $1",
+                                c_task["id"]
+                            )
+
+                            try:
+                                await bot.send_message(
+                                    chat_id=user_id,
+                                    text=(
+                                        f"⚠️ <b>تنبيه بخصم نقاط:</b>\n\n"
+                                        f"لقد قمت بمغادرة القناة: <b>{html.escape(c_task['title'])}</b>\n"
+                                        f"🔻 تم خصم المكافأة (<b>-{deduct_amount:.0f} OLK</b>) من رصيدك.\n"
+                                        f"💰 رصيدك الحالي: <b>{new_balance:.2f} OLK</b>"
+                                    ),
+                                    parse_mode="HTML"
+                                )
+                            except Exception:
+                                pass
+                            return
+
+                # 2. البحث في مهام المجموعات
+                g_task = await conn.fetchrow(
+                    "SELECT id, reward, title FROM dynamic_group_tasks WHERE group_id = $1 OR (group_id = $2 AND $2 != '')",
+                    chat_id_str, chat_username
+                )
+                if g_task:
+                    u_row = await conn.fetchrow("SELECT group_tasks_completed, olk_balance FROM users WHERE user_id = $1", user_id)
+                    if u_row and u_row["group_tasks_completed"]:
+                        completed_g = json.loads(u_row["group_tasks_completed"])
+                        if g_task["id"] in completed_g:
+                            completed_g.remove(g_task["id"])
+                            deduct_amount = g_task["reward"]
+                            new_balance = max(0.0, u_row["olk_balance"] - deduct_amount)
+
+                            await conn.execute(
+                                "UPDATE users SET olk_balance = $1, group_tasks_completed = $2 WHERE user_id = $3",
+                                new_balance, json.dumps(completed_g), user_id
+                            )
+                            await conn.execute(
+                                "UPDATE dynamic_group_tasks SET current_completions = GREATEST(0, current_completions - 1) WHERE id = $1",
+                                g_task["id"]
+                            )
+
+                            try:
+                                await bot.send_message(
+                                    chat_id=user_id,
+                                    text=(
+                                        f"⚠️ <b>تنبيه بخصم نقاط:</b>\n\n"
+                                        f"لقد قمت بمغادرة المجموعة: <b>{html.escape(g_task['title'])}</b>\n"
+                                        f"🔻 تم خصم المكافأة (<b>-{deduct_amount:.0f} OLK</b>) من رصيدك.\n"
+                                        f"💰 رصيدك الحالي: <b>{new_balance:.2f} OLK</b>"
+                                    ),
+                                    parse_mode="HTML"
+                                )
+                            except Exception:
+                                pass
+    except Exception as e:
+        print(f"Error handling chat member update: {e}")
+
 async def api_manifest(request):
     return web.json_response(TON_MANIFEST)
 
@@ -2321,7 +2414,7 @@ async def start_handler(message: Message, command: CommandObject, state: FSMCont
         "⛏️ ابدأ التعدين واجمع العملات بكل سهولة!\n\n"
         "💰 تابع أرباحك ومكافآتك من داخل البوت.\n\n"
         "🎁 اكتشف مكافآت البداية وانطلق بقوة!\n\n"
-        "👥 ادعُ أصدقاءك واكسب مكافأة 70 Olk على الإحالة.\n\n"
+        "👥 ادعُ أصدقاءك واكسب مكافأة 60 Olk على الإحالة.\n\n"
         "📋 أنجز المهام اليومية واجمع المزيد من المكافآت.\n\n"
         "━━━━━━━━━━━━━━━━━━━━━\n\n"
         "🚀 رحلتك تبدأ الآن... كن جزءاً من عالم OLK! 👾\n\n"
@@ -2599,7 +2692,7 @@ async def cb_back_to_start(callback: CallbackQuery, state: FSMContext):
         "⛏️ ابدأ التعدين واجمع العملات بكل سهولة!\n\n"
         "💰 تابع أرباحك ومكافآتك من داخل البوت.\n\n"
         "🎁 اكتشف مكافآت البداية وانطلق بقوة!\n\n"
-        "👥 ادعُ أصدقاءك واكسب مكافأة 70 Olk على الإحالة.\n\n"
+        "👥 ادعُ أصدقاءك واكسب مكافأة 60 Olk على الإحالة.\n\n"
         "📋 أنجز المهام اليومية واجمع المزيد من المكافآت.\n\n"
         "━━━━━━━━━━━━━━━━━━━━━\n\n"
         "🚀 رحلتك تبدأ الآن... كن جزءاً من عالم OLK! 👾\n\n"
@@ -3257,7 +3350,7 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("OLK Cyber Session, Proof Image Fixed, Multi-Admin Payout Sync & Promo Engine is LIVE...")
+    print("OLK Cyber Session, Auto Member Leave Deduction & Full Engine is LIVE...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
@@ -3284,7 +3377,9 @@ async def main():
     site = web.TCPSite(runner, "0.0.0.0", port)
     await site.start()
 
-    await dp.start_polling(bot)
+    # تشغيل استقبال أحداث الأعضاء (chat_member) بجانب الرسائل العادية
+    await dp.start_polling(bot, allowed_updates=["message", "callback_query", "chat_member"])
 
 if __name__ == "__main__":
     asyncio.run(main())
+    
