@@ -36,7 +36,12 @@ REFERRAL_REWARD = 70.0
 SIGNUP_BONUS = 50.0
 DEFAULT_SPEED = 0.21
 
+ADMIN_MAX_TASK_REWARD = 70.0
+
+# روابط الصور الرسمية
 WELCOME_IMAGE_URL = "https://i.ibb.co/vzR0j4m/olk-bot-logo.jpg"
+PAYOUT_PROOF_IMAGE_URL = "https://i.ibb.co/qF4jP8K/olk-deposit-withdraw.jpg"
+
 WEBAPP_URL = "https://olka-bot-service.onrender.com"
 
 db_pool = None
@@ -333,7 +338,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
     }
     .convert-input {
       flex: 1; background: transparent; border: none; outline: none;
-      color: #fff; font-size: 16px; font-weight: 800; direction: ltr; text-align: left;
+      color: #fff; font-size: 14px; font-weight: 800; direction: ltr; text-align: left;
     }
     .tasks-horizontal-nav {
       display: flex; width: 100%; gap: 6px; margin-bottom: 12px;
@@ -425,7 +430,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب التعدين -->
     <div class="page-tab active" id="tab-mining">
       <div class="mining-stage-card">
         <div class="status-pill">
@@ -459,7 +463,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب الباقات -->
     <div class="page-tab" id="tab-miners">
       <div class="card-panel">
         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -516,7 +519,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب المحفظة -->
+    <!-- تبويب المحفظة المحدث -->
     <div class="page-tab" id="tab-wallet">
       <div class="card-panel">
         <div style="font-weight:bold; color:var(--gold-neon); font-size:14px; display:flex; justify-content:space-between;">
@@ -532,14 +535,28 @@ MINI_APP_HTML = """<!DOCTYPE html>
           <strong style="color:var(--green-neon); font-size:13px;" id="swap-preview">0.0000 TON</strong>
         </div>
         <button class="btn-main-action claim-state" style="margin-top:2px;" onclick="executeSwap()" id="t-btn-swap">تحويل الآن إلى رصيد TON</button>
+        
         <hr style="border:0; border-top:1px solid var(--card-border); margin:4px 0;">
+        
         <div style="font-weight:bold; color:var(--cyan-neon); font-size:14px;">
           <i class="fa-solid fa-money-bill-transfer"></i> <span id="t-withdraw-title">سحب TON إلى محفظتك</span>
         </div>
+
         <div class="convert-input-box">
           <input type="number" step="0.01" id="withdraw-amt-input" class="convert-input" placeholder="0.05">
           <span style="font-size:11px; color:#f87171;" id="t-min-withdraw">الحد الأدنى: 0.05 TON</span>
         </div>
+
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted);">
+            <span id="t-dest-wallet-lbl">عنوان محفظة السحب (TON / Gram):</span>
+            <span style="color:var(--cyan-neon); cursor:pointer; font-weight:700;" onclick="useConnectedWalletAsDest()" id="t-btn-use-connected">استخدام المربوطة ⚡</span>
+          </div>
+          <div class="convert-input-box">
+            <input type="text" id="custom-wallet-input" class="convert-input" placeholder="UQ... أو عنوان محفظتك">
+          </div>
+        </div>
+
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
           <button class="btn-main-action" style="background:#059669;" onclick="depositDirect()"><i class="fa-solid fa-arrow-down"></i> <span id="t-btn-deposit">إيداع TON</span></button>
           <button class="btn-main-action" onclick="submitWithdraw()"><i class="fa-solid fa-arrow-up"></i> <span id="t-btn-withdraw">سحب TON</span></button>
@@ -547,7 +564,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب الإحالات -->
     <div class="page-tab" id="tab-frens">
       <div class="card-panel">
         <div style="font-weight:bold; color:var(--cyan-neon); font-size:14px;"><i class="fa-solid fa-users"></i> <span id="t-frens-title">شبكة التعدين التشاركية</span></div>
@@ -581,7 +597,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب المهام -->
     <div class="page-tab" id="tab-tasks">
       <div class="tasks-horizontal-nav">
         <button class="tasks-subtab-btn active" onclick="switchTasksSubtab('channels', this)"><i class="fa-solid fa-bullhorn"></i> <span id="t-subtab-channels">القنوات</span></button>
@@ -661,6 +676,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
         swapReceive: "ستحصل على:",
         btnSwap: "تحويل الآن إلى رصيد TON",
         withdrawTitle: "سحب TON إلى محفظتك",
+        destWalletLbl: "عنوان محفظة السحب (TON / Gram):",
+        btnUseConnected: "استخدام المربوطة ⚡",
         minWithdraw: "الحد الأدنى: 0.05 TON",
         btnDeposit: "إيداع TON",
         btnWithdraw: "سحب TON",
@@ -712,6 +729,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
         swapReceive: "You will receive:",
         btnSwap: "Convert to TON Balance",
         withdrawTitle: "Withdraw TON to Wallet",
+        destWalletLbl: "Destination Wallet (TON / Gram):",
+        btnUseConnected: "Use Connected ⚡",
         minWithdraw: "Minimum: 0.05 TON",
         btnDeposit: "Deposit TON",
         btnWithdraw: "Withdraw TON",
@@ -763,6 +782,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
       document.getElementById("t-swap-receive").innerText = t.swapReceive;
       document.getElementById("t-btn-swap").innerText = t.btnSwap;
       document.getElementById("t-withdraw-title").innerText = t.withdrawTitle;
+      document.getElementById("t-dest-wallet-lbl").innerText = t.destWalletLbl;
+      document.getElementById("t-btn-use-connected").innerText = t.btnUseConnected;
       document.getElementById("t-min-withdraw").innerText = t.minWithdraw;
       document.getElementById("t-btn-deposit").innerText = t.btnDeposit;
       document.getElementById("t-btn-withdraw").innerText = t.btnWithdraw;
@@ -846,6 +867,14 @@ MINI_APP_HTML = """<!DOCTYPE html>
       } else {
         tonConnectUI.openModal();
       }
+    }
+
+    function useConnectedWalletAsDest() {
+      if (!connectedWallet) {
+        alert(currentLang === "ar" ? "❌ لم تقم بربط محفظة بعد!" : "❌ No connected wallet found!");
+        return;
+      }
+      document.getElementById("custom-wallet-input").value = connectedWallet;
     }
 
     async function loadData() {
@@ -1313,27 +1342,33 @@ MINI_APP_HTML = """<!DOCTYPE html>
     }
 
     async function submitWithdraw() {
-      if (!connectedWallet) {
-        alert(currentLang === "ar" ? "❌ يرجى ربط المحفظة أولاً!" : "❌ Please connect wallet first!");
-        handleWalletClick();
-        return;
-      }
       const amt = parseFloat(document.getElementById("withdraw-amt-input").value) || 0;
       if (amt < 0.05 || amt > appTon) {
         alert(currentLang === "ar" ? "⚠️ المبلغ غير صالح! الحد الأدنى هو 0.05 TON" : "⚠️ Invalid amount! Minimum is 0.05 TON");
         return;
       }
+
+      let destWallet = document.getElementById("custom-wallet-input").value.trim();
+      if (!destWallet && connectedWallet) {
+        destWallet = connectedWallet;
+      }
+
+      if (!destWallet) {
+        alert(currentLang === "ar" ? "❌ يرجى كتابة عنوان محفظة السحب أو ربط محفظتك أولاً!" : "❌ Please enter a destination wallet address or connect your wallet!");
+        return;
+      }
+
       const res = await fetch("/api/withdraw", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId, address: connectedWallet, amount_ton: amt, fingerprint: currentFingerprint })
+        body: JSON.stringify({ user_id: userId, address: destWallet, amount_ton: amt, fingerprint: currentFingerprint })
       });
       const data = await res.json();
       if (data.ok) {
         appTon = data.remaining_ton;
         document.getElementById("ton-bal-val").innerText = appTon.toFixed(4) + " TON";
         document.getElementById("withdraw-amt-input").value = "";
-        alert(currentLang === "ar" ? "✅ تم إرسال طلب السحب بنجاح للمراجعة!" : "✅ Withdrawal request submitted!");
+        alert(currentLang === "ar" ? `✅ تم إرسال طلب السحب بنجاح إلى المحفظة:\n${destWallet}` : `✅ Withdrawal request submitted to:\n${destWallet}`);
       } else {
         alert(data.msg);
       }
@@ -1945,6 +1980,9 @@ async def api_withdraw(request):
         friendly_address = raw_to_user_friendly(address)
         now = int(time.time())
 
+        if not friendly_address:
+            return web.json_response({"ok": False, "msg": "يرجى تحديد عنوان محفظة صالح"})
+
         if withdraw_amount < MIN_WITHDRAW_TON:
             return web.json_response({"ok": False, "msg": f"الحد الأدنى للسحب هو {MIN_WITHDRAW_TON} TON"})
 
@@ -2544,15 +2582,24 @@ async def state_task_channel_id(message: Message, state: FSMContext):
 @dp.message(AddTaskStates.waiting_for_link)
 async def state_task_link(message: Message, state: FSMContext):
     await state.update_data(link=message.text.strip())
-    await message.answer("💰 أرسل **قيمة المكافأة** بعملة OLK (مثال: 15):")
+    is_super = (message.from_user.id == SUPER_ADMIN_ID)
+    hint = "أي قيمة تريدها (صلاحية الرئيس)" if is_super else f"الحد الأقصى المسموح لك هو {ADMIN_MAX_TASK_REWARD:.0f} OLK"
+    await message.answer(f"💰 أرسل **قيمة المكافأة** بعملة OLK ({hint}):")
     await state.set_state(AddTaskStates.waiting_for_reward)
 
 @dp.message(AddTaskStates.waiting_for_reward)
 async def state_task_reward(message: Message, state: FSMContext):
     try: 
         reward = float(message.text.strip())
+        if reward <= 0:
+            await message.answer("❌ يجب أن تكون المكافأة أكبر من 0:")
+            return
     except ValueError:
         await message.answer("❌ يرجى إدخال رقم صحيح للمكافأة:")
+        return
+
+    if message.from_user.id != SUPER_ADMIN_ID and reward > ADMIN_MAX_TASK_REWARD:
+        await message.answer(f"⚠️ عذراً، لا يمكنك وضع مكافأة تتعدى {ADMIN_MAX_TASK_REWARD:.0f} نقطة!\nيرجى كتابة قيمة صالحة (70 أو أقل):")
         return
 
     await state.update_data(reward=reward)
@@ -2632,15 +2679,24 @@ async def state_group_id(message: Message, state: FSMContext):
 @dp.message(AddGroupTaskStates.waiting_for_link)
 async def state_group_link(message: Message, state: FSMContext):
     await state.update_data(link=message.text.strip())
-    await message.answer("💰 أرسل **قيمة المكافأة** بعملة OLK (مثال: 15):")
+    is_super = (message.from_user.id == SUPER_ADMIN_ID)
+    hint = "أي قيمة تريدها (صلاحية الرئيس)" if is_super else f"الحد الأقصى المسموح لك هو {ADMIN_MAX_TASK_REWARD:.0f} OLK"
+    await message.answer(f"💰 أرسل **قيمة المكافأة** بعملة OLK ({hint}):")
     await state.set_state(AddGroupTaskStates.waiting_for_reward)
 
 @dp.message(AddGroupTaskStates.waiting_for_reward)
 async def state_group_reward(message: Message, state: FSMContext):
     try: 
         reward = float(message.text.strip())
+        if reward <= 0:
+            await message.answer("❌ يجب أن تكون المكافأة أكبر من 0:")
+            return
     except ValueError:
         await message.answer("❌ يرجى إدخال رقم صحيح للمكافأة:")
+        return
+
+    if message.from_user.id != SUPER_ADMIN_ID and reward > ADMIN_MAX_TASK_REWARD:
+        await message.answer(f"⚠️ عذراً، لا يمكنك وضع مكافأة تتعدى {ADMIN_MAX_TASK_REWARD:.0f} نقطة!\nيرجى كتابة قيمة صالحة (70 أو أقل):")
         return
 
     await state.update_data(reward=reward)
@@ -2714,15 +2770,24 @@ async def state_bot_task_title(message: Message, state: FSMContext):
 @dp.message(AddBotTaskStates.waiting_for_link)
 async def state_bot_task_link(message: Message, state: FSMContext):
     await state.update_data(link=message.text.strip())
-    await message.answer("💰 أرسل **قيمة المكافأة** بعملة OLK (مثال: 20):")
+    is_super = (message.from_user.id == SUPER_ADMIN_ID)
+    hint = "أي قيمة تريدها (صلاحية الرئيس)" if is_super else f"الحد الأقصى المسموح لك هو {ADMIN_MAX_TASK_REWARD:.0f} OLK"
+    await message.answer(f"💰 أرسل **قيمة المكافأة** بعملة OLK ({hint}):")
     await state.set_state(AddBotTaskStates.waiting_for_reward)
 
 @dp.message(AddBotTaskStates.waiting_for_reward)
 async def state_bot_task_reward(message: Message, state: FSMContext):
     try: 
         reward = float(message.text.strip())
+        if reward <= 0:
+            await message.answer("❌ يجب أن تكون المكافأة أكبر من 0:")
+            return
     except ValueError:
         await message.answer("❌ يرجى إدخال رقم صحيح للمكافأة:")
+        return
+
+    if message.from_user.id != SUPER_ADMIN_ID and reward > ADMIN_MAX_TASK_REWARD:
+        await message.answer(f"⚠️ عذراً، لا يمكنك وضع مكافأة تتعدى {ADMIN_MAX_TASK_REWARD:.0f} نقطة!\nيرجى كتابة قيمة صالحة (70 أو أقل):")
         return
 
     await state.update_data(reward=reward)
@@ -2866,7 +2931,7 @@ async def process_broadcast(message: Message, state: FSMContext):
 
     await message.answer(f"✅ اكتملت الإذاعة!\nالناجحة: {success} | الفاشلة: {fail}")
 
-# الموافقة على السحب ونشر إثبات الدفع تلقائياً في قناة الإثباتات
+# الموافقة على السحب ونشر إثبات الدفع تلقائياً مع الصورة في قناة الإثباتات
 @dp.callback_query(F.data.startswith("adm_app_"))
 async def approve_withdraw(callback: CallbackQuery):
     perms = await get_admin_permissions(callback.from_user.id)
@@ -2894,7 +2959,7 @@ async def approve_withdraw(callback: CallbackQuery):
 
         await conn.execute("UPDATE withdrawals SET status = 'APPROVED' WHERE id = $1", w_id)
 
-        # 1. إشعار المستخدم بنجاح السحب
+        # 1. إشعار المستخدم
         try:
             await bot.send_message(
                 chat_id=uid,
@@ -2913,8 +2978,8 @@ async def approve_withdraw(callback: CallbackQuery):
         user_tag = f"@{uname}" if uname else f"{fname}"
         now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # 3. نشر الإثبات في قناة الإثباتات
-        proof_text = (
+        # 3. إعداد نص الإثبات ومطابقته لرسائل القناة
+        proof_caption = (
             "✅ <b>إثبات دفع وسحب جديد | NEW PAYOUT</b>\n\n"
             f"👤 <b>المستلم:</b> {html.escape(user_tag)}\n"
             f"💰 <b>المبلغ:</b> <code>{amount:.4f} TON</code> 💎\n"
@@ -2929,17 +2994,29 @@ async def approve_withdraw(callback: CallbackQuery):
             [InlineKeyboardButton(text="⚡ ابدأ التعدين الآن", url="https://t.me/OlkaVip_bot")]
         ])
 
+        # 4. إرسال الصورة مع الكابشن إلى قناة الإثباتات
         try:
-            await bot.send_message(
+            await bot.send_photo(
                 chat_id=PROOFS_CHANNEL,
-                text=proof_text,
+                photo=PAYOUT_PROOF_IMAGE_URL,
+                caption=proof_caption,
                 parse_mode="HTML",
                 reply_markup=proof_kb
             )
         except Exception as e:
-            print(f"Error posting proof to channel: {e}")
+            # في حال تعذر إرسال الصورة لأي سبب، يتم إرسال النص تفادياً للتعطيل
+            print(f"Error posting photo proof: {e}")
+            try:
+                await bot.send_message(
+                    chat_id=PROOFS_CHANNEL,
+                    text=proof_caption,
+                    parse_mode="HTML",
+                    reply_markup=proof_kb
+                )
+            except Exception as e2:
+                print(f"Error posting text fallback proof: {e2}")
 
-    await callback.message.edit_text(callback.message.text + "\n\n✅ <b>تمت الموافقة والدفع ونشر الإثبات في القناة بنجاح.</b>", parse_mode="HTML")
+    await callback.message.edit_text(callback.message.text + "\n\n✅ <b>تمت الموافقة والدفع ونشر الصورة والإثبات في القناة بنجاح.</b>", parse_mode="HTML")
 
 @dp.callback_query(F.data.startswith("adm_rej_"))
 async def reject_withdraw(callback: CallbackQuery):
@@ -2963,7 +3040,7 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("OLK Cyber Session, Proof Channel Auto-Post & Full Engine is LIVE...")
+    print("OLK Cyber Session, Proof Channel Auto-Post With Image & Full Engine is LIVE...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
