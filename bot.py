@@ -5,8 +5,6 @@ import os
 import json
 import base64
 import html
-import hmac
-import hashlib
 from urllib.parse import parse_qsl, unquote
 from datetime import datetime
 from aiohttp import web
@@ -65,25 +63,29 @@ WEBAPP_URL = "https://olka-bot-service.onrender.com"
 
 db_pool = None
 
-# استخراج معرف المستخدم بشكل موثوق ومضمون
-def extract_telegram_user(init_data: str, fallback_uid: int = 0) -> int:
-    if init_data:
+def parse_user_id_safe(data_dict: dict, query_dict: dict = None) -> int:
+    uid = 0
+    if query_dict and "user_id" in query_dict:
         try:
-            parsed = dict(parse_qsl(init_data))
-            if "user" in parsed:
-                u_info = json.loads(unquote(parsed["user"]))
-                uid = int(u_info.get("id", 0))
-                if uid > 0:
-                    return uid
+            uid = int(query_dict.get("user_id", 0))
         except Exception:
             pass
-    try:
-        f_uid = int(fallback_uid)
-        if f_uid > 0:
-            return f_uid
-    except Exception:
-        pass
-    return 0
+    if not uid and data_dict and "user_id" in data_dict:
+        try:
+            uid = int(data_dict.get("user_id", 0))
+        except Exception:
+            pass
+    if not uid:
+        raw_init = (data_dict.get("initData") if data_dict else "") or (query_dict.get("initData") if query_dict else "")
+        if raw_init:
+            try:
+                parsed = dict(parse_qsl(raw_init))
+                if "user" in parsed:
+                    u_obj = json.loads(unquote(parsed["user"]))
+                    uid = int(u_obj.get("id", 0))
+            except Exception:
+                pass
+    return uid
 
 def raw_to_user_friendly(raw_addr: str) -> str:
     if not raw_addr or not str(raw_addr).startswith("0:"):
@@ -489,7 +491,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
     .nav-btn i { font-size: 18px; }
     .nav-btn.active { color: var(--cyan-neon); }
     .nav-btn.active i { color: var(--cyan-neon); }
-    #banned-overlay, #channel-lock-overlay, #browser-block-overlay {
+    #banned-overlay, #channel-lock-overlay {
       display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       background: #060e1a; z-index: 99999; flex-direction: column;
       align-items: center; justify-content: center; padding: 24px; text-align: center;
@@ -497,19 +499,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
   </style>
 </head>
 <body>
-
-  <div id="browser-block-overlay">
-    <i class="fa-solid fa-mobile-screen-button" style="font-size:65px; color:#ef4444; margin-bottom:16px;"></i>
-    <h2 style="color:#ef4444; margin-bottom:8px;">📱 الهواتف فقط!</h2>
-    <p style="font-size:13px; color:#cbd5e1; line-height:1.6; max-width:320px;">
-      محطة التعدين مخصصة للهواتف الذكية فقط للحماية من التعدد.
-      <br><br>
-      <strong>يمنع استخدام Telegram Web أو المتصفح.</strong>
-      <br>
-      يرجى فتح البوت من تطبيق Telegram الرسمي على هاتفك (Android / iOS).
-    </p>
-    <button class="btn-main-action" style="max-width:240px; margin-top:16px;" onclick="window.location.href='https://t.me/OlkaVip_bot'">العودة لتطبيق تيليجرام</button>
-  </div>
 
   <div id="banned-overlay">
     <i class="fa-solid fa-ban" style="font-size:60px; color:#ef4444; margin-bottom:16px;"></i>
@@ -560,7 +549,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب التعدين -->
+    <!-- تبويب التعدين والبرومو كود -->
     <div class="page-tab active" id="tab-mining">
       <div class="mining-stage-card">
         <div class="status-pill">
@@ -789,59 +778,19 @@ MINI_APP_HTML = """<!DOCTYPE html>
     const urlParams = new URLSearchParams(window.location.search);
     const rawInitData = tg?.initData || "";
     
-    // استخراج معرف المستخدم بشكل حقيقي ومؤكد
+    // استخراج معرّف المستخدم بدقة من تيليجرام أو الرابط
     let userId = tg?.initDataUnsafe?.user?.id || parseInt(urlParams.get('user_id')) || 0;
 
-    const platform = (tg?.platform || "").toLowerCase();
-    const blockedPlatforms = ["weba", "webk", "web", "tdesktop", "macos", "unknown"];
-    const isMobileClient = (platform === "android" || platform === "ios");
-
-    if (!userId || blockedPlatforms.includes(platform) || !isMobileClient) {
-      document.getElementById("browser-block-overlay").style.display = "flex";
-      throw new Error("Telegram Web / Desktop / External browser blocked");
-    }
-
-    function getDeepHardwareFingerprint() {
-      let persistentToken = localStorage.getItem("olk_device_uuid");
+    function getDeviceFingerprint() {
+      let persistentToken = localStorage.getItem("olk_device_token");
       if (!persistentToken) {
-        persistentToken = 'DEV_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-        localStorage.setItem("olk_device_uuid", persistentToken);
+        persistentToken = 'TOK_' + Math.random().toString(36).substring(2, 10);
+        localStorage.setItem("olk_device_token", persistentToken);
       }
-
-      const nav = window.navigator;
-      const screen = window.screen;
-      let hardwareParts = [persistentToken];
-
-      hardwareParts.push(screen.width + 'x' + screen.height + 'x' + screen.colorDepth + 'x' + (screen.pixelDepth || 0));
-      hardwareParts.push((nav.hardwareConcurrency || 'unk') + '_' + (nav.deviceMemory || 'unk') + '_' + (nav.maxTouchPoints || 0));
-
-      try {
-        const canvas = document.createElement('canvas');
-        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-        if (gl) {
-          const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
-          if (debugInfo) {
-            hardwareParts.push(gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL));
-            hardwareParts.push(gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL));
-          }
-          gl.clearColor(0.2, 0.4, 0.6, 0.8);
-          gl.clear(gl.COLOR_BUFFER_BIT);
-          hardwareParts.push(canvas.toDataURL().slice(-30));
-        }
-      } catch (e) {
-        hardwareParts.push('no_gl');
-      }
-
-      const rawString = hardwareParts.join('###');
-      let h = 0;
-      for (let i = 0; i < rawString.length; i++) {
-        h = ((h << 5) - h) + rawString.charCodeAt(i);
-        h |= 0;
-      }
-      return 'HW_' + Math.abs(h);
+      return persistentToken;
     }
 
-    const currentFingerprint = getDeepHardwareFingerprint();
+    const currentFingerprint = getDeviceFingerprint();
 
     let currentLang = localStorage.getItem("olk_lang") || "ar";
     const i18n = {
@@ -1050,7 +999,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ 
-            initData: rawInitData,
             user_id: userId,
             address: connectedWallet, 
             fingerprint: currentFingerprint,
@@ -1092,7 +1040,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         const res = await fetch("/api/redeem_promo", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ initData: rawInitData, user_id: userId, code: code, fingerprint: currentFingerprint })
+          body: JSON.stringify({ user_id: userId, code: code, fingerprint: currentFingerprint })
         });
         const data = await res.json();
         alert(data.msg);
@@ -1108,7 +1056,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
 
     async function loadData() {
       try {
-        const res = await fetch(`/api/get_user?initData=${encodeURIComponent(rawInitData)}&user_id=${userId}&fp=${currentFingerprint}`);
+        const res = await fetch(`/api/get_user?user_id=${userId}&fp=${currentFingerprint}`);
         const data = await res.json();
         if (data.banned) {
           document.getElementById("ban-reason-text").innerText = (currentLang === "ar" ? "سبب الحظر: " : "Reason: ") + (data.ban_reason || "");
@@ -1123,8 +1071,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
         }
 
         if (data.ok) {
-          appOlk = data.olk_balance;
-          appTon = data.ton_balance;
+          appOlk = data.olk_balance || 0.0;
+          appTon = data.ton_balance || 0.0;
           speed = data.mining_speed || 0.21;
           minerLevel = data.miner_level || 1;
           sessionStartTs = data.session_start_timestamp || 0;
@@ -1152,7 +1100,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
 
     async function loadReferralsData() {
       try {
-        const res = await fetch(`/api/get_referrals?initData=${encodeURIComponent(rawInitData)}&user_id=${userId}`);
+        const res = await fetch(`/api/get_referrals?user_id=${userId}`);
         const data = await res.json();
         if (data.ok) {
           document.getElementById("ref-count-val").innerText = data.total_count;
@@ -1209,7 +1157,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
     async function loadTasks() {
       try {
         const t = i18n[currentLang];
-        const res = await fetch(`/api/get_tasks?initData=${encodeURIComponent(rawInitData)}&user_id=${userId}`);
+        const res = await fetch(`/api/get_tasks?user_id=${userId}`);
         const data = await res.json();
         
         const container = document.getElementById("dynamic-tasks-list");
@@ -1218,7 +1166,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
           container.innerHTML = `<div style="font-size:12px; color:var(--text-muted); text-align:center;">${currentLang === "ar" ? "لا توجد قنوات حالياً." : "No channels available."}</div>`;
         } else {
           data.tasks.forEach(task => {
-            const isDone = data.completed_ids.includes(task.id);
+            const isDone = (data.completed_ids || []).includes(task.id);
             const countText = task.max_users > 0 ? ` (${task.current_completions || 0}/${task.max_users})` : '';
             const div = document.createElement("div");
             div.className = "plan-card";
@@ -1368,7 +1316,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
           const res = await fetch("/api/claim_session_rewards", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ initData: rawInitData, user_id: userId, fingerprint: currentFingerprint })
+            body: JSON.stringify({ user_id: userId, fingerprint: currentFingerprint })
           });
           const data = await res.json();
           if (data.ok) {
@@ -1392,7 +1340,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
           const res = await fetch("/api/start_mining_session", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ initData: rawInitData, user_id: userId, fingerprint: currentFingerprint })
+            body: JSON.stringify({ user_id: userId, fingerprint: currentFingerprint })
           });
           const data = await res.json();
           if (data.ok) {
@@ -1434,7 +1382,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              initData: rawInitData,
               user_id: userId,
               cost_ton: costTon,
               fingerprint: currentFingerprint
@@ -1475,7 +1422,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            initData: rawInitData,
             user_id: userId,
             cost_olk: costOlk,
             fingerprint: currentFingerprint
@@ -1517,7 +1463,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       const res = await fetch("/api/convert", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ initData: rawInitData, user_id: userId, amount: amt, fingerprint: currentFingerprint })
+        body: JSON.stringify({ user_id: userId, amount: amt, fingerprint: currentFingerprint })
       });
       const data = await res.json();
       if (data.ok) {
@@ -1556,7 +1502,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          initData: rawInitData, 
           user_id: userId,
           address: destWallet, 
           memo: memoVal,
@@ -1594,7 +1539,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       const res = await fetch("/api/verify_channel_task", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ initData: rawInitData, user_id: userId, task_id: taskId, fingerprint: currentFingerprint })
+        body: JSON.stringify({ user_id: userId, task_id: taskId, fingerprint: currentFingerprint })
       });
       const data = await res.json();
       alert(data.msg);
@@ -1609,7 +1554,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       const res = await fetch("/api/verify_group_task", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ initData: rawInitData, user_id: userId, task_id: taskId, fingerprint: currentFingerprint })
+        body: JSON.stringify({ user_id: userId, task_id: taskId, fingerprint: currentFingerprint })
       });
       const data = await res.json();
       alert(data.msg);
@@ -1624,7 +1569,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       const res = await fetch("/api/verify_bot_task", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ initData: rawInitData, user_id: userId, task_id: taskId, fingerprint: currentFingerprint })
+        body: JSON.stringify({ user_id: userId, task_id: taskId, fingerprint: currentFingerprint })
       });
       const data = await res.json();
       alert(data.msg);
@@ -1951,7 +1896,7 @@ async def api_manifest(request):
 async def api_save_wallet(request):
     try:
         data = await request.json()
-        user_id = extract_telegram_user(data.get("initData", ""), data.get("user_id", 0))
+        user_id = parse_user_id_safe(data)
         if not user_id:
             return web.json_response({"ok": False, "msg": "طلب غير مصرح به"})
 
@@ -1981,7 +1926,7 @@ async def api_save_wallet(request):
 async def api_redeem_promo(request):
     try:
         data = await request.json()
-        user_id = extract_telegram_user(data.get("initData", ""), data.get("user_id", 0))
+        user_id = parse_user_id_safe(data)
         if not user_id:
             return web.json_response({"ok": False, "msg": "طلب غير مصرح به"})
 
@@ -2015,7 +1960,7 @@ async def api_redeem_promo(request):
 
 async def api_get_referrals(request):
     try:
-        user_id = extract_telegram_user(request.query.get("initData", ""), request.query.get("user_id", 0))
+        user_id = parse_user_id_safe({}, dict(request.query))
         if not user_id:
             return web.json_response({"ok": False, "msg": "Unauthorized"})
 
@@ -2054,7 +1999,7 @@ async def api_get_referrals(request):
 
 async def api_get_tasks(request):
     try:
-        user_id = extract_telegram_user(request.query.get("initData", ""), request.query.get("user_id", 0))
+        user_id = parse_user_id_safe({}, dict(request.query))
         if not user_id:
             return web.json_response({"ok": False, "msg": "Unauthorized"})
 
@@ -2103,9 +2048,9 @@ async def api_get_tasks(request):
 # جلب بيانات المستخدم الصحيحة من قاعدة البيانات
 async def api_get_user(request):
     try:
-        user_id = extract_telegram_user(request.query.get("initData", ""), request.query.get("user_id", 0))
+        user_id = parse_user_id_safe({}, dict(request.query))
         if not user_id:
-            return web.json_response({"ok": False, "banned": True, "ban_reason": "فتح التطبيق من خارج بيئة تيليجرام غير مصرح به"})
+            return web.json_response({"ok": False, "banned": False, "olk_balance": 0.0, "ton_balance": 0.0})
 
         fp = str(request.query.get("fp", ""))
         client_ip = request.headers.get("X-Forwarded-For", request.remote)
@@ -2132,7 +2077,7 @@ async def api_get_user(request):
                 return web.json_response({"ok": True, "need_sub": True})
 
             if row:
-                olk = row["olk_balance"]
+                olk = row["olk_balance"] or 0.0
                 if row["activated_miner"] == 0:
                     await conn.execute("UPDATE users SET activated_miner = 1, device_fingerprint = $1, ip_address = $2 WHERE user_id = $3",
                                        fp, client_ip, user_id)
@@ -2142,9 +2087,9 @@ async def api_get_user(request):
                     "need_sub": False,
                     "banned": False,
                     "olk_balance": olk,
-                    "ton_balance": row["ton_balance"],
+                    "ton_balance": row["ton_balance"] or 0.0,
                     "mining_speed": row["mining_speed"] or DEFAULT_SPEED,
-                    "miner_level": row["miner_level"],
+                    "miner_level": row["miner_level"] or 1,
                     "saved_wallet": raw_to_user_friendly(row["saved_wallet"]),
                     "session_start_timestamp": row["session_start_timestamp"] or 0,
                     "session_active": bool(row["session_active"])
@@ -2173,7 +2118,7 @@ async def api_get_user(request):
 async def api_start_mining_session(request):
     try:
         data = await request.json()
-        user_id = extract_telegram_user(data.get("initData", ""), data.get("user_id", 0))
+        user_id = parse_user_id_safe(data)
         if not user_id:
             return web.json_response({"ok": False, "msg": "طلب غير مصرح به"})
 
@@ -2222,7 +2167,7 @@ async def api_start_mining_session(request):
 async def api_claim_session_rewards(request):
     try:
         data = await request.json()
-        user_id = extract_telegram_user(data.get("initData", ""), data.get("user_id", 0))
+        user_id = parse_user_id_safe(data)
         if not user_id:
             return web.json_response({"ok": False, "msg": "Unauthorized"})
 
@@ -2258,7 +2203,7 @@ async def api_claim_session_rewards(request):
 async def api_upgrade_rig_ton_direct(request):
     try:
         data = await request.json()
-        user_id = extract_telegram_user(data.get("initData", ""), data.get("user_id", 0))
+        user_id = parse_user_id_safe(data)
         if not user_id:
             return web.json_response({"ok": False, "msg": "Unauthorized"})
 
@@ -2289,7 +2234,7 @@ async def api_upgrade_rig_ton_direct(request):
 async def api_upgrade_rig_olk(request):
     try:
         data = await request.json()
-        user_id = extract_telegram_user(data.get("initData", ""), data.get("user_id", 0))
+        user_id = parse_user_id_safe(data)
         if not user_id:
             return web.json_response({"ok": False, "msg": "Unauthorized"})
 
@@ -2321,7 +2266,7 @@ async def api_upgrade_rig_olk(request):
 async def api_convert(request):
     try:
         data = await request.json()
-        user_id = extract_telegram_user(data.get("initData", ""), data.get("user_id", 0))
+        user_id = parse_user_id_safe(data)
         if not user_id:
             return web.json_response({"ok": False, "msg": "Unauthorized"})
 
@@ -2348,7 +2293,7 @@ async def api_convert(request):
 async def api_withdraw(request):
     try:
         data = await request.json()
-        user_id = extract_telegram_user(data.get("initData", ""), data.get("user_id", 0))
+        user_id = parse_user_id_safe(data)
         if not user_id:
             return web.json_response({"ok": False, "msg": "طلب غير مصرح به"})
 
@@ -2454,7 +2399,7 @@ async def api_withdraw(request):
 async def api_verify_channel_task(request):
     try:
         data = await request.json()
-        user_id = extract_telegram_user(data.get("initData", ""), data.get("user_id", 0))
+        user_id = parse_user_id_safe(data)
         if not user_id:
             return web.json_response({"ok": False, "msg": "Unauthorized"})
 
@@ -2495,7 +2440,7 @@ async def api_verify_channel_task(request):
 async def api_verify_group_task(request):
     try:
         data = await request.json()
-        user_id = extract_telegram_user(data.get("initData", ""), data.get("user_id", 0))
+        user_id = parse_user_id_safe(data)
         if not user_id:
             return web.json_response({"ok": False, "msg": "Unauthorized"})
 
@@ -2536,7 +2481,7 @@ async def api_verify_group_task(request):
 async def api_verify_bot_task(request):
     try:
         data = await request.json()
-        user_id = extract_telegram_user(data.get("initData", ""), data.get("user_id", 0))
+        user_id = parse_user_id_safe(data)
         if not user_id:
             return web.json_response({"ok": False, "msg": "Unauthorized"})
 
@@ -2568,7 +2513,6 @@ async def api_verify_bot_task(request):
         return web.json_response({"ok": False, "msg": str(e)})
 
 def build_combined_start_keyboard(user_id: int, perms: dict | None):
-    # تمرير user_id في الرابط يضمن جلب الحساب الحقيقي فوراً وبدقة 100%
     app_url = f"{WEBAPP_URL}?user_id={user_id}"
     buttons = [
         [InlineKeyboardButton(text="⚡ فتح محطة التعدين السحابية (Play Now) 🚀", web_app=WebAppInfo(url=app_url))]
@@ -3783,7 +3727,7 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("OLK Cyber Session, Fixed User State Persistence & Engine is LIVE...")
+    print("OLK Cyber Session, 100% Guaranteed State & Task Restore is LIVE...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
