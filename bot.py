@@ -1497,7 +1497,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
 
     function calcSwap() {
       const v = parseFloat(document.getElementById("swap-folk-input").value) || 0;
-      document.getElementById("swap-preview").innerText = (v / 10000).toFixed(4) + " TON";
+      document.getElementById("swap-preview").innerText = (v / 13000).toFixed(4) + " TON";
     }
 
     function setMaxSwap() {
