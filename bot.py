@@ -63,9 +63,7 @@ WEBAPP_URL = "https://olka-bot-service.onrender.com"
 
 db_pool = None
 
-# دالة استخراج المعرف الموحدة والمباشرة
 def get_user_id_from_request(request, post_data=None) -> int:
-    # 1. فحص الـ query params
     if "user_id" in request.query:
         try:
             uid = int(request.query["user_id"])
@@ -74,7 +72,6 @@ def get_user_id_from_request(request, post_data=None) -> int:
         except Exception:
             pass
 
-    # 2. فحص الـ post data
     if post_data and "user_id" in post_data:
         try:
             uid = int(post_data["user_id"])
@@ -83,7 +80,6 @@ def get_user_id_from_request(request, post_data=None) -> int:
         except Exception:
             pass
 
-    # 3. فحص initData
     raw_init = ""
     if post_data and "initData" in post_data:
         raw_init = post_data["initData"]
@@ -476,7 +472,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       color: #fff; font-size: 14px; font-weight: 800; direction: ltr; text-align: left;
     }
     .tasks-horizontal-nav {
-      display: flex; width: 100%; gap: 6px; margin-bottom: 12px;
+      display: flex width: 100%; gap: 6px; margin-bottom: 12px;
       background: #091527; padding: 5px; border-radius: 14px;
       border: 1px solid var(--card-border);
     }
@@ -565,6 +561,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
+    <!-- تبويب التعدين -->
     <div class="page-tab active" id="tab-mining">
       <div class="mining-stage-card">
         <div class="status-pill">
@@ -609,6 +606,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
+    <!-- تبويب الباقات -->
     <div class="page-tab" id="tab-miners">
       <div class="card-panel">
         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -790,18 +788,15 @@ MINI_APP_HTML = """<!DOCTYPE html>
     if (tg) { tg.ready(); tg.expand(); }
 
     const urlParams = new URLSearchParams(window.location.search);
-    const rawInitData = tg?.initData || "";
-    
-    // استخراج معرّف المستخدم بدقة من تيليجرام أو الرابط
     let userId = tg?.initDataUnsafe?.user?.id || parseInt(urlParams.get('user_id')) || 0;
 
     function getDeviceFingerprint() {
-      let persistentToken = localStorage.getItem("olk_device_token");
-      if (!persistentToken) {
-        persistentToken = 'TOK_' + Math.random().toString(36).substring(2, 10);
-        localStorage.setItem("olk_device_token", persistentToken);
+      let token = localStorage.getItem("olk_device_token");
+      if (!token) {
+        token = 'FP_' + Math.random().toString(36).substring(2, 10);
+        localStorage.setItem("olk_device_token", token);
       }
-      return persistentToken;
+      return token;
     }
 
     const currentFingerprint = getDeviceFingerprint();
@@ -1069,6 +1064,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
     }
 
     async function loadData() {
+      if (!userId) return;
       try {
         const res = await fetch(`/api/get_user?user_id=${userId}&fp=${currentFingerprint}`);
         const data = await res.json();
@@ -1113,13 +1109,14 @@ MINI_APP_HTML = """<!DOCTYPE html>
     }
 
     async function loadReferralsData() {
+      if (!userId) return;
       try {
         const res = await fetch(`/api/get_referrals?user_id=${userId}`);
         const data = await res.json();
         if (data.ok) {
-          document.getElementById("ref-count-val").innerText = data.total_count;
+          document.getElementById("ref-count-val").innerText = data.total_count || 0;
           document.getElementById("ref-earned-val").innerText = (data.earned_olk || 0).toFixed(0) + " OLK";
-          document.getElementById("ref-list-count-text").innerText = `${data.total_count} ${currentLang === "ar" ? "أصدقاء" : "frens"}`;
+          document.getElementById("ref-list-count-text").innerText = `${data.total_count || 0} ${currentLang === "ar" ? "أصدقاء" : "frens"}`;
 
           const listEl = document.getElementById("referred-users-list");
           listEl.innerHTML = "";
@@ -1169,6 +1166,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
     }
 
     async function loadTasks() {
+      if (!userId) return;
       try {
         const t = i18n[currentLang];
         const res = await fetch(`/api/get_tasks?user_id=${userId}`);
@@ -2059,7 +2057,6 @@ async def api_get_tasks(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
-# جلب بيانات المستخدم الصحيحة من قاعدة البيانات
 async def api_get_user(request):
     try:
         user_id = get_user_id_from_request(request)
@@ -2128,7 +2125,6 @@ async def api_get_user(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
-# بدء الجلسة وتثبيتها في قاعدة البيانات
 async def api_start_mining_session(request):
     try:
         data = await request.json()
