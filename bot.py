@@ -33,7 +33,7 @@ PROOFS_CHANNEL_LINK = "https://t.me/LOK_DI"
 
 PROJECT_TON_WALLET = "UQCPP2tjnAodTy0eCS-LDGzeG6ss5fTmpMICSk1fiQ_peYKi"
 
-# تم تعديل معدل التحويل ليصبح 13000 OLK مقابل 1 TON
+# نسبة التحويل المعتمدة: 13,000 OLK = 1 TON
 CONVERSION_RATE = 13000
 MIN_WITHDRAW_TON = 0.05
 REFERRAL_REWARD = 60.0
@@ -153,7 +153,7 @@ class BanStates(StatesGroup):
 class CreatePromoStates(StatesGroup):
     waiting_for_code = State()
     waiting_for_reward = State()
-    waiting_for_max_users = State()
+    waiting_for_max_uses = State()
 
 class EditTaskStates(StatesGroup):
     waiting_for_reward = State()
@@ -667,12 +667,12 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب المحفظة المحدث بمعدل التحويل الجديد: 1 TON = 13,000 OLK -->
+    <!-- تبويب المحفظة: 1 TON = 13,000 OLK -->
     <div class="page-tab" id="tab-wallet">
       <div class="card-panel">
         <div style="font-weight:bold; color:var(--gold-neon); font-size:14px; display:flex; justify-content:space-between;">
           <span id="t-swap-title">💳 صرافة OLK إلى TON</span>
-          <span style="font-size:11px; color:var(--cyan-neon); direction:ltr;">1 TON = 13,000 OLK</span>
+          <span style="font-size:11px; color:var(--cyan-neon); direction:ltr;" id="t-swap-rate-badge">1 TON = 13,000 OLK</span>
         </div>
         <div class="convert-input-box">
           <input type="number" id="swap-folk-input" class="convert-input" placeholder="1300" oninput="calcSwap()">
@@ -862,6 +862,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         statusClaim: "اكتملت الجلسة! طالب بأرباحك الآن",
         plansTitle: "باقات أجهزة التعدين",
         swapTitle: "💳 صرافة OLK إلى TON",
+        swapRateBadge: "1 TON = 13,000 OLK",
         swapReceive: "ستحصل على:",
         btnSwap: "تحويل الآن إلى رصيد TON",
         withdrawTitle: "سحب TON إلى محفظتك",
@@ -917,6 +918,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         statusClaim: "Completed! Claim your rewards",
         plansTitle: "Mining Rig Bundles",
         swapTitle: "💳 Swap OLK to TON",
+        swapRateBadge: "1 TON = 13,000 OLK",
         swapReceive: "You will receive:",
         btnSwap: "Convert to TON Balance",
         withdrawTitle: "Withdraw TON to Wallet",
@@ -972,6 +974,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       document.getElementById("t-mining-earnings-lbl").innerText = t.miningEarnings;
       document.getElementById("t-plans-title").innerText = t.plansTitle;
       document.getElementById("t-swap-title").innerText = t.swapTitle;
+      document.getElementById("t-swap-rate-badge").innerText = t.swapRateBadge;
       document.getElementById("t-swap-receive").innerText = t.swapReceive;
       document.getElementById("t-btn-swap").innerText = t.btnSwap;
       document.getElementById("t-withdraw-title").innerText = t.withdrawTitle;
@@ -2319,7 +2322,6 @@ async def api_upgrade_rig_olk(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
-# تحويل الرصيد بالمعدل الجديد (13000 OLK = 1 TON)
 async def api_convert(request):
     try:
         data = await request.json()
@@ -3091,7 +3093,6 @@ async def cb_view_withdraws(callback: CallbackQuery):
             reply_markup=kb
         )
 
-# تعديل وحذف المهام
 @dp.callback_query(F.data == "adm_tasks_menu")
 async def cb_tasks_menu(callback: CallbackQuery):
     perms = await get_admin_permissions(callback.from_user.id)
@@ -3774,7 +3775,7 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("OLK Cyber Session, 13,000 OLK/TON Swap, Zero Signup Bonus & Maximum Security is LIVE...")
+    print("OLK Cyber Session, 13,000 OLK/TON Swap Guaranteed & Engine is LIVE...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
