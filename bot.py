@@ -33,7 +33,6 @@ PROOFS_CHANNEL_LINK = "https://t.me/LOK_DI"
 
 PROJECT_TON_WALLET = "UQCPP2tjnAodTy0eCS-LDGzeG6ss5fTmpMICSk1fiQ_peYKi"
 
-# تم التعديل إلى 13000 بدلاً من 10000
 CONVERSION_RATE = 13000
 MIN_WITHDRAW_TON = 0.05
 REFERRAL_REWARD = 60.0
@@ -665,15 +664,15 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب المحفظة: معدل 13,000 OLK = 1 TON -->
+    <!-- تبويب المحفظة -->
     <div class="page-tab" id="tab-wallet">
       <div class="card-panel">
         <div style="font-weight:bold; color:var(--gold-neon); font-size:14px; display:flex; justify-content:space-between;">
           <span id="t-swap-title">💳 صرافة OLK إلى TON</span>
-          <span style="font-size:11px; color:var(--cyan-neon); direction:ltr;">1 TON = 13,000 OLK</span>
+          <span style="font-size:11px; color:var(--cyan-neon); direction:ltr;">1 TON = 10,000 OLK</span>
         </div>
         <div class="convert-input-box">
-          <input type="number" id="swap-folk-input" class="convert-input" placeholder="1300" oninput="calcSwap()">
+          <input type="number" id="swap-folk-input" class="convert-input" placeholder="1000" oninput="calcSwap()">
           <button style="background:#1e3d6b; border:1px solid var(--gold-neon); color:var(--gold-neon); padding:5px 12px; border-radius:8px; font-size:11px; font-weight:800; cursor:pointer;" onclick="setMaxSwap()">MAX</button>
         </div>
         <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted);">
@@ -986,9 +985,9 @@ MINI_APP_HTML = """<!DOCTYPE html>
       document.getElementById("t-total-ref-earnings-lbl").innerText = t.totalRefEarningsLbl;
       document.getElementById("t-invited-friends-lbl").innerText = t.invitedFriendsLbl;
       document.getElementById("t-promo-btn").innerText = t.promoBtn;
-      document.getElementById("subtab-channels").innerText = t.subtabChannels;
-      document.getElementById("subtab-groups").innerText = t.subtabGroups;
-      document.getElementById("subtab-bots").innerText = t.subtabBots;
+      document.getElementById("t-subtab-channels").innerText = t.subtabChannels;
+      document.getElementById("t-subtab-groups").innerText = t.subtabGroups;
+      document.getElementById("t-subtab-bots").innerText = t.subtabBots;
       document.getElementById("t-channels-title").innerText = t.channelsTitle;
       document.getElementById("t-groups-title").innerText = t.groupsTitle;
       document.getElementById("t-bots-title").innerText = t.botsTitle;
@@ -1496,10 +1495,9 @@ MINI_APP_HTML = """<!DOCTYPE html>
       }
     }
 
-    // تم التعديل إلى 13000
     function calcSwap() {
       const v = parseFloat(document.getElementById("swap-folk-input").value) || 0;
-      document.getElementById("swap-preview").innerText = (v / 13000).toFixed(4) + " TON";
+      document.getElementById("swap-preview").innerText = (v / 10000).toFixed(4) + " TON";
     }
 
     function setMaxSwap() {
@@ -1977,6 +1975,7 @@ async def api_redeem_promo(request):
             if not promo:
                 return web.json_response({"ok": False, "msg": "الرمز الترويجي غير صحيح أو ملغى"})
 
+            # فحص الحد الأقصى للمستفيدين
             if promo["max_uses"] > 0 and promo["current_uses"] >= promo["max_uses"]:
                 return web.json_response({"ok": False, "msg": "عذراً، وصل هذا الكود للحد الأقصى من المستفيدين وأصبح غير متاح"})
 
@@ -2307,7 +2306,6 @@ async def api_upgrade_rig_olk(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
-# نسبة التحويل المعتمدة: 13000 OLK = 1 TON
 async def api_convert(request):
     try:
         data = await request.json()
@@ -2367,7 +2365,7 @@ async def api_withdraw(request):
                     "INSERT INTO withdrawals (user_id, amount_ton, wallet_address, memo, created_at) VALUES ($1, $2, $3, $4, $5) RETURNING id",
                     user_id, withdraw_amount, friendly_address, memo if memo else None, now
                 )
-                await conn.execute("UPDATE users SET ton_balance = $1, saved_wallet = $2 WHERE user_id = $3", remaining, friendly_address, user_id)
+                await conn.execute("UPDATE users SET ton_balance = $1 WHERE user_id = $2", remaining, user_id)
 
             admin_rows = await conn.fetch("SELECT user_id FROM bot_admins WHERE can_manage_withdrawals = 1")
             admin_ids = {SUPER_ADMIN_ID}
@@ -2730,6 +2728,7 @@ async def state_promo_max_uses(message: Message, state: FSMContext):
         reply_markup=kb
     )
 
+# استعراض الأكواد الترويجية وإحصائيات استخدامها
 @dp.callback_query(F.data == "adm_view_promos")
 async def cb_view_promos(callback: CallbackQuery):
     if callback.from_user.id != SUPER_ADMIN_ID:
@@ -3726,7 +3725,7 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("OLK Cyber Session, 13,000 OLK/TON Swap Guaranteed & Engine is LIVE...")
+    print("OLK Cyber Session, Modern Promo Capsule & Promo Usage Tracker is LIVE...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
