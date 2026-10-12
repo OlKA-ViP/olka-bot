@@ -65,17 +65,25 @@ WEBAPP_URL = "https://olka-bot-service.onrender.com"
 
 db_pool = None
 
-# فحص مرن وآمن لبيانات تيليجرام يمنع تصفير الأرصدة ويثبت جلسات المستخدمين
+# استخراج معرف المستخدم بشكل موثوق ومضمون
 def extract_telegram_user(init_data: str, fallback_uid: int = 0) -> int:
     if init_data:
         try:
             parsed = dict(parse_qsl(init_data))
             if "user" in parsed:
                 u_info = json.loads(unquote(parsed["user"]))
-                return int(u_info.get("id", 0))
+                uid = int(u_info.get("id", 0))
+                if uid > 0:
+                    return uid
         except Exception:
             pass
-    return int(fallback_uid) if fallback_uid else 0
+    try:
+        f_uid = int(fallback_uid)
+        if f_uid > 0:
+            return f_uid
+    except Exception:
+        pass
+    return 0
 
 def raw_to_user_friendly(raw_addr: str) -> str:
     if not raw_addr or not str(raw_addr).startswith("0:"):
@@ -140,7 +148,7 @@ class BanStates(StatesGroup):
 class CreatePromoStates(StatesGroup):
     waiting_for_code = State()
     waiting_for_reward = State()
-    waiting_for_max_uses = State()
+    waiting_for_max_users = State()
 
 class EditTaskStates(StatesGroup):
     waiting_for_reward = State()
@@ -552,7 +560,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب التعدين والبرومو كود -->
+    <!-- تبويب التعدين -->
     <div class="page-tab active" id="tab-mining">
       <div class="mining-stage-card">
         <div class="status-pill">
@@ -654,7 +662,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب المحفظة: 1 TON = 13,000 OLK -->
+    <!-- تبويب المحفظة -->
     <div class="page-tab" id="tab-wallet">
       <div class="card-panel">
         <div style="font-weight:bold; color:var(--gold-neon); font-size:14px; display:flex; justify-content:space-between;">
@@ -778,8 +786,11 @@ MINI_APP_HTML = """<!DOCTYPE html>
     const tg = window.Telegram?.WebApp;
     if (tg) { tg.ready(); tg.expand(); }
 
+    const urlParams = new URLSearchParams(window.location.search);
     const rawInitData = tg?.initData || "";
-    let userId = tg?.initDataUnsafe?.user?.id || 0;
+    
+    // استخراج معرف المستخدم بشكل حقيقي ومؤكد
+    let userId = tg?.initDataUnsafe?.user?.id || parseInt(urlParams.get('user_id')) || 0;
 
     const platform = (tg?.platform || "").toLowerCase();
     const blockedPlatforms = ["weba", "webk", "web", "tdesktop", "macos", "unknown"];
@@ -977,9 +988,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       document.getElementById("t-total-ref-earnings-lbl").innerText = t.totalRefEarningsLbl;
       document.getElementById("t-invited-friends-lbl").innerText = t.invitedFriendsLbl;
       document.getElementById("t-promo-btn").innerText = t.promoBtn;
-      document.getElementById("subtab-channels").innerText = t.subtabChannels;
-      document.getElementById("subtab-groups").innerText = t.subtabGroups;
-      document.getElementById("subtab-bots").innerText = t.subtabBots;
       document.getElementById("t-channels-title").innerText = t.channelsTitle;
       document.getElementById("t-groups-title").innerText = t.groupsTitle;
       document.getElementById("t-bots-title").innerText = t.botsTitle;
@@ -2092,7 +2100,7 @@ async def api_get_tasks(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
-# جلب بيانات المستخدم الصحيحة من قاعدة البيانات مع حفظ الأرصدة ومنع تصفيرها
+# جلب بيانات المستخدم الصحيحة من قاعدة البيانات
 async def api_get_user(request):
     try:
         user_id = extract_telegram_user(request.query.get("initData", ""), request.query.get("user_id", 0))
@@ -2161,7 +2169,7 @@ async def api_get_user(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
-# بدء الجلسة وتثبيتها فوراً في قاعدة البيانات
+# بدء الجلسة وتثبيتها في قاعدة البيانات
 async def api_start_mining_session(request):
     try:
         data = await request.json()
@@ -2560,7 +2568,8 @@ async def api_verify_bot_task(request):
         return web.json_response({"ok": False, "msg": str(e)})
 
 def build_combined_start_keyboard(user_id: int, perms: dict | None):
-    app_url = f"{WEBAPP_URL}"
+    # تمرير user_id في الرابط يضمن جلب الحساب الحقيقي فوراً وبدقة 100%
+    app_url = f"{WEBAPP_URL}?user_id={user_id}"
     buttons = [
         [InlineKeyboardButton(text="⚡ فتح محطة التعدين السحابية (Play Now) 🚀", web_app=WebAppInfo(url=app_url))]
     ]
@@ -3079,6 +3088,7 @@ async def cb_view_withdraws(callback: CallbackQuery):
             reply_markup=kb
         )
 
+# تعديل وحذف المهام
 @dp.callback_query(F.data == "adm_tasks_menu")
 async def cb_tasks_menu(callback: CallbackQuery):
     perms = await get_admin_permissions(callback.from_user.id)
