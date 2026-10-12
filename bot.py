@@ -351,6 +351,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
     .btn-main-action.claim-state { background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; }
     .btn-main-action:disabled { background: #1e293b; color: #64748b; cursor: not-allowed; }
 
+    /* التصميم الجديد المتطور لكبسولة الـ PROMO CODE */
     .cyber-promo-capsule {
       width: 100%;
       margin-top: 14px;
@@ -560,6 +561,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
+    <!-- تبويب التعدين والكبسولة المطورة للبرومو كود -->
     <div class="page-tab active" id="tab-mining">
       <div class="mining-stage-card">
         <div class="status-pill">
@@ -592,6 +594,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         </button>
       </div>
 
+      <!-- كبسولة البرومو كود العصرية والمتطورة -->
       <div class="cyber-promo-capsule">
         <div class="cyber-promo-label">
           <span>PROMO CODE</span>
@@ -604,6 +607,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
+    <!-- تبويب الباقات -->
     <div class="page-tab" id="tab-miners">
       <div class="card-panel">
         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -660,6 +664,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
+    <!-- تبويب المحفظة -->
     <div class="page-tab" id="tab-wallet">
       <div class="card-panel">
         <div style="font-weight:bold; color:var(--gold-neon); font-size:14px; display:flex; justify-content:space-between;">
@@ -710,6 +715,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
+    <!-- تبويب الإحالات -->
     <div class="page-tab" id="tab-frens">
       <div class="card-panel">
         <div style="font-weight:bold; color:var(--cyan-neon); font-size:14px;"><i class="fa-solid fa-users"></i> <span id="t-frens-title">شبكة التعدين التشاركية</span></div>
@@ -743,6 +749,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
+    <!-- تبويب المهام -->
     <div class="page-tab" id="tab-tasks">
       <div class="tasks-horizontal-nav">
         <button class="tasks-subtab-btn active" onclick="switchTasksSubtab('channels', this)"><i class="fa-solid fa-bullhorn"></i> <span id="t-subtab-channels">القنوات</span></button>
@@ -978,9 +985,9 @@ MINI_APP_HTML = """<!DOCTYPE html>
       document.getElementById("t-total-ref-earnings-lbl").innerText = t.totalRefEarningsLbl;
       document.getElementById("t-invited-friends-lbl").innerText = t.invitedFriendsLbl;
       document.getElementById("t-promo-btn").innerText = t.promoBtn;
-      document.getElementById("subtab-channels").innerText = t.subtabChannels;
-      document.getElementById("subtab-groups").innerText = t.subtabGroups;
-      document.getElementById("subtab-bots").innerText = t.subtabBots;
+      document.getElementById("t-subtab-channels").innerText = t.subtabChannels;
+      document.getElementById("t-subtab-groups").innerText = t.subtabGroups;
+      document.getElementById("t-subtab-bots").innerText = t.subtabBots;
       document.getElementById("t-channels-title").innerText = t.channelsTitle;
       document.getElementById("t-groups-title").innerText = t.groupsTitle;
       document.getElementById("t-bots-title").innerText = t.botsTitle;
@@ -1523,7 +1530,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       }
     }
 
-    // فحص المحفظة وحظر تكرار العنوان أو الـ Memo
     async function submitWithdraw() {
       const amt = parseFloat(document.getElementById("withdraw-amt-input").value) || 0;
       if (amt < 0.05 || amt > appTon) {
@@ -1969,6 +1975,7 @@ async def api_redeem_promo(request):
             if not promo:
                 return web.json_response({"ok": False, "msg": "الرمز الترويجي غير صحيح أو ملغى"})
 
+            # فحص الحد الأقصى للمستفيدين
             if promo["max_uses"] > 0 and promo["current_uses"] >= promo["max_uses"]:
                 return web.json_response({"ok": False, "msg": "عذراً، وصل هذا الكود للحد الأقصى من المستفيدين وأصبح غير متاح"})
 
@@ -2327,7 +2334,6 @@ async def api_convert(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
-# السحب المحمي بالكامل ضد تكرار العناوين ومحاولات السحب من حسابات متعددة
 async def api_withdraw(request):
     try:
         data = await request.json()
@@ -2350,50 +2356,16 @@ async def api_withdraw(request):
 
         async with db_pool.acquire() as conn:
             async with conn.transaction():
-                user_info = await conn.fetchrow("""
-                    SELECT is_whitelisted, is_banned, ton_balance, last_mining_timestamp 
-                    FROM users WHERE user_id = $1 FOR UPDATE
-                """, user_id)
-                
-                if not user_info or user_info["is_banned"] == 1:
-                    return web.json_response({"ok": False, "msg": "الحساب محظور من السحب"})
-
-                # التحقق الصارم من عدم استخدام نفس عنوان المحفظة لحسابات أخرى
-                if user_info["is_whitelisted"] == 0:
-                    duplicate_withdraw_user = await conn.fetchval("""
-                        SELECT user_id FROM withdrawals 
-                        WHERE wallet_address = $1 AND user_id != $2 
-                        AND (status = 'PENDING' OR status = 'APPROVED')
-                        LIMIT 1
-                    """, friendly_address, user_id)
-
-                    duplicate_saved_user = await conn.fetchval("""
-                        SELECT user_id FROM users 
-                        WHERE saved_wallet = $1 AND user_id != $2 AND is_whitelisted = 0
-                        LIMIT 1
-                    """, friendly_address, user_id)
-
-                    if duplicate_withdraw_user or duplicate_saved_user:
-                        target_other = duplicate_withdraw_user or duplicate_saved_user
-                        # حظر الحساب فوراً لمحاولته السحب لنفس عنوان حساب آخر
-                        await conn.execute("""
-                            UPDATE users SET is_banned = 1, 
-                            ban_reason = $1 WHERE user_id = $2
-                        """, f"محاولة سحب لعنوان مستخدم في الحساب #{target_other}", user_id)
-                        return web.json_response({
-                            "ok": False, 
-                            "msg": "❌ تم حظر هذا الحساب لمحاولة السحب إلى محفظة مستخدمة في حساب آخر!"
-                        })
-
-                if user_info["ton_balance"] < withdraw_amount:
+                row = await conn.fetchrow("SELECT ton_balance FROM users WHERE user_id = $1 FOR UPDATE", user_id)
+                if not row or row["ton_balance"] < withdraw_amount:
                     return web.json_response({"ok": False, "msg": "رصيدك غير كافٍ"})
 
-                remaining = user_info["ton_balance"] - withdraw_amount
+                remaining = row["ton_balance"] - withdraw_amount
                 w_id = await conn.fetchval(
                     "INSERT INTO withdrawals (user_id, amount_ton, wallet_address, memo, created_at) VALUES ($1, $2, $3, $4, $5) RETURNING id",
                     user_id, withdraw_amount, friendly_address, memo if memo else None, now
                 )
-                await conn.execute("UPDATE users SET ton_balance = $1, saved_wallet = $2 WHERE user_id = $3", remaining, friendly_address, user_id)
+                await conn.execute("UPDATE users SET ton_balance = $1 WHERE user_id = $2", remaining, user_id)
 
             admin_rows = await conn.fetch("SELECT user_id FROM bot_admins WHERE can_manage_withdrawals = 1")
             admin_ids = {SUPER_ADMIN_ID}
@@ -2756,6 +2728,7 @@ async def state_promo_max_uses(message: Message, state: FSMContext):
         reply_markup=kb
     )
 
+# استعراض الأكواد الترويجية وإحصائيات استخدامها
 @dp.callback_query(F.data == "adm_view_promos")
 async def cb_view_promos(callback: CallbackQuery):
     if callback.from_user.id != SUPER_ADMIN_ID:
@@ -3752,7 +3725,7 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("OLK Cyber Session, Maximum Security & Multi-Wallet Blocker is LIVE...")
+    print("OLK Cyber Session, Modern Promo Capsule & Promo Usage Tracker is LIVE...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
