@@ -5,7 +5,9 @@ import os
 import json
 import base64
 import html
-from urllib.parse import parse_qsl, unquote
+import hmac
+import hashlib
+from urllib.parse import parse_qsl
 from datetime import datetime
 from aiohttp import web
 from aiogram import Bot, Dispatcher, F
@@ -31,11 +33,10 @@ PROOFS_CHANNEL_LINK = "https://t.me/LOK_DI"
 
 PROJECT_TON_WALLET = "UQCPP2tjnAodTy0eCS-LDGzeG6ss5fTmpMICSk1fiQ_peYKi"
 
-# نسبة التحويل المعتمدة: 13,000 OLK = 1 TON
-CONVERSION_RATE = 13000
+CONVERSION_RATE = 10000
 MIN_WITHDRAW_TON = 0.05
 REFERRAL_REWARD = 60.0
-SIGNUP_BONUS = 0.0
+SIGNUP_BONUS = 50.0
 DEFAULT_SPEED = 0.21
 ADMIN_MAX_TASK_REWARD = 70.0
 
@@ -62,42 +63,27 @@ PAYOUT_PROOF_IMAGE_URL = "https://images2.imgbox.com/71/6a/G9371QkQ_o.jpg"
 WEBAPP_URL = "https://olka-bot-service.onrender.com"
 
 db_pool = None
+admin_withdrawal_messages = {}
 
-def get_user_id_from_request(request, post_data=None) -> int:
-    if "user_id" in request.query:
-        try:
-            uid = int(request.query["user_id"])
-            if uid > 0:
-                return uid
-        except Exception:
-            pass
-
-    if post_data and "user_id" in post_data:
-        try:
-            uid = int(post_data["user_id"])
-            if uid > 0:
-                return uid
-        except Exception:
-            pass
-
-    raw_init = ""
-    if post_data and "initData" in post_data:
-        raw_init = post_data["initData"]
-    elif "initData" in request.query:
-        raw_init = request.query["initData"]
-
-    if raw_init:
-        try:
-            parsed = dict(parse_qsl(raw_init))
-            if "user" in parsed:
-                u_obj = json.loads(unquote(parsed["user"]))
-                uid = int(u_obj.get("id", 0))
-                if uid > 0:
-                    return uid
-        except Exception:
-            pass
-
-    return 0
+def validate_telegram_data(init_data: str) -> dict | None:
+    if not init_data:
+        return None
+    try:
+        parsed_data = dict(parse_qsl(init_data))
+        if "hash" not in parsed_data:
+            return None
+        received_hash = parsed_data.pop("hash")
+        
+        data_check_string = "\n".join(f"{k}={v}" for k, v in sorted(parsed_data.items()))
+        secret_key = hmac.new(b"WebAppData", BOT_TOKEN.encode(), hashlib.sha256).digest()
+        calculated_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
+        
+        if calculated_hash == received_hash:
+            user_obj = json.loads(parsed_data.get("user", "{}"))
+            return user_obj
+        return None
+    except Exception:
+        return None
 
 def raw_to_user_friendly(raw_addr: str) -> str:
     if not raw_addr or not str(raw_addr).startswith("0:"):
@@ -162,7 +148,7 @@ class BanStates(StatesGroup):
 class CreatePromoStates(StatesGroup):
     waiting_for_code = State()
     waiting_for_reward = State()
-    waiting_for_max_users = State()
+    waiting_for_max_uses = State()
 
 class EditTaskStates(StatesGroup):
     waiting_for_reward = State()
@@ -472,7 +458,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       color: #fff; font-size: 14px; font-weight: 800; direction: ltr; text-align: left;
     }
     .tasks-horizontal-nav {
-      display: flex width: 100%; gap: 6px; margin-bottom: 12px;
+      display: flex; width: 100%; gap: 6px; margin-bottom: 12px;
       background: #091527; padding: 5px; border-radius: 14px;
       border: 1px solid var(--card-border);
     }
@@ -503,7 +489,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
     .nav-btn i { font-size: 18px; }
     .nav-btn.active { color: var(--cyan-neon); }
     .nav-btn.active i { color: var(--cyan-neon); }
-    #banned-overlay, #channel-lock-overlay {
+    #banned-overlay, #channel-lock-overlay, #browser-block-overlay {
       display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       background: #060e1a; z-index: 99999; flex-direction: column;
       align-items: center; justify-content: center; padding: 24px; text-align: center;
@@ -511,6 +497,19 @@ MINI_APP_HTML = """<!DOCTYPE html>
   </style>
 </head>
 <body>
+
+  <div id="browser-block-overlay">
+    <i class="fa-solid fa-mobile-screen-button" style="font-size:65px; color:#ef4444; margin-bottom:16px;"></i>
+    <h2 style="color:#ef4444; margin-bottom:8px;">📱 الهواتف فقط!</h2>
+    <p style="font-size:13px; color:#cbd5e1; line-height:1.6; max-width:320px;">
+      محطة التعدين مخصصة للهواتف الذكية فقط للحماية من التعدد.
+      <br><br>
+      <strong>يمنع استخدام Telegram Web أو المتصفح.</strong>
+      <br>
+      يرجى فتح البوت من تطبيق Telegram الرسمي على هاتفك (Android / iOS).
+    </p>
+    <button class="btn-main-action" style="max-width:240px; margin-top:16px;" onclick="window.location.href='https://t.me/OlkaVip_bot'">العودة لتطبيق تيليجرام</button>
+  </div>
 
   <div id="banned-overlay">
     <i class="fa-solid fa-ban" style="font-size:60px; color:#ef4444; margin-bottom:16px;"></i>
@@ -561,7 +560,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب التعدين -->
     <div class="page-tab active" id="tab-mining">
       <div class="mining-stage-card">
         <div class="status-pill">
@@ -606,7 +604,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب الباقات -->
     <div class="page-tab" id="tab-miners">
       <div class="card-panel">
         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -663,15 +660,14 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب المحفظة -->
     <div class="page-tab" id="tab-wallet">
       <div class="card-panel">
         <div style="font-weight:bold; color:var(--gold-neon); font-size:14px; display:flex; justify-content:space-between;">
           <span id="t-swap-title">💳 صرافة OLK إلى TON</span>
-          <span style="font-size:11px; color:var(--cyan-neon); direction:ltr;" id="t-swap-rate-badge">1 TON = 13,000 OLK</span>
+          <span style="font-size:11px; color:var(--cyan-neon); direction:ltr;">1 TON = 10,000 OLK</span>
         </div>
         <div class="convert-input-box">
-          <input type="number" id="swap-folk-input" class="convert-input" placeholder="1300" oninput="calcSwap()">
+          <input type="number" id="swap-folk-input" class="convert-input" placeholder="1000" oninput="calcSwap()">
           <button style="background:#1e3d6b; border:1px solid var(--gold-neon); color:var(--gold-neon); padding:5px 12px; border-radius:8px; font-size:11px; font-weight:800; cursor:pointer;" onclick="setMaxSwap()">MAX</button>
         </div>
         <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted);">
@@ -714,7 +710,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب الإحالات -->
     <div class="page-tab" id="tab-frens">
       <div class="card-panel">
         <div style="font-weight:bold; color:var(--cyan-neon); font-size:14px;"><i class="fa-solid fa-users"></i> <span id="t-frens-title">شبكة التعدين التشاركية</span></div>
@@ -748,7 +743,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب المهام -->
     <div class="page-tab" id="tab-tasks">
       <div class="tasks-horizontal-nav">
         <button class="tasks-subtab-btn active" onclick="switchTasksSubtab('channels', this)"><i class="fa-solid fa-bullhorn"></i> <span id="t-subtab-channels">القنوات</span></button>
@@ -787,19 +781,60 @@ MINI_APP_HTML = """<!DOCTYPE html>
     const tg = window.Telegram?.WebApp;
     if (tg) { tg.ready(); tg.expand(); }
 
-    const urlParams = new URLSearchParams(window.location.search);
-    let userId = tg?.initDataUnsafe?.user?.id || parseInt(urlParams.get('user_id')) || 0;
+    const rawInitData = tg?.initData || "";
+    const platform = (tg?.platform || "").toLowerCase();
 
-    function getDeviceFingerprint() {
-      let token = localStorage.getItem("olk_device_token");
-      if (!token) {
-        token = 'FP_' + Math.random().toString(36).substring(2, 10);
-        localStorage.setItem("olk_device_token", token);
-      }
-      return token;
+    const blockedPlatforms = ["weba", "webk", "web", "tdesktop", "macos", "unknown"];
+    const isMobileClient = (platform === "android" || platform === "ios");
+
+    if (!rawInitData || !tg?.initDataUnsafe?.user || blockedPlatforms.includes(platform) || !isMobileClient) {
+      document.getElementById("browser-block-overlay").style.display = "flex";
+      throw new Error("Telegram Web / Desktop / External browser blocked");
     }
 
-    const currentFingerprint = getDeviceFingerprint();
+    let userId = tg.initDataUnsafe.user.id;
+
+    function getDeepHardwareFingerprint() {
+      let persistentToken = localStorage.getItem("olk_device_uuid");
+      if (!persistentToken) {
+        persistentToken = 'DEV_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        localStorage.setItem("olk_device_uuid", persistentToken);
+      }
+
+      const nav = window.navigator;
+      const screen = window.screen;
+      let hardwareParts = [persistentToken];
+
+      hardwareParts.push(screen.width + 'x' + screen.height + 'x' + screen.colorDepth + 'x' + (screen.pixelDepth || 0));
+      hardwareParts.push((nav.hardwareConcurrency || 'unk') + '_' + (nav.deviceMemory || 'unk') + '_' + (nav.maxTouchPoints || 0));
+
+      try {
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        if (gl) {
+          const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+          if (debugInfo) {
+            hardwareParts.push(gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL));
+            hardwareParts.push(gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL));
+          }
+          gl.clearColor(0.2, 0.4, 0.6, 0.8);
+          gl.clear(gl.COLOR_BUFFER_BIT);
+          hardwareParts.push(canvas.toDataURL().slice(-30));
+        }
+      } catch (e) {
+        hardwareParts.push('no_gl');
+      }
+
+      const rawString = hardwareParts.join('###');
+      let h = 0;
+      for (let i = 0; i < rawString.length; i++) {
+        h = ((h << 5) - h) + rawString.charCodeAt(i);
+        h |= 0;
+      }
+      return 'HW_' + Math.abs(h);
+    }
+
+    const currentFingerprint = getDeepHardwareFingerprint();
 
     let currentLang = localStorage.getItem("olk_lang") || "ar";
     const i18n = {
@@ -817,7 +852,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
         statusClaim: "اكتملت الجلسة! طالب بأرباحك الآن",
         plansTitle: "باقات أجهزة التعدين",
         swapTitle: "💳 صرافة OLK إلى TON",
-        swapRateBadge: "1 TON = 13,000 OLK",
         swapReceive: "ستحصل على:",
         btnSwap: "تحويل الآن إلى رصيد TON",
         withdrawTitle: "سحب TON إلى محفظتك",
@@ -873,7 +907,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
         statusClaim: "Completed! Claim your rewards",
         plansTitle: "Mining Rig Bundles",
         swapTitle: "💳 Swap OLK to TON",
-        swapRateBadge: "1 TON = 13,000 OLK",
         swapReceive: "You will receive:",
         btnSwap: "Convert to TON Balance",
         withdrawTitle: "Withdraw TON to Wallet",
@@ -929,7 +962,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       document.getElementById("t-mining-earnings-lbl").innerText = t.miningEarnings;
       document.getElementById("t-plans-title").innerText = t.plansTitle;
       document.getElementById("t-swap-title").innerText = t.swapTitle;
-      document.getElementById("t-swap-rate-badge").innerText = t.swapRateBadge;
       document.getElementById("t-swap-receive").innerText = t.swapReceive;
       document.getElementById("t-btn-swap").innerText = t.btnSwap;
       document.getElementById("t-withdraw-title").innerText = t.withdrawTitle;
@@ -946,6 +978,9 @@ MINI_APP_HTML = """<!DOCTYPE html>
       document.getElementById("t-total-ref-earnings-lbl").innerText = t.totalRefEarningsLbl;
       document.getElementById("t-invited-friends-lbl").innerText = t.invitedFriendsLbl;
       document.getElementById("t-promo-btn").innerText = t.promoBtn;
+      document.getElementById("subtab-channels").innerText = t.subtabChannels;
+      document.getElementById("subtab-groups").innerText = t.subtabGroups;
+      document.getElementById("subtab-bots").innerText = t.subtabBots;
       document.getElementById("t-channels-title").innerText = t.channelsTitle;
       document.getElementById("t-groups-title").innerText = t.groupsTitle;
       document.getElementById("t-bots-title").innerText = t.botsTitle;
@@ -1008,7 +1043,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ 
-            user_id: userId,
+            initData: rawInitData,
             address: connectedWallet, 
             fingerprint: currentFingerprint,
             chain: wallet.account.chain
@@ -1049,7 +1084,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         const res = await fetch("/api/redeem_promo", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId, code: code, fingerprint: currentFingerprint })
+          body: JSON.stringify({ initData: rawInitData, code: code, fingerprint: currentFingerprint })
         });
         const data = await res.json();
         alert(data.msg);
@@ -1064,9 +1099,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
     }
 
     async function loadData() {
-      if (!userId) return;
       try {
-        const res = await fetch(`/api/get_user?user_id=${userId}&fp=${currentFingerprint}`);
+        const res = await fetch(`/api/get_user?initData=${encodeURIComponent(rawInitData)}&fp=${currentFingerprint}`);
         const data = await res.json();
         if (data.banned) {
           document.getElementById("ban-reason-text").innerText = (currentLang === "ar" ? "سبب الحظر: " : "Reason: ") + (data.ban_reason || "");
@@ -1081,8 +1115,8 @@ MINI_APP_HTML = """<!DOCTYPE html>
         }
 
         if (data.ok) {
-          appOlk = data.olk_balance || 0.0;
-          appTon = data.ton_balance || 0.0;
+          appOlk = data.olk_balance;
+          appTon = data.ton_balance;
           speed = data.mining_speed || 0.21;
           minerLevel = data.miner_level || 1;
           sessionStartTs = data.session_start_timestamp || 0;
@@ -1109,14 +1143,13 @@ MINI_APP_HTML = """<!DOCTYPE html>
     }
 
     async function loadReferralsData() {
-      if (!userId) return;
       try {
-        const res = await fetch(`/api/get_referrals?user_id=${userId}`);
+        const res = await fetch(`/api/get_referrals?initData=${encodeURIComponent(rawInitData)}`);
         const data = await res.json();
         if (data.ok) {
-          document.getElementById("ref-count-val").innerText = data.total_count || 0;
+          document.getElementById("ref-count-val").innerText = data.total_count;
           document.getElementById("ref-earned-val").innerText = (data.earned_olk || 0).toFixed(0) + " OLK";
-          document.getElementById("ref-list-count-text").innerText = `${data.total_count || 0} ${currentLang === "ar" ? "أصدقاء" : "frens"}`;
+          document.getElementById("ref-list-count-text").innerText = `${data.total_count} ${currentLang === "ar" ? "أصدقاء" : "frens"}`;
 
           const listEl = document.getElementById("referred-users-list");
           listEl.innerHTML = "";
@@ -1166,10 +1199,9 @@ MINI_APP_HTML = """<!DOCTYPE html>
     }
 
     async function loadTasks() {
-      if (!userId) return;
       try {
         const t = i18n[currentLang];
-        const res = await fetch(`/api/get_tasks?user_id=${userId}`);
+        const res = await fetch(`/api/get_tasks?initData=${encodeURIComponent(rawInitData)}`);
         const data = await res.json();
         
         const container = document.getElementById("dynamic-tasks-list");
@@ -1178,7 +1210,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
           container.innerHTML = `<div style="font-size:12px; color:var(--text-muted); text-align:center;">${currentLang === "ar" ? "لا توجد قنوات حالياً." : "No channels available."}</div>`;
         } else {
           data.tasks.forEach(task => {
-            const isDone = (data.completed_ids || []).includes(task.id);
+            const isDone = data.completed_ids.includes(task.id);
             const countText = task.max_users > 0 ? ` (${task.current_completions || 0}/${task.max_users})` : '';
             const div = document.createElement("div");
             div.className = "plan-card";
@@ -1328,7 +1360,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
           const res = await fetch("/api/claim_session_rewards", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: userId, fingerprint: currentFingerprint })
+            body: JSON.stringify({ initData: rawInitData, fingerprint: currentFingerprint })
           });
           const data = await res.json();
           if (data.ok) {
@@ -1352,7 +1384,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
           const res = await fetch("/api/start_mining_session", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: userId, fingerprint: currentFingerprint })
+            body: JSON.stringify({ initData: rawInitData, fingerprint: currentFingerprint })
           });
           const data = await res.json();
           if (data.ok) {
@@ -1394,7 +1426,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              user_id: userId,
+              initData: rawInitData,
               cost_ton: costTon,
               fingerprint: currentFingerprint
             })
@@ -1434,7 +1466,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            user_id: userId,
+            initData: rawInitData,
             cost_olk: costOlk,
             fingerprint: currentFingerprint
           })
@@ -1458,7 +1490,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
 
     function calcSwap() {
       const v = parseFloat(document.getElementById("swap-folk-input").value) || 0;
-      document.getElementById("swap-preview").innerText = (v / 13000).toFixed(4) + " TON";
+      document.getElementById("swap-preview").innerText = (v / 10000).toFixed(4) + " TON";
     }
 
     function setMaxSwap() {
@@ -1475,7 +1507,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       const res = await fetch("/api/convert", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId, amount: amt, fingerprint: currentFingerprint })
+        body: JSON.stringify({ initData: rawInitData, amount: amt, fingerprint: currentFingerprint })
       });
       const data = await res.json();
       if (data.ok) {
@@ -1491,6 +1523,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       }
     }
 
+    // فحص المحفظة وحظر تكرار العنوان أو الـ Memo
     async function submitWithdraw() {
       const amt = parseFloat(document.getElementById("withdraw-amt-input").value) || 0;
       if (amt < 0.05 || amt > appTon) {
@@ -1514,7 +1547,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          user_id: userId,
+          initData: rawInitData, 
           address: destWallet, 
           memo: memoVal,
           amount_ton: amt, 
@@ -1551,7 +1584,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       const res = await fetch("/api/verify_channel_task", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId, task_id: taskId, fingerprint: currentFingerprint })
+        body: JSON.stringify({ initData: rawInitData, task_id: taskId, fingerprint: currentFingerprint })
       });
       const data = await res.json();
       alert(data.msg);
@@ -1566,7 +1599,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       const res = await fetch("/api/verify_group_task", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId, task_id: taskId, fingerprint: currentFingerprint })
+        body: JSON.stringify({ initData: rawInitData, task_id: taskId, fingerprint: currentFingerprint })
       });
       const data = await res.json();
       alert(data.msg);
@@ -1581,7 +1614,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       const res = await fetch("/api/verify_bot_task", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId, task_id: taskId, fingerprint: currentFingerprint })
+        body: JSON.stringify({ initData: rawInitData, task_id: taskId, fingerprint: currentFingerprint })
       });
       const data = await res.json();
       alert(data.msg);
@@ -1636,18 +1669,8 @@ async def init_db():
             is_banned INTEGER DEFAULT 0,
             ban_reason TEXT DEFAULT NULL,
             activated_miner INTEGER DEFAULT 0,
-            is_whitelisted INTEGER DEFAULT 0,
-            completed_sessions INTEGER DEFAULT 0
+            is_whitelisted INTEGER DEFAULT 0
         );
-        """)
-
-        await conn.execute("""
-        DO $$
-        BEGIN
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='completed_sessions') THEN
-                ALTER TABLE users ADD COLUMN completed_sessions INTEGER DEFAULT 0;
-            END IF;
-        END $$;
         """)
 
         await conn.execute("""
@@ -1743,15 +1766,6 @@ async def init_db():
                 ALTER TABLE withdrawals ADD COLUMN memo TEXT DEFAULT NULL;
             END IF;
         END $$;
-        """)
-
-        await conn.execute("""
-        CREATE TABLE IF NOT EXISTS withdrawal_admin_messages (
-            withdrawal_id INTEGER,
-            chat_id BIGINT,
-            message_id BIGINT,
-            PRIMARY KEY (withdrawal_id, chat_id, message_id)
-        );
         """)
 
 async def get_admin_permissions(user_id: int):
@@ -1908,10 +1922,11 @@ async def api_manifest(request):
 async def api_save_wallet(request):
     try:
         data = await request.json()
-        user_id = get_user_id_from_request(request, data)
-        if not user_id:
-            return web.json_response({"ok": False, "msg": "طلب غير مصرح به"})
+        tg_user = validate_telegram_data(data.get("initData", ""))
+        if not tg_user:
+            return web.json_response({"ok": False, "msg": "طلب غير مصرح به من متصفح خارجي"})
 
+        user_id = tg_user["id"]
         address = str(data.get("address", "")).strip()
         chain = str(data.get("chain", "-239"))
         
@@ -1938,10 +1953,11 @@ async def api_save_wallet(request):
 async def api_redeem_promo(request):
     try:
         data = await request.json()
-        user_id = get_user_id_from_request(request, data)
-        if not user_id:
-            return web.json_response({"ok": False, "msg": "طلب غير مصرح به"})
+        tg_user = validate_telegram_data(data.get("initData", ""))
+        if not tg_user:
+            return web.json_response({"ok": False, "msg": "طلب غير مصرح به من متصفح خارجي"})
 
+        user_id = tg_user["id"]
         code = str(data.get("code", "")).strip().upper()
         now = int(time.time())
 
@@ -1972,10 +1988,12 @@ async def api_redeem_promo(request):
 
 async def api_get_referrals(request):
     try:
-        user_id = get_user_id_from_request(request)
-        if not user_id:
+        init_data = request.query.get("initData", "")
+        tg_user = validate_telegram_data(init_data)
+        if not tg_user:
             return web.json_response({"ok": False, "msg": "Unauthorized"})
 
+        user_id = tg_user["id"]
         async with db_pool.acquire() as conn:
             rows = await conn.fetch("""
                 SELECT user_id, username, first_name, ref_reward_claimed 
@@ -2011,10 +2029,12 @@ async def api_get_referrals(request):
 
 async def api_get_tasks(request):
     try:
-        user_id = get_user_id_from_request(request)
-        if not user_id:
+        init_data = request.query.get("initData", "")
+        tg_user = validate_telegram_data(init_data)
+        if not tg_user:
             return web.json_response({"ok": False, "msg": "Unauthorized"})
 
+        user_id = tg_user["id"]
         async with db_pool.acquire() as conn:
             rows = await conn.fetch("""
                 SELECT id, title, channel_id, link, reward, max_users, current_completions 
@@ -2059,10 +2079,12 @@ async def api_get_tasks(request):
 
 async def api_get_user(request):
     try:
-        user_id = get_user_id_from_request(request)
-        if not user_id:
-            return web.json_response({"ok": False, "banned": False, "olk_balance": 0.0, "ton_balance": 0.0})
+        init_data = request.query.get("initData", "")
+        tg_user = validate_telegram_data(init_data)
+        if not tg_user:
+            return web.json_response({"ok": False, "banned": True, "ban_reason": "فتح التطبيق من متصفح خارجي أو VPN غير مصرح به"})
 
+        user_id = tg_user["id"]
         fp = str(request.query.get("fp", ""))
         client_ip = request.headers.get("X-Forwarded-For", request.remote)
         now = int(time.time())
@@ -2088,33 +2110,34 @@ async def api_get_user(request):
                 return web.json_response({"ok": True, "need_sub": True})
 
             if row:
-                olk = row["olk_balance"] if row["olk_balance"] is not None else 0.0
+                olk = row["olk_balance"]
                 if row["activated_miner"] == 0:
-                    await conn.execute("UPDATE users SET activated_miner = 1, device_fingerprint = $1, ip_address = $2 WHERE user_id = $3",
-                                       fp, client_ip, user_id)
+                    olk += SIGNUP_BONUS
+                    await conn.execute("UPDATE users SET activated_miner = 1, olk_balance = $1, device_fingerprint = $2, ip_address = $3 WHERE user_id = $4",
+                                       olk, fp, client_ip, user_id)
 
                 return web.json_response({
                     "ok": True,
                     "need_sub": False,
                     "banned": False,
-                    "olk_balance": float(olk),
-                    "ton_balance": float(row["ton_balance"] or 0.0),
-                    "mining_speed": float(row["mining_speed"] or DEFAULT_SPEED),
-                    "miner_level": int(row["miner_level"] or 1),
+                    "olk_balance": olk,
+                    "ton_balance": row["ton_balance"],
+                    "mining_speed": row["mining_speed"] or DEFAULT_SPEED,
+                    "miner_level": row["miner_level"],
                     "saved_wallet": raw_to_user_friendly(row["saved_wallet"]),
-                    "session_start_timestamp": int(row["session_start_timestamp"] or 0),
+                    "session_start_timestamp": row["session_start_timestamp"] or 0,
                     "session_active": bool(row["session_active"])
                 })
             else:
                 await conn.execute("""
                     INSERT INTO users (user_id, last_mining_timestamp, mining_speed, olk_balance, activated_miner, device_fingerprint, ip_address)
-                    VALUES ($1, $2, $3, 0.0, 1, $4, $5) ON CONFLICT (user_id) DO NOTHING
-                """, user_id, now, DEFAULT_SPEED, fp, client_ip)
+                    VALUES ($1, $2, $3, $4, 1, $5, $6) ON CONFLICT (user_id) DO NOTHING
+                """, user_id, now, DEFAULT_SPEED, SIGNUP_BONUS, fp, client_ip)
                 return web.json_response({
                     "ok": True,
                     "need_sub": False,
                     "banned": False,
-                    "olk_balance": 0.0,
+                    "olk_balance": SIGNUP_BONUS,
                     "ton_balance": 0.0,
                     "mining_speed": DEFAULT_SPEED,
                     "miner_level": 1,
@@ -2128,10 +2151,11 @@ async def api_get_user(request):
 async def api_start_mining_session(request):
     try:
         data = await request.json()
-        user_id = get_user_id_from_request(request, data)
-        if not user_id:
-            return web.json_response({"ok": False, "msg": "طلب غير مصرح به"})
+        tg_user = validate_telegram_data(data.get("initData", ""))
+        if not tg_user:
+            return web.json_response({"ok": False, "msg": "طلب غير مصرح به من متصفح خارجي"})
 
+        user_id = tg_user["id"]
         fp = str(data.get("fingerprint", ""))
         client_ip = request.headers.get("X-Forwarded-For", request.remote)
         now = int(time.time())
@@ -2177,16 +2201,17 @@ async def api_start_mining_session(request):
 async def api_claim_session_rewards(request):
     try:
         data = await request.json()
-        user_id = get_user_id_from_request(request, data)
-        if not user_id:
+        tg_user = validate_telegram_data(data.get("initData", ""))
+        if not tg_user:
             return web.json_response({"ok": False, "msg": "Unauthorized"})
 
+        user_id = tg_user["id"]
         now = int(time.time())
 
         async with db_pool.acquire() as conn:
             async with conn.transaction():
                 row = await conn.fetchrow("""
-                    SELECT olk_balance, session_active, session_start_timestamp, mining_speed, completed_sessions 
+                    SELECT olk_balance, session_active, session_start_timestamp, mining_speed 
                     FROM users WHERE user_id = $1 FOR UPDATE
                 """, user_id)
                 if not row or not row["session_active"]:
@@ -2200,11 +2225,10 @@ async def api_claim_session_rewards(request):
                 actual_speed = row["mining_speed"] or DEFAULT_SPEED
                 calculated_reward = capped_elapsed * (actual_speed * 0.000030 * 10)
                 new_bal = row["olk_balance"] + calculated_reward
-                new_completed_sessions = (row["completed_sessions"] or 0) + 1
 
                 await conn.execute("""
-                    UPDATE users SET olk_balance = $1, session_active = 0, session_start_timestamp = 0, completed_sessions = $2 WHERE user_id = $3
-                """, new_bal, new_completed_sessions, user_id)
+                    UPDATE users SET olk_balance = $1, session_active = 0, session_start_timestamp = 0 WHERE user_id = $2
+                """, new_bal, user_id)
 
         return web.json_response({"ok": True, "olk_balance": new_bal, "claimed": calculated_reward})
     except Exception as e:
@@ -2213,10 +2237,11 @@ async def api_claim_session_rewards(request):
 async def api_upgrade_rig_ton_direct(request):
     try:
         data = await request.json()
-        user_id = get_user_id_from_request(request, data)
-        if not user_id:
+        tg_user = validate_telegram_data(data.get("initData", ""))
+        if not tg_user:
             return web.json_response({"ok": False, "msg": "Unauthorized"})
 
+        user_id = tg_user["id"]
         cost_ton = float(data.get("cost_ton", 0))
 
         if cost_ton not in VALID_PLANS_TON:
@@ -2244,10 +2269,11 @@ async def api_upgrade_rig_ton_direct(request):
 async def api_upgrade_rig_olk(request):
     try:
         data = await request.json()
-        user_id = get_user_id_from_request(request, data)
-        if not user_id:
+        tg_user = validate_telegram_data(data.get("initData", ""))
+        if not tg_user:
             return web.json_response({"ok": False, "msg": "Unauthorized"})
 
+        user_id = tg_user["id"]
         cost_olk = float(data.get("cost_olk", 0))
 
         if cost_olk not in VALID_PLANS_OLK:
@@ -2276,10 +2302,11 @@ async def api_upgrade_rig_olk(request):
 async def api_convert(request):
     try:
         data = await request.json()
-        user_id = get_user_id_from_request(request, data)
-        if not user_id:
+        tg_user = validate_telegram_data(data.get("initData", ""))
+        if not tg_user:
             return web.json_response({"ok": False, "msg": "Unauthorized"})
 
+        user_id = tg_user["id"]
         amount = float(data.get("amount", 0))
 
         if amount <= 0:
@@ -2300,13 +2327,15 @@ async def api_convert(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
+# السحب المحمي بالكامل ضد تكرار العناوين ومحاولات السحب من حسابات متعددة
 async def api_withdraw(request):
     try:
         data = await request.json()
-        user_id = get_user_id_from_request(request, data)
-        if not user_id:
-            return web.json_response({"ok": False, "msg": "طلب غير مصرح به"})
+        tg_user = validate_telegram_data(data.get("initData", ""))
+        if not tg_user:
+            return web.json_response({"ok": False, "msg": "طلب غير مصرح به من متصفح خارجي"})
 
+        user_id = tg_user["id"]
         address = str(data.get("address", "")).strip()
         memo = str(data.get("memo", "")).strip()
         withdraw_amount = float(data.get("amount_ton", 0))
@@ -2322,19 +2351,14 @@ async def api_withdraw(request):
         async with db_pool.acquire() as conn:
             async with conn.transaction():
                 user_info = await conn.fetchrow("""
-                    SELECT is_whitelisted, is_banned, ton_balance, completed_sessions 
+                    SELECT is_whitelisted, is_banned, ton_balance, last_mining_timestamp 
                     FROM users WHERE user_id = $1 FOR UPDATE
                 """, user_id)
                 
                 if not user_info or user_info["is_banned"] == 1:
                     return web.json_response({"ok": False, "msg": "الحساب محظور من السحب"})
 
-                if user_info["is_whitelisted"] == 0 and (user_info["completed_sessions"] or 0) < 3:
-                    return web.json_response({
-                        "ok": False, 
-                        "msg": "⚠️ لحماية المنظومة: يجب تشغيل وجمع أرباح 3 جلسات تعدين على الأقل قبل فتح ميزة السحب."
-                    })
-
+                # التحقق الصارم من عدم استخدام نفس عنوان المحفظة لحسابات أخرى
                 if user_info["is_whitelisted"] == 0:
                     duplicate_withdraw_user = await conn.fetchval("""
                         SELECT user_id FROM withdrawals 
@@ -2351,6 +2375,7 @@ async def api_withdraw(request):
 
                     if duplicate_withdraw_user or duplicate_saved_user:
                         target_other = duplicate_withdraw_user or duplicate_saved_user
+                        # حظر الحساب فوراً لمحاولته السحب لنفس عنوان حساب آخر
                         await conn.execute("""
                             UPDATE users SET is_banned = 1, 
                             ban_reason = $1 WHERE user_id = $2
@@ -2375,32 +2400,29 @@ async def api_withdraw(request):
             for ar in admin_rows:
                 admin_ids.add(ar["user_id"])
 
-            admin_kb = InlineKeyboardMarkup(inline_keyboard=[
-                [
-                    InlineKeyboardButton(text="✅ موافقة ودفع", callback_data=f"adm_app_{w_id}"),
-                    InlineKeyboardButton(text="❌ رفض", callback_data=f"adm_rej_{w_id}")
-                ]
-            ])
-            
-            memo_display = f"\n🏷️ <b>الـ Memo:</b> <code>{html.escape(memo)}</code>" if memo else ""
-            admin_notification = (
-                f"🚨 <b>طلب سحب TON جديد #{w_id}</b>\n\n"
-                f"👤 المستخدم: <code>{user_id}</code>\n"
-                f"💎 المبلغ: <code>{withdraw_amount:.4f} TON</code>\n"
-                f"📫 المحفظة:\n<code>{friendly_address}</code>"
-                f"{memo_display}"
-            )
-            
-            for adm_id in admin_ids:
-                try:
-                    sent_msg = await bot.send_message(chat_id=adm_id, text=admin_notification, reply_markup=admin_kb, parse_mode="HTML")
-                    await conn.execute("""
-                        INSERT INTO withdrawal_admin_messages (withdrawal_id, chat_id, message_id)
-                        VALUES ($1, $2, $3)
-                        ON CONFLICT DO NOTHING
-                    """, w_id, adm_id, sent_msg.message_id)
-                except Exception:
-                    pass
+        admin_kb = InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(text="✅ موافقة ودفع", callback_data=f"adm_app_{w_id}"),
+                InlineKeyboardButton(text="❌ رفض", callback_data=f"adm_rej_{w_id}")
+            ]
+        ])
+        
+        memo_display = f"\n🏷️ <b>الـ Memo:</b> <code>{html.escape(memo)}</code>" if memo else ""
+        admin_notification = (
+            f"🚨 <b>طلب سحب TON جديد #{w_id}</b>\n\n"
+            f"👤 المستخدم: <code>{user_id}</code>\n"
+            f"💎 المبلغ: <code>{withdraw_amount:.4f} TON</code>\n"
+            f"📫 المحفظة:\n<code>{friendly_address}</code>"
+            f"{memo_display}"
+        )
+        
+        admin_withdrawal_messages[w_id] = []
+        for adm_id in admin_ids:
+            try:
+                sent_msg = await bot.send_message(chat_id=adm_id, text=admin_notification, reply_markup=admin_kb, parse_mode="HTML")
+                admin_withdrawal_messages[w_id].append((adm_id, sent_msg.message_id))
+            except Exception:
+                pass
 
         return web.json_response({"ok": True, "remaining_ton": remaining})
     except Exception as e:
@@ -2409,10 +2431,11 @@ async def api_withdraw(request):
 async def api_verify_channel_task(request):
     try:
         data = await request.json()
-        user_id = get_user_id_from_request(request, data)
-        if not user_id:
+        tg_user = validate_telegram_data(data.get("initData", ""))
+        if not tg_user:
             return web.json_response({"ok": False, "msg": "Unauthorized"})
 
+        user_id = tg_user["id"]
         task_id = int(data.get("task_id"))
 
         async with db_pool.acquire() as conn:
@@ -2450,10 +2473,11 @@ async def api_verify_channel_task(request):
 async def api_verify_group_task(request):
     try:
         data = await request.json()
-        user_id = get_user_id_from_request(request, data)
-        if not user_id:
+        tg_user = validate_telegram_data(data.get("initData", ""))
+        if not tg_user:
             return web.json_response({"ok": False, "msg": "Unauthorized"})
 
+        user_id = tg_user["id"]
         task_id = int(data.get("task_id"))
 
         async with db_pool.acquire() as conn:
@@ -2491,10 +2515,11 @@ async def api_verify_group_task(request):
 async def api_verify_bot_task(request):
     try:
         data = await request.json()
-        user_id = get_user_id_from_request(request, data)
-        if not user_id:
+        tg_user = validate_telegram_data(data.get("initData", ""))
+        if not tg_user:
             return web.json_response({"ok": False, "msg": "Unauthorized"})
 
+        user_id = tg_user["id"]
         task_id = int(data.get("task_id"))
 
         async with db_pool.acquire() as conn:
@@ -2523,7 +2548,7 @@ async def api_verify_bot_task(request):
         return web.json_response({"ok": False, "msg": str(e)})
 
 def build_combined_start_keyboard(user_id: int, perms: dict | None):
-    app_url = f"{WEBAPP_URL}?user_id={user_id}"
+    app_url = f"{WEBAPP_URL}"
     buttons = [
         [InlineKeyboardButton(text="⚡ فتح محطة التعدين السحابية (Play Now) 🚀", web_app=WebAppInfo(url=app_url))]
     ]
@@ -2629,6 +2654,7 @@ async def start_handler(message: Message, command: CommandObject, state: FSMCont
         "━━━━━━━━━━━━━━━━━━━━━\n\n"
         "⛏️ ابدأ التعدين واجمع العملات بكل سهولة!\n\n"
         "💰 تابع أرباحك ومكافآتك من داخل البوت.\n\n"
+        "🎁 اكتشف مكافآت البداية وانطلق بقوة!\n\n"
         "👥 ادعُ أصدقاءك واكسب مكافأة 60 Olk على الإحالة.\n\n"
         "📋 أنجز المهام اليومية واجمع المزيد من المكافآت.\n\n"
         "━━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -2939,6 +2965,7 @@ async def cb_back_to_start(callback: CallbackQuery, state: FSMContext):
         "━━━━━━━━━━━━━━━━━━━━━\n\n"
         "⛏️ ابدأ التعدين واجمع العملات بكل سهولة!\n\n"
         "💰 تابع أرباحك ومكافآتك من داخل البوت.\n\n"
+        "🎁 اكتشف مكافآت البداية وانطلق بقوة!\n\n"
         "👥 ادعُ أصدقاءك واكسب مكافأة 60 Olk على الإحالة.\n\n"
         "📋 أنجز المهام اليومية واجمع المزيد من المكافآت.\n\n"
         "━━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -3579,7 +3606,7 @@ async def approve_withdraw(callback: CallbackQuery):
         if row["status"] != 'PENDING':
             await callback.answer("⚠️ تم اتخاذ إجراء على هذا الطلب مسبقاً!", show_alert=True)
             try:
-                await callback.message.edit_text(callback.message.text + f"\n\n🔒 <b>هذا الطلب منفذ بالفعل بحالة: {row['status']}</b>", reply_markup=None, parse_mode="HTML")
+                await callback.message.edit_text(callback.message.text + f"\n\n🔒 <b>هذا الطلب منفذ بالفعل بحالة: {row['status']}</b>", parse_mode="HTML")
             except Exception: pass
             return
 
@@ -3591,7 +3618,6 @@ async def approve_withdraw(callback: CallbackQuery):
         fname = row["first_name"] or "مستخدم"
 
         await conn.execute("UPDATE withdrawals SET status = 'APPROVED' WHERE id = $1", w_id)
-        saved_msgs = await conn.fetch("SELECT chat_id, message_id FROM withdrawal_admin_messages WHERE withdrawal_id = $1", w_id)
 
     await callback.answer("✅ تمت الموافقة بنجاح!", show_alert=False)
 
@@ -3652,21 +3678,16 @@ async def approve_withdraw(callback: CallbackQuery):
         f"🛡️ <b>بواسطة:</b> {admin_done_by}"
     )
 
-    if saved_msgs:
-        for m in saved_msgs:
+    if w_id in admin_withdrawal_messages:
+        for c_id, m_id in admin_withdrawal_messages[w_id]:
             try:
-                await bot.edit_message_text(
-                    chat_id=m["chat_id"],
-                    message_id=m["message_id"],
-                    text=updated_notice,
-                    reply_markup=None,
-                    parse_mode="HTML"
-                )
+                await bot.edit_message_text(chat_id=c_id, message_id=m_id, text=updated_notice, parse_mode="HTML")
             except Exception:
                 pass
+        del admin_withdrawal_messages[w_id]
     else:
         try:
-            await callback.message.edit_text(updated_notice, reply_markup=None, parse_mode="HTML")
+            await callback.message.edit_text(updated_notice, parse_mode="HTML")
         except Exception: pass
 
 # رفض السحب
@@ -3685,13 +3706,12 @@ async def reject_withdraw(callback: CallbackQuery):
         if row["status"] != 'PENDING':
             await callback.answer("⚠️ تم اتخاذ إجراء على هذا الطلب مسبقاً!", show_alert=True)
             try:
-                await callback.message.edit_text(callback.message.text + f"\n\n🔒 <b>هذا الطلب منفذ بالفعل بحالة: {row['status']}</b>", reply_markup=None, parse_mode="HTML")
+                await callback.message.edit_text(callback.message.text + f"\n\n🔒 <b>هذا الطلب منفذ بالفعل بحالة: {row['status']}</b>", parse_mode="HTML")
             except Exception: pass
             return
 
         uid, amount, wallet_raw, w_memo = row["user_id"], row["amount_ton"], row["wallet_address"], row["memo"]
         await conn.execute("UPDATE withdrawals SET status = 'REJECTED' WHERE id = $1", w_id)
-        saved_msgs = await conn.fetch("SELECT chat_id, message_id FROM withdrawal_admin_messages WHERE withdrawal_id = $1", w_id)
 
     await callback.answer("❌ تم رفض الطلب (دون إعادة الرصيد)", show_alert=False)
 
@@ -3715,21 +3735,16 @@ async def reject_withdraw(callback: CallbackQuery):
         f"🛡️ <b>بواسطة:</b> {admin_done_by}"
     )
 
-    if saved_msgs:
-        for m in saved_msgs:
+    if w_id in admin_withdrawal_messages:
+        for c_id, m_id in admin_withdrawal_messages[w_id]:
             try:
-                await bot.edit_message_text(
-                    chat_id=m["chat_id"],
-                    message_id=m["message_id"],
-                    text=rejected_notice,
-                    reply_markup=None,
-                    parse_mode="HTML"
-                )
+                await bot.edit_message_text(chat_id=c_id, message_id=m_id, text=rejected_notice, parse_mode="HTML")
             except Exception:
                 pass
+        del admin_withdrawal_messages[w_id]
     else:
         try:
-            await callback.message.edit_text(rejected_notice, reply_markup=None, parse_mode="HTML")
+            await callback.message.edit_text(rejected_notice, parse_mode="HTML")
         except Exception: pass
 
 async def web_handler(request):
@@ -3737,7 +3752,7 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("OLK Cyber Session Engine LIVE...")
+    print("OLK Cyber Session, Maximum Security & Multi-Wallet Blocker is LIVE...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
