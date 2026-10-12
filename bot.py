@@ -63,29 +63,45 @@ WEBAPP_URL = "https://olka-bot-service.onrender.com"
 
 db_pool = None
 
-def parse_user_id_safe(data_dict: dict, query_dict: dict = None) -> int:
-    uid = 0
-    if query_dict and "user_id" in query_dict:
+# دالة استخراج المعرف الموحدة والمباشرة
+def get_user_id_from_request(request, post_data=None) -> int:
+    # 1. فحص الـ query params
+    if "user_id" in request.query:
         try:
-            uid = int(query_dict.get("user_id", 0))
+            uid = int(request.query["user_id"])
+            if uid > 0:
+                return uid
         except Exception:
             pass
-    if not uid and data_dict and "user_id" in data_dict:
+
+    # 2. فحص الـ post data
+    if post_data and "user_id" in post_data:
         try:
-            uid = int(data_dict.get("user_id", 0))
+            uid = int(post_data["user_id"])
+            if uid > 0:
+                return uid
         except Exception:
             pass
-    if not uid:
-        raw_init = (data_dict.get("initData") if data_dict else "") or (query_dict.get("initData") if query_dict else "")
-        if raw_init:
-            try:
-                parsed = dict(parse_qsl(raw_init))
-                if "user" in parsed:
-                    u_obj = json.loads(unquote(parsed["user"]))
-                    uid = int(u_obj.get("id", 0))
-            except Exception:
-                pass
-    return uid
+
+    # 3. فحص initData
+    raw_init = ""
+    if post_data and "initData" in post_data:
+        raw_init = post_data["initData"]
+    elif "initData" in request.query:
+        raw_init = request.query["initData"]
+
+    if raw_init:
+        try:
+            parsed = dict(parse_qsl(raw_init))
+            if "user" in parsed:
+                u_obj = json.loads(unquote(parsed["user"]))
+                uid = int(u_obj.get("id", 0))
+                if uid > 0:
+                    return uid
+        except Exception:
+            pass
+
+    return 0
 
 def raw_to_user_friendly(raw_addr: str) -> str:
     if not raw_addr or not str(raw_addr).startswith("0:"):
@@ -549,7 +565,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب التعدين والبرومو كود -->
     <div class="page-tab active" id="tab-mining">
       <div class="mining-stage-card">
         <div class="status-pill">
@@ -594,7 +609,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب الباقات -->
     <div class="page-tab" id="tab-miners">
       <div class="card-panel">
         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -1896,7 +1910,7 @@ async def api_manifest(request):
 async def api_save_wallet(request):
     try:
         data = await request.json()
-        user_id = parse_user_id_safe(data)
+        user_id = get_user_id_from_request(request, data)
         if not user_id:
             return web.json_response({"ok": False, "msg": "طلب غير مصرح به"})
 
@@ -1926,7 +1940,7 @@ async def api_save_wallet(request):
 async def api_redeem_promo(request):
     try:
         data = await request.json()
-        user_id = parse_user_id_safe(data)
+        user_id = get_user_id_from_request(request, data)
         if not user_id:
             return web.json_response({"ok": False, "msg": "طلب غير مصرح به"})
 
@@ -1960,7 +1974,7 @@ async def api_redeem_promo(request):
 
 async def api_get_referrals(request):
     try:
-        user_id = parse_user_id_safe({}, dict(request.query))
+        user_id = get_user_id_from_request(request)
         if not user_id:
             return web.json_response({"ok": False, "msg": "Unauthorized"})
 
@@ -1999,7 +2013,7 @@ async def api_get_referrals(request):
 
 async def api_get_tasks(request):
     try:
-        user_id = parse_user_id_safe({}, dict(request.query))
+        user_id = get_user_id_from_request(request)
         if not user_id:
             return web.json_response({"ok": False, "msg": "Unauthorized"})
 
@@ -2048,7 +2062,7 @@ async def api_get_tasks(request):
 # جلب بيانات المستخدم الصحيحة من قاعدة البيانات
 async def api_get_user(request):
     try:
-        user_id = parse_user_id_safe({}, dict(request.query))
+        user_id = get_user_id_from_request(request)
         if not user_id:
             return web.json_response({"ok": False, "banned": False, "olk_balance": 0.0, "ton_balance": 0.0})
 
@@ -2077,7 +2091,7 @@ async def api_get_user(request):
                 return web.json_response({"ok": True, "need_sub": True})
 
             if row:
-                olk = row["olk_balance"] or 0.0
+                olk = row["olk_balance"] if row["olk_balance"] is not None else 0.0
                 if row["activated_miner"] == 0:
                     await conn.execute("UPDATE users SET activated_miner = 1, device_fingerprint = $1, ip_address = $2 WHERE user_id = $3",
                                        fp, client_ip, user_id)
@@ -2086,12 +2100,12 @@ async def api_get_user(request):
                     "ok": True,
                     "need_sub": False,
                     "banned": False,
-                    "olk_balance": olk,
-                    "ton_balance": row["ton_balance"] or 0.0,
-                    "mining_speed": row["mining_speed"] or DEFAULT_SPEED,
-                    "miner_level": row["miner_level"] or 1,
+                    "olk_balance": float(olk),
+                    "ton_balance": float(row["ton_balance"] or 0.0),
+                    "mining_speed": float(row["mining_speed"] or DEFAULT_SPEED),
+                    "miner_level": int(row["miner_level"] or 1),
                     "saved_wallet": raw_to_user_friendly(row["saved_wallet"]),
-                    "session_start_timestamp": row["session_start_timestamp"] or 0,
+                    "session_start_timestamp": int(row["session_start_timestamp"] or 0),
                     "session_active": bool(row["session_active"])
                 })
             else:
@@ -2118,7 +2132,7 @@ async def api_get_user(request):
 async def api_start_mining_session(request):
     try:
         data = await request.json()
-        user_id = parse_user_id_safe(data)
+        user_id = get_user_id_from_request(request, data)
         if not user_id:
             return web.json_response({"ok": False, "msg": "طلب غير مصرح به"})
 
@@ -2167,7 +2181,7 @@ async def api_start_mining_session(request):
 async def api_claim_session_rewards(request):
     try:
         data = await request.json()
-        user_id = parse_user_id_safe(data)
+        user_id = get_user_id_from_request(request, data)
         if not user_id:
             return web.json_response({"ok": False, "msg": "Unauthorized"})
 
@@ -2203,7 +2217,7 @@ async def api_claim_session_rewards(request):
 async def api_upgrade_rig_ton_direct(request):
     try:
         data = await request.json()
-        user_id = parse_user_id_safe(data)
+        user_id = get_user_id_from_request(request, data)
         if not user_id:
             return web.json_response({"ok": False, "msg": "Unauthorized"})
 
@@ -2234,7 +2248,7 @@ async def api_upgrade_rig_ton_direct(request):
 async def api_upgrade_rig_olk(request):
     try:
         data = await request.json()
-        user_id = parse_user_id_safe(data)
+        user_id = get_user_id_from_request(request, data)
         if not user_id:
             return web.json_response({"ok": False, "msg": "Unauthorized"})
 
@@ -2266,7 +2280,7 @@ async def api_upgrade_rig_olk(request):
 async def api_convert(request):
     try:
         data = await request.json()
-        user_id = parse_user_id_safe(data)
+        user_id = get_user_id_from_request(request, data)
         if not user_id:
             return web.json_response({"ok": False, "msg": "Unauthorized"})
 
@@ -2293,7 +2307,7 @@ async def api_convert(request):
 async def api_withdraw(request):
     try:
         data = await request.json()
-        user_id = parse_user_id_safe(data)
+        user_id = get_user_id_from_request(request, data)
         if not user_id:
             return web.json_response({"ok": False, "msg": "طلب غير مصرح به"})
 
@@ -2399,7 +2413,7 @@ async def api_withdraw(request):
 async def api_verify_channel_task(request):
     try:
         data = await request.json()
-        user_id = parse_user_id_safe(data)
+        user_id = get_user_id_from_request(request, data)
         if not user_id:
             return web.json_response({"ok": False, "msg": "Unauthorized"})
 
@@ -2440,7 +2454,7 @@ async def api_verify_channel_task(request):
 async def api_verify_group_task(request):
     try:
         data = await request.json()
-        user_id = parse_user_id_safe(data)
+        user_id = get_user_id_from_request(request, data)
         if not user_id:
             return web.json_response({"ok": False, "msg": "Unauthorized"})
 
@@ -2481,7 +2495,7 @@ async def api_verify_group_task(request):
 async def api_verify_bot_task(request):
     try:
         data = await request.json()
-        user_id = parse_user_id_safe(data)
+        user_id = get_user_id_from_request(request, data)
         if not user_id:
             return web.json_response({"ok": False, "msg": "Unauthorized"})
 
@@ -3727,7 +3741,7 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("OLK Cyber Session, 100% Guaranteed State & Task Restore is LIVE...")
+    print("OLK Cyber Session Engine LIVE...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
