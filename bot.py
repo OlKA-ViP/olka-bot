@@ -33,10 +33,11 @@ PROOFS_CHANNEL_LINK = "https://t.me/LOK_DI"
 
 PROJECT_TON_WALLET = "UQCPP2tjnAodTy0eCS-LDGzeG6ss5fTmpMICSk1fiQ_peYKi"
 
-CONVERSION_RATE = 10000
+# تم تعديل معدل التحويل ليصبح 13000 OLK مقابل 1 TON
+CONVERSION_RATE = 13000
 MIN_WITHDRAW_TON = 0.05
 REFERRAL_REWARD = 60.0
-SIGNUP_BONUS = 50.0
+SIGNUP_BONUS = 0.0
 DEFAULT_SPEED = 0.21
 ADMIN_MAX_TASK_REWARD = 70.0
 
@@ -74,6 +75,10 @@ def validate_telegram_data(init_data: str) -> dict | None:
             return None
         received_hash = parsed_data.pop("hash")
         
+        auth_date = int(parsed_data.get("auth_date", 0))
+        if auth_date > 0 and (time.time() - auth_date > 86400):
+            return None
+
         data_check_string = "\n".join(f"{k}={v}" for k, v in sorted(parsed_data.items()))
         secret_key = hmac.new(b"WebAppData", BOT_TOKEN.encode(), hashlib.sha256).digest()
         calculated_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
@@ -148,7 +153,7 @@ class BanStates(StatesGroup):
 class CreatePromoStates(StatesGroup):
     waiting_for_code = State()
     waiting_for_reward = State()
-    waiting_for_max_uses = State()
+    waiting_for_max_users = State()
 
 class EditTaskStates(StatesGroup):
     waiting_for_reward = State()
@@ -351,7 +356,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
     .btn-main-action.claim-state { background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; }
     .btn-main-action:disabled { background: #1e293b; color: #64748b; cursor: not-allowed; }
 
-    /* التصميم الجديد المتطور لكبسولة الـ PROMO CODE */
     .cyber-promo-capsule {
       width: 100%;
       margin-top: 14px;
@@ -561,7 +565,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب التعدين والكبسولة المطورة للبرومو كود -->
+    <!-- تبويب التعدين والبرومو كود -->
     <div class="page-tab active" id="tab-mining">
       <div class="mining-stage-card">
         <div class="status-pill">
@@ -594,7 +598,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
         </button>
       </div>
 
-      <!-- كبسولة البرومو كود العصرية والمتطورة -->
       <div class="cyber-promo-capsule">
         <div class="cyber-promo-label">
           <span>PROMO CODE</span>
@@ -664,15 +667,15 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب المحفظة -->
+    <!-- تبويب المحفظة المحدث بمعدل التحويل الجديد: 1 TON = 13,000 OLK -->
     <div class="page-tab" id="tab-wallet">
       <div class="card-panel">
         <div style="font-weight:bold; color:var(--gold-neon); font-size:14px; display:flex; justify-content:space-between;">
           <span id="t-swap-title">💳 صرافة OLK إلى TON</span>
-          <span style="font-size:11px; color:var(--cyan-neon); direction:ltr;">1 TON = 10,000 OLK</span>
+          <span style="font-size:11px; color:var(--cyan-neon); direction:ltr;">1 TON = 13,000 OLK</span>
         </div>
         <div class="convert-input-box">
-          <input type="number" id="swap-folk-input" class="convert-input" placeholder="1000" oninput="calcSwap()">
+          <input type="number" id="swap-folk-input" class="convert-input" placeholder="1300" oninput="calcSwap()">
           <button style="background:#1e3d6b; border:1px solid var(--gold-neon); color:var(--gold-neon); padding:5px 12px; border-radius:8px; font-size:11px; font-weight:800; cursor:pointer;" onclick="setMaxSwap()">MAX</button>
         </div>
         <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted);">
@@ -985,9 +988,9 @@ MINI_APP_HTML = """<!DOCTYPE html>
       document.getElementById("t-total-ref-earnings-lbl").innerText = t.totalRefEarningsLbl;
       document.getElementById("t-invited-friends-lbl").innerText = t.invitedFriendsLbl;
       document.getElementById("t-promo-btn").innerText = t.promoBtn;
-      document.getElementById("t-subtab-channels").innerText = t.subtabChannels;
-      document.getElementById("t-subtab-groups").innerText = t.subtabGroups;
-      document.getElementById("t-subtab-bots").innerText = t.subtabBots;
+      document.getElementById("subtab-channels").innerText = t.subtabChannels;
+      document.getElementById("subtab-groups").innerText = t.subtabGroups;
+      document.getElementById("subtab-bots").innerText = t.subtabBots;
       document.getElementById("t-channels-title").innerText = t.channelsTitle;
       document.getElementById("t-groups-title").innerText = t.groupsTitle;
       document.getElementById("t-bots-title").innerText = t.botsTitle;
@@ -1495,9 +1498,10 @@ MINI_APP_HTML = """<!DOCTYPE html>
       }
     }
 
+    // حساب التحويل الفوري بالمعدل الجديد 13000 OLK = 1 TON
     function calcSwap() {
       const v = parseFloat(document.getElementById("swap-folk-input").value) || 0;
-      document.getElementById("swap-preview").innerText = (v / 10000).toFixed(4) + " TON";
+      document.getElementById("swap-preview").innerText = (v / 13000).toFixed(4) + " TON";
     }
 
     function setMaxSwap() {
@@ -1675,8 +1679,18 @@ async def init_db():
             is_banned INTEGER DEFAULT 0,
             ban_reason TEXT DEFAULT NULL,
             activated_miner INTEGER DEFAULT 0,
-            is_whitelisted INTEGER DEFAULT 0
+            is_whitelisted INTEGER DEFAULT 0,
+            completed_sessions INTEGER DEFAULT 0
         );
+        """)
+
+        await conn.execute("""
+        DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='completed_sessions') THEN
+                ALTER TABLE users ADD COLUMN completed_sessions INTEGER DEFAULT 0;
+            END IF;
+        END $$;
         """)
 
         await conn.execute("""
@@ -1975,7 +1989,6 @@ async def api_redeem_promo(request):
             if not promo:
                 return web.json_response({"ok": False, "msg": "الرمز الترويجي غير صحيح أو ملغى"})
 
-            # فحص الحد الأقصى للمستفيدين
             if promo["max_uses"] > 0 and promo["current_uses"] >= promo["max_uses"]:
                 return web.json_response({"ok": False, "msg": "عذراً، وصل هذا الكود للحد الأقصى من المستفيدين وأصبح غير متاح"})
 
@@ -2119,9 +2132,8 @@ async def api_get_user(request):
             if row:
                 olk = row["olk_balance"]
                 if row["activated_miner"] == 0:
-                    olk += SIGNUP_BONUS
-                    await conn.execute("UPDATE users SET activated_miner = 1, olk_balance = $1, device_fingerprint = $2, ip_address = $3 WHERE user_id = $4",
-                                       olk, fp, client_ip, user_id)
+                    await conn.execute("UPDATE users SET activated_miner = 1, device_fingerprint = $1, ip_address = $2 WHERE user_id = $3",
+                                       fp, client_ip, user_id)
 
                 return web.json_response({
                     "ok": True,
@@ -2138,13 +2150,13 @@ async def api_get_user(request):
             else:
                 await conn.execute("""
                     INSERT INTO users (user_id, last_mining_timestamp, mining_speed, olk_balance, activated_miner, device_fingerprint, ip_address)
-                    VALUES ($1, $2, $3, $4, 1, $5, $6) ON CONFLICT (user_id) DO NOTHING
-                """, user_id, now, DEFAULT_SPEED, SIGNUP_BONUS, fp, client_ip)
+                    VALUES ($1, $2, $3, 0.0, 1, $4, $5) ON CONFLICT (user_id) DO NOTHING
+                """, user_id, now, DEFAULT_SPEED, fp, client_ip)
                 return web.json_response({
                     "ok": True,
                     "need_sub": False,
                     "banned": False,
-                    "olk_balance": SIGNUP_BONUS,
+                    "olk_balance": 0.0,
                     "ton_balance": 0.0,
                     "mining_speed": DEFAULT_SPEED,
                     "miner_level": 1,
@@ -2218,7 +2230,7 @@ async def api_claim_session_rewards(request):
         async with db_pool.acquire() as conn:
             async with conn.transaction():
                 row = await conn.fetchrow("""
-                    SELECT olk_balance, session_active, session_start_timestamp, mining_speed 
+                    SELECT olk_balance, session_active, session_start_timestamp, mining_speed, completed_sessions 
                     FROM users WHERE user_id = $1 FOR UPDATE
                 """, user_id)
                 if not row or not row["session_active"]:
@@ -2232,10 +2244,11 @@ async def api_claim_session_rewards(request):
                 actual_speed = row["mining_speed"] or DEFAULT_SPEED
                 calculated_reward = capped_elapsed * (actual_speed * 0.000030 * 10)
                 new_bal = row["olk_balance"] + calculated_reward
+                new_completed_sessions = (row["completed_sessions"] or 0) + 1
 
                 await conn.execute("""
-                    UPDATE users SET olk_balance = $1, session_active = 0, session_start_timestamp = 0 WHERE user_id = $2
-                """, new_bal, user_id)
+                    UPDATE users SET olk_balance = $1, session_active = 0, session_start_timestamp = 0, completed_sessions = $2 WHERE user_id = $3
+                """, new_bal, new_completed_sessions, user_id)
 
         return web.json_response({"ok": True, "olk_balance": new_bal, "claimed": calculated_reward})
     except Exception as e:
@@ -2306,6 +2319,7 @@ async def api_upgrade_rig_olk(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
+# تحويل الرصيد بالمعدل الجديد (13000 OLK = 1 TON)
 async def api_convert(request):
     try:
         data = await request.json()
@@ -2356,16 +2370,54 @@ async def api_withdraw(request):
 
         async with db_pool.acquire() as conn:
             async with conn.transaction():
-                row = await conn.fetchrow("SELECT ton_balance FROM users WHERE user_id = $1 FOR UPDATE", user_id)
-                if not row or row["ton_balance"] < withdraw_amount:
+                user_info = await conn.fetchrow("""
+                    SELECT is_whitelisted, is_banned, ton_balance, completed_sessions 
+                    FROM users WHERE user_id = $1 FOR UPDATE
+                """, user_id)
+                
+                if not user_info or user_info["is_banned"] == 1:
+                    return web.json_response({"ok": False, "msg": "الحساب محظور من السحب"})
+
+                if user_info["is_whitelisted"] == 0 and (user_info["completed_sessions"] or 0) < 3:
+                    return web.json_response({
+                        "ok": False, 
+                        "msg": "⚠️ لحماية المنظومة: يجب تشغيل وجمع أرباح 3 جلسات تعدين على الأقل قبل فتح ميزة السحب."
+                    })
+
+                if user_info["is_whitelisted"] == 0:
+                    duplicate_withdraw_user = await conn.fetchval("""
+                        SELECT user_id FROM withdrawals 
+                        WHERE wallet_address = $1 AND user_id != $2 
+                        AND (status = 'PENDING' OR status = 'APPROVED')
+                        LIMIT 1
+                    """, friendly_address, user_id)
+
+                    duplicate_saved_user = await conn.fetchval("""
+                        SELECT user_id FROM users 
+                        WHERE saved_wallet = $1 AND user_id != $2 AND is_whitelisted = 0
+                        LIMIT 1
+                    """, friendly_address, user_id)
+
+                    if duplicate_withdraw_user or duplicate_saved_user:
+                        target_other = duplicate_withdraw_user or duplicate_saved_user
+                        await conn.execute("""
+                            UPDATE users SET is_banned = 1, 
+                            ban_reason = $1 WHERE user_id = $2
+                        """, f"محاولة سحب لعنوان مستخدم في الحساب #{target_other}", user_id)
+                        return web.json_response({
+                            "ok": False, 
+                            "msg": "❌ تم حظر هذا الحساب لمحاولة السحب إلى محفظة مستخدمة في حساب آخر!"
+                        })
+
+                if user_info["ton_balance"] < withdraw_amount:
                     return web.json_response({"ok": False, "msg": "رصيدك غير كافٍ"})
 
-                remaining = row["ton_balance"] - withdraw_amount
+                remaining = user_info["ton_balance"] - withdraw_amount
                 w_id = await conn.fetchval(
                     "INSERT INTO withdrawals (user_id, amount_ton, wallet_address, memo, created_at) VALUES ($1, $2, $3, $4, $5) RETURNING id",
                     user_id, withdraw_amount, friendly_address, memo if memo else None, now
                 )
-                await conn.execute("UPDATE users SET ton_balance = $1 WHERE user_id = $2", remaining, user_id)
+                await conn.execute("UPDATE users SET ton_balance = $1, saved_wallet = $2 WHERE user_id = $3", remaining, friendly_address, user_id)
 
             admin_rows = await conn.fetch("SELECT user_id FROM bot_admins WHERE can_manage_withdrawals = 1")
             admin_ids = {SUPER_ADMIN_ID}
@@ -2626,7 +2678,6 @@ async def start_handler(message: Message, command: CommandObject, state: FSMCont
         "━━━━━━━━━━━━━━━━━━━━━\n\n"
         "⛏️ ابدأ التعدين واجمع العملات بكل سهولة!\n\n"
         "💰 تابع أرباحك ومكافآتك من داخل البوت.\n\n"
-        "🎁 اكتشف مكافآت البداية وانطلق بقوة!\n\n"
         "👥 ادعُ أصدقاءك واكسب مكافأة 60 Olk على الإحالة.\n\n"
         "📋 أنجز المهام اليومية واجمع المزيد من المكافآت.\n\n"
         "━━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -2728,7 +2779,6 @@ async def state_promo_max_uses(message: Message, state: FSMContext):
         reply_markup=kb
     )
 
-# استعراض الأكواد الترويجية وإحصائيات استخدامها
 @dp.callback_query(F.data == "adm_view_promos")
 async def cb_view_promos(callback: CallbackQuery):
     if callback.from_user.id != SUPER_ADMIN_ID:
@@ -2938,7 +2988,6 @@ async def cb_back_to_start(callback: CallbackQuery, state: FSMContext):
         "━━━━━━━━━━━━━━━━━━━━━\n\n"
         "⛏️ ابدأ التعدين واجمع العملات بكل سهولة!\n\n"
         "💰 تابع أرباحك ومكافآتك من داخل البوت.\n\n"
-        "🎁 اكتشف مكافآت البداية وانطلق بقوة!\n\n"
         "👥 ادعُ أصدقاءك واكسب مكافأة 60 Olk على الإحالة.\n\n"
         "📋 أنجز المهام اليومية واجمع المزيد من المكافآت.\n\n"
         "━━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -3725,7 +3774,7 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("OLK Cyber Session, Modern Promo Capsule & Promo Usage Tracker is LIVE...")
+    print("OLK Cyber Session, 13,000 OLK/TON Swap, Zero Signup Bonus & Maximum Security is LIVE...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
