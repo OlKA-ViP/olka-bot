@@ -33,10 +33,12 @@ PROOFS_CHANNEL_LINK = "https://t.me/LOK_DI"
 
 PROJECT_TON_WALLET = "UQCPP2tjnAodTy0eCS-LDGzeG6ss5fTmpMICSk1fiQ_peYKi"
 
+# نسبة التحويل المعتمدة: 13,000 OLK = 1 TON
 CONVERSION_RATE = 13000
 MIN_WITHDRAW_TON = 0.05
 REFERRAL_REWARD = 60.0
-SIGNUP_BONUS = 50.0
+# تم نزع مكافأة التسجيل كلياً
+SIGNUP_BONUS = 0.0
 DEFAULT_SPEED = 0.21
 ADMIN_MAX_TASK_REWARD = 70.0
 
@@ -351,7 +353,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
     .btn-main-action.claim-state { background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; }
     .btn-main-action:disabled { background: #1e293b; color: #64748b; cursor: not-allowed; }
 
-    /* التصميم الجديد المتطور لكبسولة الـ PROMO CODE */
     .cyber-promo-capsule {
       width: 100%;
       margin-top: 14px;
@@ -664,15 +665,14 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب المحفظة -->
+    <!-- تبويب المحفظة (تمت إزالة عبارة السعر القديم بالكامل) -->
     <div class="page-tab" id="tab-wallet">
       <div class="card-panel">
-        <div style="font-weight:bold; color:var(--gold-neon); font-size:14px; display:flex; justify-content:space-between;">
+        <div style="font-weight:bold; color:var(--gold-neon); font-size:14px;">
           <span id="t-swap-title">💳 صرافة OLK إلى TON</span>
-          <span style="font-size:11px; color:var(--cyan-neon); direction:ltr;">1 TON = 10,000 OLK</span>
         </div>
         <div class="convert-input-box">
-          <input type="number" id="swap-folk-input" class="convert-input" placeholder="1000" oninput="calcSwap()">
+          <input type="number" id="swap-folk-input" class="convert-input" placeholder="1300" oninput="calcSwap()">
           <button style="background:#1e3d6b; border:1px solid var(--gold-neon); color:var(--gold-neon); padding:5px 12px; border-radius:8px; font-size:11px; font-weight:800; cursor:pointer;" onclick="setMaxSwap()">MAX</button>
         </div>
         <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted);">
@@ -2119,9 +2119,8 @@ async def api_get_user(request):
             if row:
                 olk = row["olk_balance"]
                 if row["activated_miner"] == 0:
-                    olk += SIGNUP_BONUS
-                    await conn.execute("UPDATE users SET activated_miner = 1, olk_balance = $1, device_fingerprint = $2, ip_address = $3 WHERE user_id = $4",
-                                       olk, fp, client_ip, user_id)
+                    await conn.execute("UPDATE users SET activated_miner = 1, device_fingerprint = $1, ip_address = $2 WHERE user_id = $3",
+                                       fp, client_ip, user_id)
 
                 return web.json_response({
                     "ok": True,
@@ -2138,13 +2137,13 @@ async def api_get_user(request):
             else:
                 await conn.execute("""
                     INSERT INTO users (user_id, last_mining_timestamp, mining_speed, olk_balance, activated_miner, device_fingerprint, ip_address)
-                    VALUES ($1, $2, $3, $4, 1, $5, $6) ON CONFLICT (user_id) DO NOTHING
-                """, user_id, now, DEFAULT_SPEED, SIGNUP_BONUS, fp, client_ip)
+                    VALUES ($1, $2, $3, 0.0, 1, $4, $5) ON CONFLICT (user_id) DO NOTHING
+                """, user_id, now, DEFAULT_SPEED, fp, client_ip)
                 return web.json_response({
                     "ok": True,
                     "need_sub": False,
                     "banned": False,
-                    "olk_balance": SIGNUP_BONUS,
+                    "olk_balance": 0.0,
                     "ton_balance": 0.0,
                     "mining_speed": DEFAULT_SPEED,
                     "miner_level": 1,
@@ -2306,6 +2305,7 @@ async def api_upgrade_rig_olk(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
+# نسبة التحويل المعتمدة: 13000 OLK = 1 TON
 async def api_convert(request):
     try:
         data = await request.json()
@@ -2365,7 +2365,7 @@ async def api_withdraw(request):
                     "INSERT INTO withdrawals (user_id, amount_ton, wallet_address, memo, created_at) VALUES ($1, $2, $3, $4, $5) RETURNING id",
                     user_id, withdraw_amount, friendly_address, memo if memo else None, now
                 )
-                await conn.execute("UPDATE users SET ton_balance = $1 WHERE user_id = $2", remaining, user_id)
+                await conn.execute("UPDATE users SET ton_balance = $1, saved_wallet = $2 WHERE user_id = $3", remaining, friendly_address, user_id)
 
             admin_rows = await conn.fetch("SELECT user_id FROM bot_admins WHERE can_manage_withdrawals = 1")
             admin_ids = {SUPER_ADMIN_ID}
@@ -2597,7 +2597,7 @@ async def start_handler(message: Message, command: CommandObject, state: FSMCont
                 if referrer_id != user_id:
                     await conn.execute("""
                         INSERT INTO users (user_id, username, first_name, referred_by, last_mining_timestamp, mining_speed, olk_balance, activated_miner)
-                        VALUES ($1, $2, $3, $4, $5, $6, 0, 0)
+                        VALUES ($1, $2, $3, $4, $5, $6, 0.0, 0)
                         ON CONFLICT (user_id) DO UPDATE SET 
                             referred_by = EXCLUDED.referred_by,
                             username = EXCLUDED.username,
@@ -2608,7 +2608,7 @@ async def start_handler(message: Message, command: CommandObject, state: FSMCont
         elif not user:
             await conn.execute("""
                 INSERT INTO users (user_id, username, first_name, last_mining_timestamp, mining_speed, olk_balance, activated_miner)
-                VALUES ($1, $2, $3, $4, $5, 0, 0)
+                VALUES ($1, $2, $3, $4, $5, 0.0, 0)
                 ON CONFLICT (user_id) DO UPDATE SET 
                     username = EXCLUDED.username,
                     first_name = EXCLUDED.first_name
@@ -2626,7 +2626,6 @@ async def start_handler(message: Message, command: CommandObject, state: FSMCont
         "━━━━━━━━━━━━━━━━━━━━━\n\n"
         "⛏️ ابدأ التعدين واجمع العملات بكل سهولة!\n\n"
         "💰 تابع أرباحك ومكافآتك من داخل البوت.\n\n"
-        "🎁 اكتشف مكافآت البداية وانطلق بقوة!\n\n"
         "👥 ادعُ أصدقاءك واكسب مكافأة 60 Olk على الإحالة.\n\n"
         "📋 أنجز المهام اليومية واجمع المزيد من المكافآت.\n\n"
         "━━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -2728,7 +2727,6 @@ async def state_promo_max_uses(message: Message, state: FSMContext):
         reply_markup=kb
     )
 
-# استعراض الأكواد الترويجية وإحصائيات استخدامها
 @dp.callback_query(F.data == "adm_view_promos")
 async def cb_view_promos(callback: CallbackQuery):
     if callback.from_user.id != SUPER_ADMIN_ID:
@@ -2938,7 +2936,6 @@ async def cb_back_to_start(callback: CallbackQuery, state: FSMContext):
         "━━━━━━━━━━━━━━━━━━━━━\n\n"
         "⛏️ ابدأ التعدين واجمع العملات بكل سهولة!\n\n"
         "💰 تابع أرباحك ومكافآتك من داخل البوت.\n\n"
-        "🎁 اكتشف مكافآت البداية وانطلق بقوة!\n\n"
         "👥 ادعُ أصدقاءك واكسب مكافأة 60 Olk على الإحالة.\n\n"
         "📋 أنجز المهام اليومية واجمع المزيد من المكافآت.\n\n"
         "━━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -3579,7 +3576,7 @@ async def approve_withdraw(callback: CallbackQuery):
         if row["status"] != 'PENDING':
             await callback.answer("⚠️ تم اتخاذ إجراء على هذا الطلب مسبقاً!", show_alert=True)
             try:
-                await callback.message.edit_text(callback.message.text + f"\n\n🔒 <b>هذا الطلب منفذ بالفعل بحالة: {row['status']}</b>", parse_mode="HTML")
+                await callback.message.edit_text(callback.message.text + f"\n\n🔒 <b>هذا الطلب منفذ بالفعل بحالة: {row['status']}</b>", reply_markup=None, parse_mode="HTML")
             except Exception: pass
             return
 
@@ -3679,7 +3676,7 @@ async def reject_withdraw(callback: CallbackQuery):
         if row["status"] != 'PENDING':
             await callback.answer("⚠️ تم اتخاذ إجراء على هذا الطلب مسبقاً!", show_alert=True)
             try:
-                await callback.message.edit_text(callback.message.text + f"\n\n🔒 <b>هذا الطلب منفذ بالفعل بحالة: {row['status']}</b>", parse_mode="HTML")
+                await callback.message.edit_text(callback.message.text + f"\n\n🔒 <b>هذا الطلب منفذ بالفعل بحالة: {row['status']}</b>", reply_markup=None, parse_mode="HTML")
             except Exception: pass
             return
 
@@ -3725,7 +3722,7 @@ async def web_handler(request):
 
 async def main():
     await init_db()
-    print("OLK Cyber Session, Modern Promo Capsule & Promo Usage Tracker is LIVE...")
+    print("OLK Cyber Session Engine LIVE...")
 
     app = web.Application()
     app.router.add_get("/", web_handler)
