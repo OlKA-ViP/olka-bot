@@ -37,7 +37,6 @@ PROJECT_TON_WALLET = "UQCPP2tjnAodTy0eCS-LDGzeG6ss5fTmpMICSk1fiQ_peYKi"
 CONVERSION_RATE = 13000
 MIN_WITHDRAW_TON = 0.05
 REFERRAL_REWARD = 60.0
-# تم نزع مكافأة التسجيل كلياً
 SIGNUP_BONUS = 0.0
 DEFAULT_SPEED = 0.21
 ADMIN_MAX_TASK_REWARD = 70.0
@@ -491,14 +490,63 @@ MINI_APP_HTML = """<!DOCTYPE html>
     .nav-btn i { font-size: 18px; }
     .nav-btn.active { color: var(--cyan-neon); }
     .nav-btn.active i { color: var(--cyan-neon); }
-    #banned-overlay, #channel-lock-overlay, #browser-block-overlay {
+
+    #banned-overlay, #channel-lock-overlay, #browser-block-overlay, #maintenance-overlay {
       display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       background: #060e1a; z-index: 99999; flex-direction: column;
       align-items: center; justify-content: center; padding: 24px; text-align: center;
     }
+
+    /* كبسولة وتصميم واجهة الصيانة العصرية */
+    .maintenance-box {
+      background: linear-gradient(145deg, #0f2444, #081324);
+      border: 1.5px solid var(--cyan-neon);
+      box-shadow: 0 0 35px rgba(0, 229, 255, 0.25);
+      border-radius: 26px;
+      padding: 30px 22px;
+      max-width: 380px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+    .maintenance-icon-glow {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0, 229, 255, 0.2) 0%, transparent 70%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 38px;
+      color: var(--cyan-neon);
+      border: 1.5px solid var(--cyan-neon);
+      animation: pulse 2s infinite;
+    }
   </style>
 </head>
 <body>
+
+  <!-- واجهة الصيانة العصرية للمستخدمين -->
+  <div id="maintenance-overlay">
+    <div class="maintenance-box">
+      <div class="maintenance-icon-glow">
+        <i class="fa-solid fa-wrench"></i>
+      </div>
+      <h2 style="color:#ffffff; font-size:18px; font-weight:900; letter-spacing:0.5px;">🛠️ المنظومة قيد الصيانة</h2>
+      <p style="font-size:12.5px; color:#cbd5e1; line-height:1.7;">
+        نعمل حالياً على ترقية خوادم التعدين وتحسين كفاءة المنظومة.
+        <br>
+        سيعود البوت للعمل بكامل ميزاته فور اكتمال التحديثات، شكراً لتفهمكم.
+      </p>
+      <div style="background:#040913; border:1px solid #1e3d6b; border-radius:12px; padding:8px 16px; font-size:11px; color:var(--gold-neon); font-weight:800; display:flex; align-items:center; gap:8px;">
+        <div class="pulse-dot"></div> جاري التحديث السحابي ⚡
+      </div>
+      <button class="btn-main-action" style="margin-top:8px; max-width:240px; font-size:12px;" onclick="loadData()">
+        <i class="fa-solid fa-rotate"></i> إعادة المحاولة
+      </button>
+    </div>
+  </div>
 
   <div id="browser-block-overlay">
     <i class="fa-solid fa-mobile-screen-button" style="font-size:65px; color:#ef4444; margin-bottom:16px;"></i>
@@ -562,7 +610,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب التعدين والكبسولة المطورة للبرومو كود -->
+    <!-- تبويب التعدين -->
     <div class="page-tab active" id="tab-mining">
       <div class="mining-stage-card">
         <div class="status-pill">
@@ -595,7 +643,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
         </button>
       </div>
 
-      <!-- كبسولة البرومو كود العصرية والمتطورة -->
       <div class="cyber-promo-capsule">
         <div class="cyber-promo-label">
           <span>PROMO CODE</span>
@@ -665,14 +712,14 @@ MINI_APP_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- تبويب المحفظة (تمت إزالة عبارة السعر القديم بالكامل) -->
+    <!-- تبويب المحفظة -->
     <div class="page-tab" id="tab-wallet">
       <div class="card-panel">
         <div style="font-weight:bold; color:var(--gold-neon); font-size:14px;">
-          <span id="t-swap-title">💳 صرافة OLK إلى TON</span>
+          <span id="t-swap-title">صرافة OLK إلى TON</span>
         </div>
         <div class="convert-input-box">
-          <input type="number" id="swap-folk-input" class="convert-input" placeholder="1300" oninput="calcSwap()">
+          <input type="number" id="swap-folk-input" class="convert-input" placeholder="1000" oninput="calcSwap()">
           <button style="background:#1e3d6b; border:1px solid var(--gold-neon); color:var(--gold-neon); padding:5px 12px; border-radius:8px; font-size:11px; font-weight:800; cursor:pointer;" onclick="setMaxSwap()">MAX</button>
         </div>
         <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted);">
@@ -858,7 +905,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         statusActive: "جلسة التعدين نشطة الآن",
         statusClaim: "اكتملت الجلسة! طالب بأرباحك الآن",
         plansTitle: "باقات أجهزة التعدين",
-        swapTitle: "💳 صرافة OLK إلى TON",
+        swapTitle: "صرافة OLK إلى TON",
         swapReceive: "ستحصل على:",
         btnSwap: "تحويل الآن إلى رصيد TON",
         withdrawTitle: "سحب TON إلى محفظتك",
@@ -913,7 +960,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
         statusActive: "Mining Session Active",
         statusClaim: "Completed! Claim your rewards",
         plansTitle: "Mining Rig Bundles",
-        swapTitle: "💳 Swap OLK to TON",
+        swapTitle: "Swap OLK to TON",
         swapReceive: "You will receive:",
         btnSwap: "Convert to TON Balance",
         withdrawTitle: "Withdraw TON to Wallet",
@@ -985,9 +1032,6 @@ MINI_APP_HTML = """<!DOCTYPE html>
       document.getElementById("t-total-ref-earnings-lbl").innerText = t.totalRefEarningsLbl;
       document.getElementById("t-invited-friends-lbl").innerText = t.invitedFriendsLbl;
       document.getElementById("t-promo-btn").innerText = t.promoBtn;
-      document.getElementById("t-subtab-channels").innerText = t.subtabChannels;
-      document.getElementById("t-subtab-groups").innerText = t.subtabGroups;
-      document.getElementById("t-subtab-bots").innerText = t.subtabBots;
       document.getElementById("t-channels-title").innerText = t.channelsTitle;
       document.getElementById("t-groups-title").innerText = t.groupsTitle;
       document.getElementById("t-bots-title").innerText = t.botsTitle;
@@ -1109,6 +1153,15 @@ MINI_APP_HTML = """<!DOCTYPE html>
       try {
         const res = await fetch(`/api/get_user?initData=${encodeURIComponent(rawInitData)}&fp=${currentFingerprint}`);
         const data = await res.json();
+
+        // فحص وضع الصيانة
+        if (data.maintenance) {
+          document.getElementById("maintenance-overlay").style.display = "flex";
+          return;
+        } else {
+          document.getElementById("maintenance-overlay").style.display = "none";
+        }
+
         if (data.banned) {
           document.getElementById("ban-reason-text").innerText = (currentLang === "ar" ? "سبب الحظر: " : "Reason: ") + (data.ban_reason || "");
           document.getElementById("banned-overlay").style.display = "flex";
@@ -1631,7 +1684,7 @@ MINI_APP_HTML = """<!DOCTYPE html>
       }
     }
 
-    applyLanguage(currentLang);
+    applyLanguage("ar");
     loadData();
   </script>
 </body>
@@ -1650,6 +1703,19 @@ async def init_db():
     global db_pool
     db_pool = await asyncpg.create_pool(DATABASE_URL, min_size=1, max_size=10)
     async with db_pool.acquire() as conn:
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS system_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        );
+        """)
+
+        await conn.execute("""
+        INSERT INTO system_settings (key, value)
+        VALUES ('maintenance_mode', '0')
+        ON CONFLICT (key) DO NOTHING;
+        """)
+
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS users (
             user_id BIGINT PRIMARY KEY,
@@ -1774,6 +1840,11 @@ async def init_db():
         END $$;
         """)
 
+async def is_maintenance_active():
+    async with db_pool.acquire() as conn:
+        val = await conn.fetchval("SELECT value FROM system_settings WHERE key = 'maintenance_mode'")
+        return str(val) == "1"
+
 async def get_admin_permissions(user_id: int):
     if user_id == SUPER_ADMIN_ID:
         return {
@@ -1799,6 +1870,14 @@ async def check_multi_account_fraud(conn, user_id: int, fp: str, ip: str, wallet
     u_row = await conn.fetchrow("SELECT is_whitelisted FROM users WHERE user_id = $1", user_id)
     if u_row and u_row["is_whitelisted"] == 1:
         return False, ""
+
+    if ip:
+        banned_ip = await conn.fetchval(
+            "SELECT 1 FROM users WHERE ip_address = $1 AND is_banned = 1 LIMIT 1",
+            ip
+        )
+        if banned_ip:
+            return True, "محظور: تم اكتشاف شبكة إنترنت مرتبطة بحساب مخالف سابقاً (IP Banned)"
 
     if fp:
         multi_fp = await conn.fetchval(
@@ -1975,7 +2054,6 @@ async def api_redeem_promo(request):
             if not promo:
                 return web.json_response({"ok": False, "msg": "الرمز الترويجي غير صحيح أو ملغى"})
 
-            # فحص الحد الأقصى للمستفيدين
             if promo["max_uses"] > 0 and promo["current_uses"] >= promo["max_uses"]:
                 return web.json_response({"ok": False, "msg": "عذراً، وصل هذا الكود للحد الأقصى من المستفيدين وأصبح غير متاح"})
 
@@ -2096,6 +2174,12 @@ async def api_get_user(request):
         client_ip = request.headers.get("X-Forwarded-For", request.remote)
         now = int(time.time())
 
+        # التحقق من الصيانة
+        maintenance_on = await is_maintenance_active()
+        admin_perms = await get_admin_permissions(user_id)
+        if maintenance_on and not admin_perms:
+            return web.json_response({"ok": False, "maintenance": True})
+
         is_sub = await check_user_channel_subscribed(user_id)
 
         async with db_pool.acquire() as conn:
@@ -2124,6 +2208,7 @@ async def api_get_user(request):
 
                 return web.json_response({
                     "ok": True,
+                    "maintenance": False,
                     "need_sub": False,
                     "banned": False,
                     "olk_balance": olk,
@@ -2141,6 +2226,7 @@ async def api_get_user(request):
                 """, user_id, now, DEFAULT_SPEED, fp, client_ip)
                 return web.json_response({
                     "ok": True,
+                    "maintenance": False,
                     "need_sub": False,
                     "banned": False,
                     "olk_balance": 0.0,
@@ -2162,6 +2248,12 @@ async def api_start_mining_session(request):
             return web.json_response({"ok": False, "msg": "طلب غير مصرح به من متصفح خارجي"})
 
         user_id = tg_user["id"]
+
+        maintenance_on = await is_maintenance_active()
+        admin_perms = await get_admin_permissions(user_id)
+        if maintenance_on and not admin_perms:
+            return web.json_response({"ok": False, "msg": "المنظومة قيد الصيانة مؤقتاً"})
+
         fp = str(data.get("fingerprint", ""))
         client_ip = request.headers.get("X-Forwarded-For", request.remote)
         now = int(time.time())
@@ -2305,7 +2397,6 @@ async def api_upgrade_rig_olk(request):
     except Exception as e:
         return web.json_response({"ok": False, "msg": str(e)})
 
-# نسبة التحويل المعتمدة: 13000 OLK = 1 TON
 async def api_convert(request):
     try:
         data = await request.json()
@@ -2342,11 +2433,19 @@ async def api_withdraw(request):
             return web.json_response({"ok": False, "msg": "طلب غير مصرح به من متصفح خارجي"})
 
         user_id = tg_user["id"]
+
+        maintenance_on = await is_maintenance_active()
+        admin_perms = await get_admin_permissions(user_id)
+        if maintenance_on and not admin_perms:
+            return web.json_response({"ok": False, "msg": "المنظومة قيد الصيانة مؤقتاً"})
+
         address = str(data.get("address", "")).strip()
         memo = str(data.get("memo", "")).strip()
         withdraw_amount = float(data.get("amount_ton", 0))
         friendly_address = raw_to_user_friendly(address)
         now = int(time.time())
+        client_ip = request.headers.get("X-Forwarded-For", request.remote)
+        fp = str(data.get("fingerprint", ""))
 
         if not friendly_address:
             return web.json_response({"ok": False, "msg": "يرجى تحديد عنوان محفظة صالح"})
@@ -2356,16 +2455,51 @@ async def api_withdraw(request):
 
         async with db_pool.acquire() as conn:
             async with conn.transaction():
-                row = await conn.fetchrow("SELECT ton_balance FROM users WHERE user_id = $1 FOR UPDATE", user_id)
-                if not row or row["ton_balance"] < withdraw_amount:
+                user_info = await conn.fetchrow("""
+                    SELECT is_whitelisted, is_banned, ton_balance, ip_address, device_fingerprint 
+                    FROM users WHERE user_id = $1 FOR UPDATE
+                """, user_id)
+
+                if not user_info or user_info["is_banned"] == 1:
+                    return web.json_response({"ok": False, "msg": "الحساب محظور من السحب"})
+
+                # التحقق الصارم من تكرار عنوان المحفظة في حسابات أخرى
+                if user_info["is_whitelisted"] == 0:
+                    other_user = await conn.fetchrow("""
+                        SELECT user_id, ip_address, device_fingerprint FROM users 
+                        WHERE (saved_wallet = $1 OR user_id IN (SELECT user_id FROM withdrawals WHERE wallet_address = $1)) 
+                        AND user_id != $2 AND is_whitelisted = 0
+                        LIMIT 1
+                    """, friendly_address, user_id)
+
+                    if other_user:
+                        target_other_id = other_user["user_id"]
+                        ban_reason = f"كشف تعدد حسابات عبر نفس محفظة السحب ({friendly_address}) مع الحساب #{target_other_id}"
+
+                        await conn.execute("UPDATE users SET is_banned = 1, ban_reason = $1 WHERE user_id = $2", ban_reason, user_id)
+                        await conn.execute("UPDATE users SET is_banned = 1, ban_reason = $1 WHERE user_id = $2", ban_reason, target_other_id)
+
+                        collected_ips = {ip for ip in [client_ip, user_info["ip_address"], other_user["ip_address"]] if ip}
+                        collected_fps = {f for f in [fp, user_info["device_fingerprint"], other_user["device_fingerprint"]] if f}
+
+                        for bad_ip in collected_ips:
+                            await conn.execute("UPDATE users SET is_banned = 1, ban_reason = $1 WHERE ip_address = $2 AND is_whitelisted = 0", ban_reason, bad_ip)
+
+                        for bad_fp in collected_fps:
+                            await conn.execute("UPDATE users SET is_banned = 1, ban_reason = $1 WHERE device_fingerprint = $2 AND is_whitelisted = 0", ban_reason, bad_fp)
+
+                        return web.json_response({"ok": False, "msg": "❌ تم حظر هذا الحساب وجميع الحسابات المرتبطة بنفس الشبكة لاستخدام نفس عنوان المحفظة!"})
+
+                if user_info["ton_balance"] < withdraw_amount:
                     return web.json_response({"ok": False, "msg": "رصيدك غير كافٍ"})
 
-                remaining = row["ton_balance"] - withdraw_amount
+                remaining = user_info["ton_balance"] - withdraw_amount
                 w_id = await conn.fetchval(
                     "INSERT INTO withdrawals (user_id, amount_ton, wallet_address, memo, created_at) VALUES ($1, $2, $3, $4, $5) RETURNING id",
                     user_id, withdraw_amount, friendly_address, memo if memo else None, now
                 )
-                await conn.execute("UPDATE users SET ton_balance = $1, saved_wallet = $2 WHERE user_id = $3", remaining, friendly_address, user_id)
+                await conn.execute("UPDATE users SET ton_balance = $1, saved_wallet = $2, ip_address = $3, device_fingerprint = $4 WHERE user_id = $5",
+                                   remaining, friendly_address, client_ip, fp, user_id)
 
             admin_rows = await conn.fetch("SELECT user_id FROM bot_admins WHERE can_manage_withdrawals = 1")
             admin_ids = {SUPER_ADMIN_ID}
@@ -2528,12 +2662,15 @@ def build_combined_start_keyboard(user_id: int, perms: dict | None):
         buttons.append([InlineKeyboardButton(text="👑 فتح لوحة التحكم الإدارية (Admin Panel)", callback_data="adm_home")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
-def build_main_admin_keyboard(perms):
+async def build_main_admin_keyboard(perms):
     buttons = [
         [InlineKeyboardButton(text="📊 إحصائيات المنظومة والمستخدمين", callback_data="adm_stats")],
         [InlineKeyboardButton(text="🏆 توب 20 الأكثر إحالة (Top 20 Referrers)", callback_data="adm_top_refs")]
     ]
     if perms.get("is_super"):
+        m_active = await is_maintenance_active()
+        m_btn_text = "🔴 وضع الصيانة: مفعل (اضغط للإلغاء)" if m_active else "🟢 وضع الصيانة: معطل (اضغط للتفعيل)"
+        buttons.append([InlineKeyboardButton(text=m_btn_text, callback_data="adm_toggle_maint")])
         buttons.append([
             InlineKeyboardButton(text="🎁 إنشاء كود برومو", callback_data="adm_create_promo_start"),
             InlineKeyboardButton(text="📋 قائمة واستخدام الأكواد", callback_data="adm_view_promos")
@@ -2655,11 +2792,27 @@ async def admin_panel(message: Message, state: FSMContext):
     if not perms:
         return
     rank = "👑 الرئيس الأعلى (Super Admin)" if perms.get("is_super") else "🛡️ مشرف فرعي (Sub-Admin)"
+    kb = await build_main_admin_keyboard(perms)
     await message.answer(
         f"⚡ <b>لوحة التحكم والإدارة</b>\nرتبتك: <b>{rank}</b>\n\nاختر من الأزرار أدناه:",
-        reply_markup=build_main_admin_keyboard(perms),
+        reply_markup=kb,
         parse_mode="HTML"
     )
+
+@dp.callback_query(F.data == "adm_toggle_maint")
+async def cb_toggle_maintenance(callback: CallbackQuery):
+    if callback.from_user.id != SUPER_ADMIN_ID:
+        await callback.answer("⛔ هذا الإجراء خاص بالرئيس الأعلى فقط!", show_alert=True)
+        return
+
+    async with db_pool.acquire() as conn:
+        current = await conn.fetchval("SELECT value FROM system_settings WHERE key = 'maintenance_mode'")
+        new_val = '0' if str(current) == '1' else '1'
+        await conn.execute("UPDATE system_settings SET value = $1 WHERE key = 'maintenance_mode'", new_val)
+
+    status_str = "مفعّل 🔴 (المستخدمون محجوبون بشاشة الصيانة)" if new_val == '1' else "معطل 🟢 (البوت متاح للجميع)"
+    await callback.answer(f"تم تغيير وضع الصيانة: {status_str}", show_alert=True)
+    await cb_admin_home(callback, None)
 
 @dp.callback_query(F.data == "adm_create_promo_start")
 async def cb_create_promo_start(callback: CallbackQuery, state: FSMContext):
@@ -2927,7 +3080,8 @@ async def ban_user_direct(message: Message, command: CommandObject):
 @dp.callback_query(F.data == "adm_back_to_start")
 async def cb_back_to_start(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
-    await state.clear()
+    if state:
+        await state.clear()
     user_id = callback.from_user.id
     perms = await get_admin_permissions(user_id)
     welcome_text = (
@@ -2956,16 +3110,18 @@ async def cb_back_to_start(callback: CallbackQuery, state: FSMContext):
     )
 
 @dp.callback_query(F.data == "adm_home")
-async def cb_admin_home(callback: CallbackQuery, state: FSMContext):
+async def cb_admin_home(callback: CallbackQuery, state: FSMContext = None):
     await callback.answer()
-    await state.clear()
+    if state:
+        await state.clear()
     perms = await get_admin_permissions(callback.from_user.id)
     if not perms:
         return
     rank = "👑 الرئيس الأعلى (Super Admin)" if perms.get("is_super") else "🛡️ مشرف فرعي (Sub-Admin)"
+    kb = await build_main_admin_keyboard(perms)
     await callback.message.edit_text(
         f"⚡ <b>لوحة التحكم والإدارة</b>\nرتبتك: <b>{rank}</b>\n\nاختر من الأزرار أدناه:",
-        reply_markup=build_main_admin_keyboard(perms),
+        reply_markup=kb,
         parse_mode="HTML"
     )
 
